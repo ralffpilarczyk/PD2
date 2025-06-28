@@ -1,0 +1,8 @@
+Section 29 Test Results
+
+single_agent: {'words': 1143, 'has_sources': False, 'has_tables': False}
+multi_v1_preservation: {'words': 836, 'has_sources': False, 'has_tables': False}
+multi_v2_chain_custody: {'words': 768, 'has_sources': True, 'has_tables': False}
+specialized_agent: {'words': 851, 'has_sources': False, 'has_tables': False}
+iterative_refinement: {'words': 1216, 'has_sources': True, 'has_tables': False}
+constraint_based: {'words': 834, 'has_sources': False, 'has_tables': False}

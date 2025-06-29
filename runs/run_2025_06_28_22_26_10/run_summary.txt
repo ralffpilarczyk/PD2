@@ -1,0 +1,52 @@
+RUN SUMMARY - 2025_06_28_22_26_10
+============================================================
+
+SECTIONS PROCESSED: [1, 7, 13, 21, 29, 32]
+
+QUALITY METRICS:
+{
+  "section_1": {
+    "insights_count": 6,
+    "output_length": 2899,
+    "depth_ratio": 0.002069679199724043
+  },
+  "section_7": {
+    "insights_count": 18,
+    "output_length": 2429,
+    "depth_ratio": 0.007410456978180321
+  },
+  "section_13": {
+    "insights_count": 7,
+    "output_length": 1192,
+    "depth_ratio": 0.00587248322147651
+  },
+  "section_21": {
+    "insights_count": 6,
+    "output_length": 1511,
+    "depth_ratio": 0.003970880211780278
+  },
+  "section_29": {
+    "insights_count": 14,
+    "output_length": 2288,
+    "depth_ratio": 0.006118881118881119
+  },
+  "section_32": {
+    "insights_count": 23,
+    "output_length": 19966,
+    "depth_ratio": 0.0011519583291595714
+  },
+  "average_depth_ratio": 0.0044323898432003074
+}
+
+MEMORY STATE:
+- Universal principles: 0
+- Section-specific observations: 0
+- Failure prevention rules: 0
+
+OUTPUTS SAVED:
+- Individual section analyses: runs/run_2025_06_28_22_26_10/section_X/
+- Step-by-step process: Each step saved for review
+- Memory review: runs/run_2025_06_28_22_26_10/memory_review/
+- Quality metrics: quality_metrics/insight_depth_scores.json
+
+STATUS: Run completed successfully

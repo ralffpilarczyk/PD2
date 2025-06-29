@@ -1,0 +1,16 @@
+{
+  "universal_principles": [],
+  "section_specific": {
+    "financial": [],
+    "operational": [],
+    "competitive": [],
+    "due_diligence": [],
+    "appendix": []
+  },
+  "failure_prevention": [],
+  "meta": {
+    "total_runs": 0,
+    "last_updated": "2025_06_28_21_18_42",
+    "version": "1.0"
+  }
+}

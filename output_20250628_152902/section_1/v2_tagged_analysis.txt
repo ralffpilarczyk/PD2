@@ -1,0 +1,57 @@
+The Group's operational footprint is characterized by a focused multi-regional manufacturing strategy, primarily across Southeast Asia and China. This structure supports its business model by providing a distributed production capability with specialized facilities.
+
+### a. Employee distribution across locations and functions
+
+The provided facts do not detail employee distribution by location or function. However, the operational presence suggests a significant workforce engaged in manufacturing across Singapore, Malaysia, and China.
+
+### b. Main operating assets, their strategic importance and their ownership (owned or leased)
+
+**Main Operating Assets:**
+
+*   **Headquarters:** Located in Singapore [SOURCE: Fu Yu 24 AR_m.md, p.2]. This centralizes corporate functions and strategic decision-making in a key regional business hub.
+*   **Manufacturing Sites:** The Group operates 6 strategic manufacturing sites [SOURCE: Fu Yu 24 AR_m.md, p.2]. These sites are fundamental to the Group's core business of manufacturing.
+*   **Total Production Floor Capacity:** The Group possesses more than 1.5 million square feet of production floor capacity [SOURCE: Fu Yu 24 AR_m.md, p.2]. This substantial capacity indicates the company's scale and ability to handle large-volume production, crucial for serving diverse client needs.
+*   **Flagship Smart Factory (Singapore):**
+    *   **Location:** 9 Tuas Drive 1 in Singapore [SOURCE: Fu Yu 24 AR_m.md, p.5].
+    *   **Usable Space:** Over 9,348 sqm of usable space as of FY2024 [SOURCE: Fu Yu 24 AR_m.md, p.5].
+    *   **Specialization:** Features a 100K-class cleanroom specifically for manufacturing and assembling biomedical products [SOURCE: Fu Yu 24 AR_m.md, p.2]. This facility is strategically important as it signifies the Group's capability to engage in high-precision, high-value manufacturing, particularly in the regulated biomedical sector, which likely commands higher margins and serves niche markets.
+
+**Ownership:** The provided facts do not specify whether the operating assets (manufacturing sites, flagship factory) are owned or leased.
+
+### c. Geographic footprint and alignment with business strategy
+
+The Group's geographic footprint is concentrated in key manufacturing hubs in Asia: Singapore, Malaysia, and China [SOURCE: Fu Yu 24 AR_m.md, p.2]. This distribution aligns with a business strategy of regional presence, likely optimizing for supply chain efficiencies, market access, and potentially diversified cost structures across different countries.
+
+The relative contribution of each region to the Group's manufacturing sales/revenue highlights the operational distribution:
+
+| Region      | Contribution to Total Manufacturing Sales/Revenue | Period      | Source                                  |
+| :---------- | :---------------------------------------------- | :---------- | :-------------------------------------- |
+| Singapore   | 40.2%                                           | FY2024      | [SOURCE: Fu Yu 24 AR_m.md, p.8]         |
+| Malaysia    | 31.9%                                           | FY2024      | [SOURCE: Fu Yu 24 AR_m.md, p.8]         |
+| China       | 27.9%                                           | FY2024      | [SOURCE: Fu Yu 24 AR_m.md, p.5]         |
+
+*Note: The source for China operations states "total manufacturing revenue" while Singapore and Malaysia state "total manufacturing sales". This is a minor inconsistency in terminology across the sources for the same period.*
+
+The data indicates that Singapore operations contribute the largest share of manufacturing output, underscoring its strategic importance, particularly with the flagship Smart Factory located there. Malaysia and China represent significant, though smaller, operational bases, collectively accounting for nearly 60% of manufacturing output. This balanced distribution across three distinct markets allows the company to potentially cater to different customer bases, leverage varied labor costs, and mitigate risks associated with over-reliance on a single geographic market.
+
+**Operating Data Points (Capacity, Square Footage):**
+
+| Data Point                     | Value                 | Period | Date       | Source                                  |
+| :----------------------------- | :-------------------- | :----- | :--------- | :-------------------------------------- |
+| Number of manufacturing sites  | 6                     | N/A    | N/A        | [SOURCE: Fu Yu 24 AR_m.md, p.2]         |
+| Total production floor capacity| >1.5 million sq ft    | N/A    | N/A        | [SOURCE: Fu Yu 24 AR_m.md, p.2]         |
+| Smart Factory usable space     | >9,348 sqm            | FY2024 | FY2024     | [SOURCE: Fu Yu 24 AR_m.md, p.5]         |
+
+*No historical values for the last 3 years or 5 most recent interim periods are available for these specific operational data points from the provided facts beyond FY2024.*
+
+### d. Any significant changes or trends in the operating footprint
+
+The provided facts do not contain historical data points that would allow for an analysis of significant changes or trends in the operating footprint over time. The available data presents a snapshot of the current state (FY2024, 1H2024).
+
+### e. How the operating structure supports competitive positioning
+
+The Group's operating structure supports its competitive positioning in several ways:
+
+1.  **Regional Reach and Diversification:** Operating 6 strategic manufacturing sites across Singapore, Malaysia, and China provides a diversified geographic footprint [SOURCE: Fu Yu 24 AR_m.md, p.2]. This enables the Group to serve customers across different regional markets efficiently, potentially access varied talent pools and supply chains, and mitigate risks from economic or political fluctuations in a single country.
+2.  **Scalability:** With over 1.5 million square feet of production floor capacity [SOURCE: Fu Yu 24 AR_m.md, p.2], the Group demonstrates significant scale. This allows it to handle large orders, potentially achieve economies of scale, and meet the demands of major clients.
+3.  **Specialized High-Value Manufacturing:** The flagship Smart Factory in Singapore, with its 100K-class cleanroom for biomedical products [SOURCE: Fu Yu 24 AR_m.md, p.2] and over 9,348 sqm of usable space [SOURCE: Fu Yu 24 AR_m.md, p.5], positions the Group to compete in high-precision, high-tech segments. This capability suggests an ability to produce complex, high-quality components for regulated industries, potentially commanding premium pricing and attracting clients with advanced technical requirements. This differentiates the Group from lower-cost, less specialized manufacturers.

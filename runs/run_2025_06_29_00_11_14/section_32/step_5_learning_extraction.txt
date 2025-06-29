@@ -1,0 +1,14 @@
+ANALYTICAL_PATTERNS:
+- **Prioritize Causal and Consequential Analysis:** Focus analytical efforts on identifying underlying causes, interdependencies, and the direct or indirect implications of observed patterns, rather than merely describing data. The highest value insights arise from understanding "why" something happened and "what its impact is."
+- **Employ a Structured Inquiry Framework:** Systematically move beyond initial observations by asking "Why?", "What else?", "So what?", and "What's next?" to deepen understanding, uncover hidden relationships, and ensure insights are actionable.
+- **Seek Intersectional Data Linkages:** Actively look for connections and correlations between seemingly unrelated data points or dimensions. Cross-referencing disparate datasets or qualitative and quantitative information often reveals the most profound and actionable insights.
+
+FAILURE_PREVENTION:
+- **Define Scope and Deliverables Rigorously Upfront:** Establish clear boundaries for the analysis, specific questions to answer, and expected types of insights or recommendations *before* drafting. This prevents superficiality, ensures comprehensive coverage, and minimizes the need for extensive completeness improvements later.
+- **Embed an "Evidence-to-Insight-to-Action" Workflow:** From the outset, structure your analysis process to explicitly connect raw observations (evidence) to derived insights and then to actionable implications or recommendations, rather than merely presenting facts. This ensures analytical depth from the first attempt.
+- **Adopt a "Critique First Draft" Mindset:** Approach the initial draft as a hypothesis-generating exercise, immediately followed by a structured self-critique asking: "Is this complete?", "Is it insightful?", "Is it actionable for the audience?", and "Is the evidence sufficient?". This proactive identification of gaps significantly improves the first attempt.
+
+SECTION_INSIGHTS:
+- **Optimize Appendices for Granular Support and Independent Utility:** Design appendix content to provide detailed substantiation for the main analysis (e.g., methodology, raw data, detailed calculations) while ensuring each entry is sufficiently annotated and organized to be understood as a standalone reference.
+- **Ensure Explicit Linkage and Contextualization:** Clearly articulate the purpose of each appendix item, precisely linking it to specific points in the main document. Provide necessary contextual explanations (e.g., data sources, definitions, methodologies) within the appendix itself to maximize its utility and prevent misinterpretation.
+- **Treat Appendices as Structured Extensions, Not Data Dumps:** Avoid using appendices as a catch-all for leftover information. Instead, curate them as structured, accessible repositories of critical supplementary data and detailed analytical processes that enhance the credibility and depth of the primary report without cluttering the main narrative.

@@ -1,0 +1,30 @@
+Here are the learning observations extracted from the analysis cycle, framed as actionable principles for future improvement:
+
+**ANALYTICAL_PATTERNS:**
+
+*   **Integrate Operational Data with Strategic & Financial Context:** Connect operational footprint data (e.g., headcount shifts, asset changes, geographic focus) directly to its impact on business performance, strategic objectives, and competitive positioning, even when working with non-financial data.
+*   **Employ the "What-Why-So What" Framework Consistently:** Systematically investigate observations by identifying the "What" (the pattern/observation), exploring the "Why" (the underlying causes or motivations), and articulating the "So What" (the implications for financial performance, strategy, risk, or competitive advantage).
+*   **Explicitly Highlight Anomalies, Disconnects, and Benchmarks:** Go beyond merely presenting data by explicitly calling out any unusual trends, contradictions between data and management commentary, or relevant external industry benchmarks to deepen insights.
+*   **Cross-Reference Data Points for Coherence and Critical Assessment:** Compare related data points (e.g., CapEx figures against ambitious strategic claims, headcount changes against segment cessation) to identify potential discrepancies, raise critical questions about feasibility, or assess the magnitude of stated impacts.
+*   **Prioritize Consistent Data Presentation:** When presenting quantitative data for comparison (e.g., regional performance), choose and consistently apply metrics (e.g., both absolute figures and percentage contributions) to facilitate easier reader comprehension and comparison.
+*   **Emphasize Forward-Looking Indicators:** Give prominence and detailed analysis to forward-looking operational metrics (e.g., order book increases) as key indicators of future performance and strategic trajectory.
+*   **Maintain Rigorous Source Citation:** Ensure all claims and data points are precisely and comprehensively sourced with document names, page numbers, and specific sections/tables, as this fundamentally enhances the analytical rigor and credibility.
+*   **Leverage Formatting for Clarity:** Effectively utilize specified formatting requirements (e.g., tables, bullet points, nested structures) to enhance readability, organize complex information, and improve the overall impact of data presentation.
+
+**FAILURE_PREVENTION:**
+
+*   **Strictly Adhere to All Constraints:** Meticulously follow *all* specified requirements, especially exclusionary constraints (e.g., "NOT financial data"). If a constraint restricts direct data use, actively seek and utilize appropriate non-financial proxies, or explicitly state the limitation if no such proxy is available.
+*   **Be Exhaustive in Data Extraction for All Time Periods:** For *each* data point, diligently search for and present all required historical (e.g., 3 years) and interim (e.g., 5 most recent periods) data. Document explicitly if certain data for specified periods is genuinely unavailable in the source documents.
+*   **Verify Factual Claims and Derived Insights:** Conduct a meticulous review of all factual statements and derived insights against the raw source data to prevent misinterpretations, erroneous conclusions, or conflating different data sets.
+*   **Systematically Address All Requested Data Points:** Actively search for and include *all* explicitly listed data points or examples (e.g., "Number of Customers"), ensuring they are extracted and analyzed with historical context where possible.
+*   **Avoid Speculative Leaps in Analysis:** Ground all analytical insights in direct evidence from the source documents. If an inference is made, clearly state it as an assumption that may require further validation, rather than presenting it as a direct factual conclusion.
+*   **Clarify Ambiguities or Inconsistencies:** If source data presents ambiguities (e.g., conflicting energy figures, unclear asset definitions), either seek further clarification from the source or explicitly highlight the ambiguity to the reader, explaining the potential interpretations.
+*   **Ensure Technical Metric Understanding:** Prior to analysis, ensure a clear and consistent understanding of all technical metrics and units (e.g., energy consumption units, capacity definitions) to avoid presenting conflicting or confusing data.
+
+**SECTION_INSIGHTS (Specific to Operational Analysis):**
+
+*   **Quantify Operational Impact on Financials and Governance:** Beyond describing operational changes, delve into their potential financial implications (e.g., impact on revenue, profitability, asset values, CapEx efficiency) and any related governance issues (e.g., risk management weaknesses), even if financial figures are not explicitly presented.
+*   **Delineate Distinct Operational Functions:** Clearly distinguish between core operational assets or functions (e.g., manufacturing facilities) and other asset types or activities (e.g., investment properties, discontinued segments) within the same entity to avoid blurring the true operational footprint with other business activities.
+*   **Connect Operational Metrics to Productivity and Efficiency:** Where possible, translate operational changes into quantifiable productivity or efficiency metrics (e.g., inferring Revenue Per Employee from headcount changes, discussing capacity utilization, linking process improvements to waste reduction).
+*   **Analyze Product/Geographic Mix Shifts:** Assess how changes in product focus or geographic concentration of operations contribute to (or detract from) overall Group-level financial metrics and strategic positioning (e.g., impact on overall margins).
+*   **Structure for Flow and Impact:** Organize operational analysis sections to build a cohesive narrative, clearly linking the observed changes in footprint to strategic rationale, competitive advantage, and future outlook.

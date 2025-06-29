@@ -1,0 +1,18 @@
+ANALYTICAL_PATTERNS:
+-   **Prioritize comparative analysis to generate immediate value:** Focus on year-over-year (YoY) and quarter-over-quarter (QoQ) comparisons, along with benchmarking against industry averages or competitors, to highlight key trends and anomalies that signify performance shifts.
+-   **Link financial outcomes to operational drivers:** Go beyond simply stating financial figures by actively seeking and explaining the underlying operational activities (e.g., sales volume, pricing changes, cost controls) that caused the numbers to change.
+-   **Utilize ratio analysis as an initial insight filter:** Systematically calculate key financial ratios (e.g., profitability, liquidity, solvency, efficiency) early in the process to quickly identify areas of strength, weakness, or significant change, guiding deeper investigation.
+-   **Dedicate a distinct phase for "So what?" and "What next?" questions:** After initial data compilation and factual completeness, explicitly reserve time to brainstorm and articulate the implications, risks, and opportunities derived from the financial figures for decision-making.
+
+FAILURE_PREVENTION:
+-   **Establish a comprehensive data checklist at the outset:** Before beginning analysis, define all necessary data points (e.g., specific statements, periods, key operational metrics) to prevent omissions that require rework during completeness checks.
+-   **Integrate context-setting as a foundational step:** Ensure the initial draft includes essential contextual information, such as the relevant industry trends, macroeconomic factors, or significant company events, to provide a framework for interpreting financial performance.
+-   **Proactively quantify changes and variances:** Don't just list numbers; immediately calculate percentage changes and absolute differences for critical line items and totals to highlight the magnitude of shifts from the first pass.
+-   **Anticipate the "why" and "what if" questions from stakeholders:** During the initial analysis, consider what follow-up questions decision-makers will likely ask about the numbers and proactively seek explanations or explore potential future scenarios.
+
+SECTION_INSIGHTS:
+-   **Lead with an executive summary of financial health and key trends:** Start financial sections with a concise summary that immediately communicates the overall financial position, significant performance shifts, and critical conclusions, allowing stakeholders to grasp the essence quickly.
+-   **Visualize trends and comparisons effectively:** Use charts (e.g., line graphs for trends, bar charts for comparisons) to make complex financial data more digestible and to immediately highlight patterns, outliers, and significant changes without relying solely on tables.
+-   **Ensure the inclusion and interpretation of cash flow dynamics:** Always analyze the Cash Flow Statement alongside the Income Statement and Balance Sheet, as it provides crucial insights into liquidity, funding, and true cash generation often missed when focusing only on profitability.
+-   **Prioritize actionable recommendations or implications:** Conclude financial sections by translating analytical insights into clear, actionable implications for strategy, operations, or investment decisions, demonstrating the practical value of the analysis beyond mere reporting.
+-   **Embed forward-looking statements and risk factors:** Go beyond historical analysis to discuss potential future implications, identify key risks, and, where appropriate, offer scenario analyses or sensitivities to provide a more complete and valuable perspective.

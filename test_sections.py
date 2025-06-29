@@ -146,7 +146,7 @@ sections = [
         "title": "Appendix",
         "specs": """
 You will be provided with a large block of text containing all tables extracted from multiple source documents, formatted in Markdown.
-Your task is to act as an expert data organizer and format this information into a single, clean, comprehensive, and logically structured HTML appendix.
+Your task is to act as an expert data organizer and format this information into a single, clean, comprehensive, and logically structured appendix.
 
 **CRITICAL INSTRUCTIONS:**
 
@@ -164,11 +164,9 @@ Your task is to act as an expert data organizer and format this information into
 
 4.  **Prioritize Clarity over Combination:** If combining time periods creates a confusing or inaccurate table (e.g., the metrics are not truly like-for-like, or the headers become too complex), it is **better to create separate, clear tables**. Never drop data for the sake of combining. When in doubt, show tables separately.
 
-5.  **Use Standard HTML:** Adhere strictly to the provided HTML formatting rules (e.g., `<table class="data-table">`, `<thead>`, `<tbody>`, etc.). Use `<h3>` and `<h4>` to create a clear hierarchy based on the organizational structure above.
+5.  **Use Source Information:** The input markdown will contain page numbers and table titles from the original documents. Use these to inform your headings and to help you group related tables.
 
-6.  **Use Source Information:** The input markdown will contain page numbers and table titles from the original documents. Use these to inform your headings and to help you group related tables.
 
-Your output must be a single, well-formed block of HTML representing the entire appendix content, starting with `<div class="section" id="section-32">` and ending with `</div>`.
         """
     }
 ]

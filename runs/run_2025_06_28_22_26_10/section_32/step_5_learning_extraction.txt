@@ -1,0 +1,18 @@
+ANALYTICAL_PATTERNS:
+- Prioritize insights that explain complex relationships, underlying mechanisms, or the rationale behind observed patterns, moving beyond mere data presentation to deep understanding.
+- Develop concise summaries and interpretive analyses for large datasets within the appendix, enabling readers to grasp key implications without sifting through all raw data.
+- Employ a structured framework for identifying dependencies and causal links between disparate data points, as these connections significantly elevate analytical depth and value.
+- Explicitly map methodological steps to their direct outputs and subsequent implications, clarifying the analytical journey and ensuring reproducibility.
+
+FAILURE_PREVENTION:
+- Before drafting, establish a comprehensive checklist for expected content, including all relevant definitions, assumptions, data sources, and methodological steps to ensure foundational completeness.
+- Proactively define the precise scope and boundaries of the analysis, identifying what will and will not be covered to prevent ambiguity and ensure all necessary elements are included from the outset.
+- Integrate a "reader's questions" review early in the process, anticipating potential queries about 'why,' 'how,' and 'what if' to guide the depth of analysis and pre-emptively fill information gaps.
+- Mandate an early-stage peer review or self-audit focused solely on identifying unstated assumptions, data inconsistencies, and logical leaps, prior to extensive insight generation.
+
+SECTION_INSIGHTS:
+- Design appendix content to be highly modular and self-referential, allowing readers to extract specific details or methodologies without extensive cross-reading of other sections.
+- Employ consistent and detailed cross-referencing to the main document and other appendix sections, facilitating seamless navigation and ensuring supporting information is easily located.
+- For each distinct sub-section within the appendix, include a brief introductory statement explaining its purpose and direct relevance to the main analysis, preventing disconnected data presentation.
+- Ensure all specialized terminology, acronyms, and dataset abbreviations used are clearly defined, preferably in a dedicated glossary or at their first instance, to maintain accessibility for diverse readers.
+- Prioritize the inclusion of sufficient underlying data, detailed methodologies, and clear assumptions to enable external validation or replication of the primary analysis.

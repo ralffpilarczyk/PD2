@@ -1,0 +1,9 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When management frames actions positively, investigate underlying negative triggers (e.g., 'investigation') to reveal true context."
+  section_number: 13
+  quality_score: 10
+  word_count: 23
+- instruction: "When management claims 'improvement' or 'early success,' cross-validate with ultimate bottom-line metrics – persistent losses outweigh narrative."
+  section_number: 13
+  quality_score: 9
+  word_count: 22

@@ -1,0 +1,68 @@
+{
+  "insights": {
+    "section_13": [
+      {
+        "instruction": "When a company states a strategic shift (e.g., towards higher-value segments, digital transformation, asset-light model), cross-reference these claims with concurrent shifts in revenue recognition patterns, asset ownership structure (owned vs. leased), and detailed workforce composition changes \u2013 this verifies if strategic intent is genuinely reflected in underlying operational and financial mechanics.",
+        "section_number": 13,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1
+      },
+      {
+        "instruction": "When evaluating resource allocation, specifically cross-reference capital expenditure (CAPEX) and human capital investments (e.g., training hours, strategic hires) with stated long-term strategic objectives and the evolving demands of the operating environment \u2013 this reveals potential underinvestment, misaligned priorities, or unrealistic targets that hinder future capability.",
+        "section_number": 13,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1
+      }
+    ],
+    "section_29": [
+      {
+        "instruction": "When analyzing sustainability or other non-financial initiatives, quantify the direct and indirect financial benefits (e.g., cost savings, revenue generation, risk mitigation) and demand detailed breakdowns (e.g., intensity vs. absolute, specific scope contribution) \u2013 this moves beyond generic claims to assess tangible business value and genuine impact.",
+        "section_number": 29,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1
+      }
+    ],
+    "section_32": [
+      {
+        "instruction": "When encountering 'Not Meaningful' (NM) percentage changes or extreme volatility in key financial or operational metrics, always revert to the absolute values and investigate the qualitative drivers (e.g., shift from loss to profit, one-off events, divestitures) \u2013 this uncovers the true magnitude and nature of change obscured by percentage figures and highlights underlying stability or instability.",
+        "section_number": 32,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1
+      }
+    ],
+    "section_7": [
+      {
+        "instruction": "When analyzing significant operational events (e.g., site liquidations, business line cessations, asset impairments), investigate the root causes beyond immediate financial impacts or stated narratives, probing for links to governance failures, internal control weaknesses, or strategic missteps \u2013 this provides a comprehensive understanding of systemic issues rather than isolated incidents.",
+        "section_number": 7,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1
+      }
+    ],
+    "section_21": [
+      {
+        "instruction": "When assessing competitive positioning or claimed performance improvements, rigorously benchmark the company's metrics against 'best-in-class' industry peers, not just broad averages, across operational efficiency, profitability, and specific strategic capabilities \u2013 this distinguishes genuine competitive advantage from mere internal rebound or industry-wide trends.",
+        "section_number": 21,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1
+      }
+    ]
+  },
+  "meta": {
+    "version": "3.0",
+    "total_runs": 1,
+    "last_updated": "2025_06_29_09_36_43",
+    "active_sections": [
+      13,
+      29,
+      32,
+      7,
+      21
+    ]
+  }
+}

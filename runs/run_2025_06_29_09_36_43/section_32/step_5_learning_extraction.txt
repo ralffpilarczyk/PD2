@@ -1,0 +1,271 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When analyzing sustainability performance, cross-reference raw energy consumption data with intensity metrics (e.g., GJ/S$'mil Revenue) over time - this reveals if energy management improvements are driven by absolute reduction or changes in operational scale/efficiency."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing renewable energy contributions, compare 'Energy Sold (Solar)' and 'RECs Sold (Solar)' against 'Energy Consumption (Solar)' - this provides insight into the company's internal utilization versus external monetization of renewable energy generation."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing GHG emissions, disaggregate total emissions into Scope 1 and Scope 2 and track their proportions over time - this indicates the primary sources of emissions and the effectiveness of direct versus indirect emission reduction strategies."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing waste management, compare the total volume of 'Waste Diverted from Disposal' against 'Waste Directed to Disposal' to calculate a diversion rate - this provides a critical measure of circular economy progress and waste efficiency."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing occupational health and safety, track 'Recordable work-related injuries' alongside 'No of lost days' and 'Total Man hours' to calculate severity and frequency rates - this provides a more comprehensive view of safety performance beyond just incident counts."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing talent acquisition and retention, calculate net employee change by comparing 'New Hire' and 'Resignations' annually and regionally - this reveals workforce growth or contraction patterns and potential regional talent imbalances."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing workforce diversity, compare 'Percentage of Employees per Employee Category, by Gender' with the overall 'Total Number of Employees by Gender' to identify gender representation across different hierarchical levels - this highlights potential gender gaps in leadership or specific roles."
+  section_number: 32
+  quality_score: 10
+- instruction: "When evaluating human capital development, analyze trends in 'Average Training Hours per Employee' by both gender and employee category over several years - this reveals if training investments are equitable across demographics and targeted at specific professional development needs."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing profitability, break down the 'Change %' for Gross Profit and Revenue to understand the drivers of margin shifts (e.g., faster revenue growth vs. cost of sales management) - this helps pinpoint operational efficiency improvements or pressures."
+  section_number: 32
+  quality_score: 10
+- instruction: "When investigating income statement, identify 'NM' (Not Meaningful) percentage changes for significant line items (e.g., Results from operating activities, Profit/Loss before income tax) that transition from loss to profit or vice versa - this signals a fundamental turnaround or deterioration requiring detailed qualitative explanation."
+  section_number: 32
+  quality_score: 10
+- instruction: "When evaluating core business viability, isolate the impact of 'Loss from discontinued operations' on the 'Loss for the period/year attributable to owners of the Company' to understand the core business performance trend - this separates one-off or strategic exit impacts from ongoing operational results."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing cash flows, compare 'Net cash (used in)/generated from operating activities' with 'Net Profit/ (Loss)' from the income statement - significant differences indicate the quality of earnings and the impact of working capital changes."
+  section_number: 32
+  quality_score: 10
+- instruction: "When evaluating capital expenditure strategy, compare trends in 'Net cash used in investing activities' (especially 'Purchase of property, plant and equipment') against 'Depreciation of property, plant and equipment' from the income statement - this indicates whether the company is reinvesting sufficiently to maintain or grow its asset base."
+  section_number: 32
+  quality_score: 10
+- instruction: "When evaluating per-share metrics, separate 'Loss per share from continuing operations' from 'discontinued operations' - this provides a clearer picture of the ongoing business's profitability on a per-share basis, unclouded by one-off events."
+  section_number: 32
+  quality_score: 10
+- instruction: "For summary profit metrics, when encountering 'NM' for change, always refer to the detailed income statement to understand the magnitude and cause of the swing from loss to profit or vice versa - the percentage change becomes meaningless when crossing zero."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing economic impact, calculate the 'Economic value retained' trend over time (Direct economic value generated minus Economic value distributed) and cross-reference with 'Net Profit/ (Loss)' - this shows how effectively the company converts generated value into retained earnings, indicating financial sustainability."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing PPE, compare 'Additions' in PPE with 'Purchase of property, plant and equipment' in the cash flow statement, noting non-cash transactions (e.g., right-of-use assets, lease modifications) - this reconciles investment activities reported in different statements and reveals financing methods for asset growth."
+  section_number: 32
+  quality_score: 10
+- instruction: "For impairment assessments, scrutinize the 'Key Assumptions' (e.g., discount rate, growth rates, margins) for both Fair Value Less Costs of Disposal and Value in Use - sensitivity analysis on these assumptions can reveal the robustness of asset valuations and potential future impairment risks."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing goodwill, specifically track 'Impairment loss recognised' as it directly impacts profitability and carrying amounts - a significant impairment indicates that the acquired assets or businesses are not performing as originally expected."
+  section_number: 32
+  quality_score: 10
+- instruction: "When Goodwill impairment is assessed, compare the assumptions used (e.g., revenue growth, gross profit margin) against actual historical performance and future business plans - this evaluates the realism of the impairment test and signals management's outlook."
+  section_number: 32
+  quality_score: 10
+- instruction: "When reviewing subsidiary investments, analyze the 'Impairment losses' on equity investments and 'Movement in Impairment Allowance' for amounts due from subsidiaries - this signals financial distress or underperformance of specific subsidiaries."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing asset quality, monitor the 'Allowance for impairment of doubtful receivables' and 'Movements in Impairment Allowance for Amounts Due from Subsidiaries' - an increasing trend in allowances indicates deteriorating credit quality or financial health of debtors/subsidiaries."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing debt structure, compare 'Loans and Borrowings' (current vs. non-current) with the 'Terms and Debt Repayment Schedule' - this highlights short-term vs. long-term debt obligations and upcoming maturities that impact liquidity."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing non-core profitability, analyze the composition and trend of 'Other Income' and 'Other Expenses, Net' to identify non-core or one-off activities that significantly impact profitability (e.g., gain on disposal, foreign exchange, impairment) - this helps distinguish recurring operational performance from extraordinary items."
+  section_number: 32
+  quality_score: 10
+- instruction: "When evaluating tax impact, reconcile 'Tax expense/(credit)' from the income statement with the 'Reconciliation of effective tax rate' to understand the drivers of tax variability (e.g., tax-exempt income, non-deductible expenses, prior year adjustments) - this explains actual tax burden vs. statutory rates."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing management projections, critically assess the 'Key Assumptions for Financial Performance of Base Case Scenario (Manufacturing Segment)' (e.g., Revenue growth rate, Gross profit margin) - compare these with historical trends and external market outlooks to evaluate the realism of management's projections."
+  section_number: 32
+  quality_score: 10
+- instruction: "When understanding core business performance, always analyze 'Discontinued Operation - Results' and 'Cash Flow' separately from continuing operations - this isolates the core, ongoing business results from the financial impact of divested segments on overall group performance."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing liquidity risk, analyze the 'Contractual Maturities' of financial liabilities to identify significant concentrations of debt maturing within 'Less than 1 year' and 'Between 1 and 5 years' - this highlights short-to-medium term refinancing needs and potential cash flow pressures."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing revenue performance, compare the 'Change %' of 'Sales of goods' versus 'Revenue from tooling contracts' within the manufacturing segment across different geographical markets - this highlights which product/service lines and regions are driving growth or experiencing decline."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing the impact of strategic exits, quantify the revenue contribution from the 'Supply Chain Management Services Segment (Discontinued Operation)' to understand its historical impact and the revenue gap left by its divestment - this helps assess the post-divestment revenue profile."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing financial performance by period, compare 'Sales reported for the first half year' with 'Sales reported for the second half year' to identify seasonality or significant operational shifts within the year - dramatic changes (e.g., 78.0% increase H1 to 45.8% decrease H2) warrant immediate investigation into underlying drivers."
+  section_number: 32
+  quality_score: 10
+- instruction: "When evaluating half-year performance, analyze the 'Operating profit after tax' for both halves relative to sales - significant profit divergence despite sales trends (e.g., sales up, profit down or vice-versa) indicates changes in cost structure, margins, or efficiency."
+  section_number: 32
+  quality_score: 10
+- instruction: "When performing deep segment analysis, scrutinize 'Group adjustment and eliminations' for revenue, expenses, assets, and liabilities - these adjustments highlight inter-company transactions and consolidation impacts that distort raw segment performance."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing regional profitability, compare 'Segment profit/ (loss) before income tax' across different manufacturing regions (Singapore, China, Malaysia) to identify regional profitability variations - this points to differences in operational efficiency, cost structures, or market conditions by geography."
+  section_number: 32
+  quality_score: 10
+- instruction: "For directors seeking re-election, specifically review 'Other Principal Commitments' and 'Directorships' in other listed companies - this helps assess potential time commitments and conflicts of interest."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing pay-for-performance alignment, compare 'Aggregate Remuneration Paid to Directors' and 'Aggregate Remuneration Paid to Key Management Personnel' against company performance (e.g., revenue, net profit) - this helps assess the pay-for-performance alignment."
+  section_number: 32
+  quality_score: 10
+- instruction: "When analyzing governance, note remuneration paid to 'Immediate Family Members of GCEO' or 'Substantial Shareholder' - this flags potential related party transactions that warrant scrutiny for arm's length dealings."
+  section_number: 32
+  quality_score: 10
+- instruction: "When understanding compensation expense, examine the 'Measurement of RSP Awards (Cash-Settled)' and 'Key Assumptions (Equity-Settled)' for share-based payments (e.g., fair value, share price, expected dividends, probability of meeting conditions) - these assumptions are critical for valuing the compensation expense and reveal management's internal outlook."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing dividend sustainability and payout policy, compare 'Dividends Declared and Paid' against 'Net Profit/ (Loss)' and 'Cash Generated from Operating Activities' - this indicates the sustainability of dividend payouts and the company's dividend policy relative to its profitability and cash generation."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing related party transactions, quantify 'Purchase of services' from related parties not within the group and investigate their nature and terms - this is crucial for ensuring transactions are at arm's length and do not unduly benefit connected parties."
+  section_number: 32
+  quality_score: 10
+- instruction: "When assessing governance oversight, note any 'Managerial Position in Issuer/Principal Subsidiaries who is a Relative of Director/CEO/Substantial Shareholder' and their 'Current position and duties' - this flags potential nepotism or conflicts of interest that require strong governance oversight."
+  section_number: 32
+  quality_score: 10
+- instruction: "When evaluating energy data, note significant restatements of units (e.g., MWh/Liter to GJ) and investigate their impact on trend analysis - inconsistent unit reporting can obscure actual performance changes or lead to misinterpretations."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating GHG intensity, confirm the denominator's scope (e.g., 'manufacturing sectors only') and assess its appropriateness for comparisons – inconsistencies in the base metric can invalidate inter-period or inter-company comparisons."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing water withdrawal trends, identify and account for changes in reporting units (e.g., m3 to megaliter) and confirm if 'restatement of unit of measurement' truly implies 'does not impact any conclusions' by checking underlying data - unit changes can mask or exaggerate real shifts."
+  section_number: 32
+  quality_score: 9
+- instruction: "For waste data, analyze the composition (e.g., hazardous vs. non-hazardous, specific material types like plastics, paper, metal) in both diverted and disposed categories - this identifies high-impact waste streams for targeted reduction or recycling initiatives."
+  section_number: 32
+  quality_score: 9
+- instruction: "When examining work-related injury rates, compare trends in 'Fatalities' and 'High-consequence injuries' against 'Recordable injuries' - significant divergence may indicate issues with incident classification or a focus on lower-severity events masking severe risks."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing workforce demographics, identify reporting gaps in historical data (e.g., 'Not reported' for regional gender breakdowns) and note the impact on longitudinal analysis of diversity trends - missing data limits historical comparability for granular insights."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating employee composition, compare total employee numbers across regions and against historical data (FY2022, FY2023 vs FY2024) - this highlights shifts in global workforce distribution and potential changes in operational hubs."
+  section_number: 32
+  quality_score: 9
+- instruction: "For hiring and turnover analysis, examine the rates broken down by gender and age group to identify specific demographic segments facing higher recruitment challenges or attrition risks - this supports targeted HR strategies for diversity and workforce planning."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing workforce age profiles, analyze 'Percentage of Employees per Employee Category, by Age Group' to understand age distribution across different professional levels - this helps identify potential succession planning needs or a reliance on specific age demographics in critical roles."
+  section_number: 32
+  quality_score: 9
+- instruction: "When reviewing performance management systems, examine 'Percentage of Staff Receiving Performance & Career Development Review' by employee category and gender - significant disparities may indicate inequities in career progression support or review processes."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing financial position, compare year-over-year changes in key asset and liability categories (e.g., PPE, Inventories, Trade Receivables, Cash, Loans, Payables) for both Group and Company - this highlights shifts in financial structure, liquidity, and operational gearing."
+  section_number: 32
+  quality_score: 9
+- instruction: "For consolidated vs. company-level balance sheets, identify significant differences in specific accounts (e.g., 'Goodwill' present in Group but not Company, 'Subsidiaries' in Company) - this reveals the impact of consolidation adjustments and the structure of inter-company investments."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing comprehensive income, distinguish between net profit/loss and 'Other comprehensive income' components (especially foreign currency translation differences) - this provides a fuller picture of financial performance that includes non-cash, market-related impacts on equity."
+  section_number: 32
+  quality_score: 9
+- instruction: "When reviewing changes in equity, trace movements in 'Retained earnings' and 'Share capital' alongside 'Total comprehensive income' and 'Dividends paid' - this shows how profits are retained/distributed and capital structure changes."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing cash flows, examine the 'Adjustments for' section in cash flow from operations to identify large non-cash expenses (e.g., depreciation, impairment provisions) or non-operating gains/losses (e.g., gain on disposal) - this explains the divergence between net income and operating cash flow."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing financial leverage and capital management, analyze the 'Cash flows from financing activities' to understand how the company funds its operations and investments, especially repayment of loans, lease liabilities, and dividend payments - this provides insight into debt management, capital structure, and shareholder distributions."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing shareholder value, track 'Net asset value per Ordinary Share' over time and compare it with the share price - this helps determine if the company is trading at a premium or discount to its book value."
+  section_number: 32
+  quality_score: 9
+- instruction: "When provided with interim financial snapshots, compare them to the full-year statements to identify significant intra-year movements in key financial position items (e.g., cash, liabilities) - this can reveal seasonal trends, short-term liquidity management, or mid-year operational shifts."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing economic impact, analyze the distribution of economic value across different stakeholders (purchases, employees, capital providers, government) - this highlights the company's financial contribution and resource allocation strategy."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing PPE, track the additions, disposals, and reclassifications in the cost and accumulated depreciation tables - this provides insight into asset acquisition, retirement, and internal re-allocation strategies."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing investment properties, compare the 'Carrying amounts' (depreciated cost) with the 'Fair Value of Investment Property' - this highlights potential unrealized gains or losses and market valuation differences."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating subsidiary performance, cross-reference 'Details of Subsidiaries' (principal activities, location, equity interest) with their reported certifications (e.g., ISO, QS) from Section 1 - this provides a holistic view of the operational capabilities and compliance status of each entity within the group."
+  section_number: 32
+  quality_score: 9
+- instruction: "For inventories, analyze 'Movements in Allowance for Stock Obsolescence' (allowance made, reversed, utilized) alongside the raw 'Inventories' data - this provides insight into inventory management effectiveness and potential obsolescence risks."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing debt movements, use the 'Reconciliation of Movements of Loans and Borrowings and Lease Liabilities to Cash Flows from Financing Activities' to understand how reported liabilities translate into actual cash movements, noting 'New lease' and 'Modification of lease liabilities' for non-cash debt changes - this provides a comprehensive view of debt evolution."
+  section_number: 32
+  quality_score: 9
+- instruction: "For capital management, track the 'Gearing ratio' trend over time - this indicates changes in financial leverage and adherence to capital structure policies."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing equity, analyze changes in 'Reserves' components, particularly 'Foreign currency translation reserve' and 'Retained earnings,' as they reflect non-operating factors impacting equity and cumulative profits - this provides a deeper understanding of comprehensive income and capital allocation."
+  section_number: 32
+  quality_score: 9
+- instruction: "When examining payables, differentiate 'Trade payables' from 'Accrued expenses' and 'Other payables' to understand the mix of operational liabilities vs. other short-term obligations - this helps assess working capital efficiency and supplier relationships."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing revenue recognition, compare 'Contract assets' (unbilled revenue) with 'Contract liabilities' (deferred revenue) and 'Trade receivables' - this provides insight into project progress, billing cycles, and customer prepayment patterns."
+  section_number: 32
+  quality_score: 9
+- instruction: "When understanding strategic exits, compare the 2H and FY results/cash flows for discontinued operations to identify the timing and magnitude of impact from these segments over the year - this can reveal the specific period when operations ceased or significantly scaled down."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating future investment, assess 'Capital expenditure contracted for... but not recognised' - this indicates future cash outflows and asset base expansion plans that are not yet reflected on the balance sheet."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing credit risk, analyze 'Credit Risk Exposure by Geographical Area' to identify concentrations of receivables in specific regions - this highlights geographic vulnerabilities to economic downturns or geopolitical risks."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing interest rate risk, analyze the proportion of 'Fixed rate instruments' versus 'Variable rate instruments' for financial assets and liabilities - this indicates the company's exposure to interest rate fluctuations."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing foreign currency risk, track the 'Net exposure' to significant foreign currencies (e.g., US dollar) over time - this indicates the company's sensitivity to exchange rate movements and the effectiveness of hedging strategies."
+  section_number: 32
+  quality_score: 9
+- instruction: "When reviewing financial instruments, compare 'Total carrying amount' for financial assets and liabilities with their respective 'Fair Values' (if different classification exists) - this highlights potential valuation differences and underlying market risks."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing lease obligations, track the 'Additions to right-of-use assets' and 'Lease modification' to understand the growth and changes in the company's operational footprint through leasing - this provides insight into asset acquisition strategies beyond direct purchase."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing lease economics, compare 'Interest on lease liabilities' with 'Income from sub-leasing right-of-use assets' - this indicates the net financial cost or benefit derived from the company's leasing and sub-leasing activities."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating revenue streams from leasing activities, analyze the 'Maturity Analysis of Lease Payments to be Received' to understand future cash inflows from assets leased out - this provides insight into the predictability and short-to-medium term liquidity from lessor activities."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing business model shifts, compare revenue recognized 'at a point in time' versus 'over time' across segments and regions - this indicates the prevalence of transactional sales versus project-based or service-oriented revenue models."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating half-year financial performance, compare 'Sales reported for the first half year' with 'Sales reported for the second half year' to identify seasonality or significant operational shifts within the year - dramatic changes warrant immediate investigation into underlying drivers."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating segment performance, evaluate the capital expenditure** (excluding ROU) and interest income/finance costs allocated to each manufacturing segment - this provides insights into regional investment strategies and funding costs."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing board diversity, compare 'Composition of Board of Directors by Gender' and 'by Age Group' against internal diversity targets or industry benchmarks - this highlights progress or gaps in board diversity."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing governance oversight effectiveness, review 'Directors' Attendance at Board and Board Committee Meetings' (especially for external/independent directors) - low attendance may signal disengagement or capacity issues, impacting oversight effectiveness."
+  section_number: 32
+  quality_score: 9
+- instruction: "When assessing governance, note the comprehensive 'No' answers to various background questions for re-electing directors - while basic compliance, a sudden 'Yes' in future years would trigger a significant red flag for integrity."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating anti-corruption efforts, track 'Total number of operations assessed for risks related to corruption' and 'Percentage of operations assessed' (if reported) annually - this indicates the comprehensiveness of risk management coverage."
+  section_number: 32
+  quality_score: 9
+- instruction: "When evaluating anti-corruption efforts, compare the 'Percentage of governance body members' and 'Percentage of employees' that have received anti-corruption training - this highlights the extent of ethical culture dissemination across all organizational levels."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing remuneration, differentiate the components (Salary, Bonus, Restricted Share Plan, Allowances, Fees) for 'Executive Directors' vs. 'Independent Non-Executive Directors' - this highlights the varying compensation structures and alignment with performance/governance roles."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing long-term incentives, track the movement of 'Awards under the Fu Yu Restricted Share Plan' (granted, vested, outstanding) for key individuals - this indicates the pace of equity compensation vesting and its potential dilutive impact."
+  section_number: 32
+  quality_score: 9
+- instruction: "When analyzing ownership concentration, examine the 'Distribution of Shareholdings' to identify the concentration of ownership among '1,000,001 AND ABOVE' shareholding sizes - high concentration suggests significant control by a few large investors."
+  section_number: 32
+  quality_score: 9
+- instruction: "When identifying potential conflicts, cross-reference the 'Substantial Shareholders' list with 'Directors' Key Information' and 'Remuneration of Substantial Shareholder' to identify instances where substantial shareholders are also active in management or on the board - this indicates a close alignment or potential for influence."
+  section_number: 32
+  quality_score: 9

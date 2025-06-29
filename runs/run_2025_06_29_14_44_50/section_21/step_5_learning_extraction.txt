@@ -1,0 +1,9 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When audit opinion is qualified, analyze systemic governance implications and potential unquantified liabilities; these erode trust and constrain operations."
+  section_number: 21
+  quality_score: 8
+  word_count: 24
+- instruction: "When assessing liquidity or other financial strengths, analyze how unquantified or contingent liabilities can undermine their effective buffer capacity."
+  section_number: 21
+  quality_score: 8
+  word_count: 25

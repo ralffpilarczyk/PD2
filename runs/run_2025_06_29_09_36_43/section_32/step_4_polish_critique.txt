@@ -1,0 +1,204 @@
+This appendix provides a large volume of data, extracted and presented cleanly in markdown tables. The introductory statement clearly defines its purpose as a "clean data reference tool" by excluding narrative and analytical insights, which is well-aligned with appendix best practices.
+
+However, there are significant opportunities to improve its **CLARITY** and **ORGANIZATION**, making it a more effective reference tool.
+
+Here's a detailed critique:
+
+### Overall Strengths:
+
+*   **Pure Data Focus:** Successfully adheres to the stated objective of presenting raw data without narrative or analysis.
+*   **Data Integrity:** All numerical data, figures, and original formatting appear to be retained, which is crucial for an appendix.
+*   **Source Citation:** Each table correctly cites its source document and page number, facilitating verification.
+*   **Footnotes:** Necessary footnotes (e.g., for restated units, specific definitions) are included and well-placed.
+*   **Table Formatting:** Markdown tables are generally well-formed and readable, with appropriate column alignment for numerical data.
+
+### Areas for Improvement (Clarity & Organization):
+
+1.  **Overly Broad Sections and Lack of Hierarchy:**
+    *   **"3. Supporting Financials"** is excessively broad. It currently serves as a catch-all for various financial notes including detailed breakdowns of PPE, investment property, subsidiaries, goodwill, receivables, inventories, loans, cash, capital structure, payables, contract balances, income statement components, *discontinued operations*, *financial risk management*, and *leases*. This makes it very difficult for a user to quickly locate specific information.
+    *   **"5. Shareholder & Governance Data"** suffers from the same problem. It lumps together board composition, anti-corruption, director attendance, director personal information, remuneration, share-based payments, and general shareholder information. Each of these sub-topics contains multiple tables.
+    *   **"6. All Other Miscellaneous Data Tables"** indicates a failure in categorization. Ideally, an appendix should be logically structured enough that a "miscellaneous" section is minimal or non-existent.
+
+2.  **Misplaced Data Blocks:**
+    *   **Financial Risk Management (from original Section 3):** This is a critical and substantial block of data. It should have its own top-level section (e.g., "Financial Risk Management").
+    *   **Lease Information (from original Section 3):** Similarly, the detailed lease tables (as lessee and lessor) are comprehensive enough to warrant their own top-level section (e.g., "Lease Information").
+    *   **Financial Summaries (from original Section 2):** Tables like "Earnings per Ordinary Share (Basic and Diluted)," "Net Asset Value per Ordinary Share," "Operating (Loss)/Profit and Net (Loss)/Profit (Summary)," and "Financial Position Summary (1H2024 Snapshot)" are *summaries* or *derived metrics*. While valuable, they disrupt the flow of the core financial statements (Balance Sheet, Income Statement, Cash Flow, Changes in Equity). A dedicated sub-section or even a new top-level section for "Financial Summaries and Key Ratios" could improve clarity. The "1H2024 Snapshot" is particularly distinct as it's from an interim report and summarises a different period than the annual statements, making its current placement slightly confusing.
+    *   **"Corporate Information - Board of Directors & Committees" and "Our Business Memberships" (from original Section 6):** These are general corporate directory/information rather than performance or governance data. They would be better placed in a "Corporate and General Information" section.
+
+3.  **Lack of Granular Sub-headings:**
+    Even if the top-level sections are re-organized, the sheer number of tables within them necessitates more granular sub-headings (e.g., using `###` or `####` in Markdown) to group highly related tables. For example, all tables related to "Property, Plant and Equipment" should be under their own specific sub-heading within a broader financial notes section.
+
+4.  **Ambiguous Symbols:**
+    *   In the "Corporate ISO and QS Certification" table, the `^` symbol is used repeatedly without any explanation. This significantly impacts clarity as the reader cannot immediately understand what it signifies (e.g., "certified," "applicable," "in progress"). A simple footnote or legend is needed.
+
+### Specific Recommendations for Improvement:
+
+To transform this appendix into a truly "clean data reference tool," I recommend the following structural overhaul:
+
+**Revised Appendix Structure (Example):**
+
+**SECTION 32: Appendix**
+*(Maintain the current introductory text here, as it's clear and concise)*
+
+---
+
+**1. Operational Key Performance Indicators (KPIs)**
+    *   Corporate ISO and QS Certification (Add footnote: `^` indicates certification obtained)
+    *   Energy Consumption
+    *   Energy Sold
+    *   RECs Sold
+    *   Energy Intensity
+    *   Greenhouse Gas (GHG) Emissions Profile
+    *   Water Withdrawn (Third-party Water)
+    *   Waste Diverted from Disposal
+    *   Waste Directed to Disposal
+    *   Work-Related Injuries
+    *   Total Number of Employees by Gender and Region
+    *   Total Number of Employees, by Gender and Region (Historical)
+    *   Number of New Hire & Hiring Rate
+    *   Number of Resignations and Turnover Rate
+    *   Employee Composition by Category and Gender
+    *   Employee Composition by Category and Age Group
+    *   Average Training Hours per Employee
+    *   Average Training Hours per Employee by Category
+    *   Percentage of Staff Receiving Performance & Career Development Review
+
+**2. Core Financial Statements (Group & Company)**
+    *   Condensed Interim Statements of Financial Position (Group)
+    *   Condensed Interim Statements of Financial Position (Company)
+    *   Condensed Interim Consolidated Income Statement
+    *   Condensed Interim Consolidated Statement of Comprehensive Income
+    *   Condensed Interim Statements of Changes in Equity (Group)
+    *   Condensed Interim Statements of Changes in Equity (Company)
+    *   Condensed Interim Consolidated Statement of Cash Flows
+
+**3. Financial Summaries & Key Metrics**
+    *   Earnings per Ordinary Share (Basic and Diluted)
+    *   Net Asset Value per Ordinary Share
+    *   Operating (Loss)/Profit and Net (Loss)/Profit (Summary)
+    *   Financial Position Summary (1H2024 Snapshot)
+
+**4. Financial Notes & Supplementary Data**
+    *   **4.1 Property, Plant and Equipment (PPE)**
+        *   Property, Plant and Equipment (Group)
+        *   Property, Plant and Equipment (Company)
+        *   Property, Plant and Equipment - Non-Cash Transactions
+        *   Property, Plant and Equipment - Impairment Assessment - Fair Value Less Costs of Disposal
+        *   Property, Plant and Equipment - Impairment Assessment - Value in Use Key Assumptions
+    *   **4.2 Investment Property**
+        *   Investment Property
+        *   Investment Property Fair Value
+        *   Investment Property Details
+    *   **4.3 Goodwill**
+        *   Goodwill
+        *   Goodwill Impairment Testing Key Assumptions
+    *   **4.4 Subsidiaries**
+        *   Subsidiaries - Equity Investments and Impairment
+        *   Subsidiaries - Movement in Impairment Allowance
+        *   Details of Subsidiaries
+    *   **4.5 Receivables & Inventories**
+        *   Trade and Other Receivables
+        *   Amounts Due from Subsidiaries
+        *   Movement in Impairment Allowance for Amounts Due from Subsidiaries
+        *   Inventories
+        *   Movements in Allowance for Stock Obsolescence
+    *   **4.6 Capital & Liabilities**
+        *   Loans and Borrowings
+        *   Loans and Borrowings - Terms and Debt Repayment Schedule (Group)
+        *   Loans and Borrowings - Terms and Debt Repayment Schedule (Company)
+        *   Reconciliation of Movements of Loans and Borrowings and Lease Liabilities to Cash Flows from Financing Activities
+        *   Cash and Bank Balances
+        *   Share Capital
+        *   Capital Management
+        *   Reserves
+        *   Trade and Other Payables
+        *   Provision for Reinstatement Costs
+        *   Movement in Provision for Reinstatement Costs
+    *   **4.7 Revenue & Expense Details**
+        *   Contract Balances
+        *   Significant Changes in Contract Balances
+        *   Other Income (Group)
+        *   Other Expenses, Net (Group)
+        *   Finance Costs (Group)
+        *   Components of Loss for the Year
+        *   Tax Expense/(Credit) (Group)
+        *   Tax (Credit)/Expense (2H and FY)
+    *   **4.8 Discontinued Operations**
+        *   Discontinued Operation - Results
+        *   Discontinued Operations - Cash Flow
+        *   Discontinued Operations - Results (2H and FY)
+        *   Discontinued Operations - Cash Flow (2H and FY)
+    *   **4.9 Capital Expenditure Commitments**
+
+**5. Financial Risk Management**
+    *   Financial Risk Management - Credit Risk Exposure by Geographical Area
+    *   Financial Risk Management - Expected Credit Loss (ECL) of Trade Receivables, Other Receivables, and Contract Assets
+    *   Financial Risk Management - Movements in Impairment Loss for Trade and Other Receivables
+    *   Financial Risk Management - Liquidity Risk - Contractual Maturities (Group)
+    *   Financial Risk Management - Liquidity Risk - Contractual Maturities (Company)
+    *   Financial Risk Management - Interest Rate Risk Profile
+    *   Financial Risk Management - Foreign Currency Risk Exposure (US Dollar)
+    *   Financial Risk Management - Accounting Classification and Fair Values (Group)
+    *   Financial Risk Management - Accounting Classification and Fair Values (Company)
+    *   Financial Risk Management - Accounting Classification and Fair Values (Group) (Condensed)
+    *   Financial Risk Management - Accounting Classification and Fair Values (Company) (Condensed)
+
+**6. Lease Information**
+    *   Leases as Lessee - Right-of-Use Assets (Group)
+    *   Leases as Lessee - Right-of-Use Assets (Company)
+    *   Leases as Lessee - Amounts Recognised in Profit or Loss
+    *   Leases as Lessor - Maturity Analysis of Lease Payments to be Received
+
+**7. Segment Reporting**
+    *   Revenue Disaggregation by Primary Geographical Markets, Major Products, Service Lines, and Timing of Revenue Recognition (Six Months Ended)
+    *   Revenue Disaggregation by Primary Geographical Markets, Major Products, Service Lines, and Timing of Revenue Recognition (Twelve Months Ended)
+    *   Breakdown of Sales (Half-Year Comparison)
+    *   Segment Reporting (Full Data) - Revenue and Expenses
+    *   Segment Reporting (Full Data) - Assets and Liabilities
+
+**8. Shareholder & Governance Data**
+    *   **8.1 Board Composition & Operations**
+        *   Composition of Board of Directors by Gender
+        *   Composition of Board of Directors by Age Group
+        *   Directors' Attendance at Board and Board Committee Meetings
+        *   Directors' Attendance at AGM (FY2023 AGM)
+        *   Directors' Key Information
+        *   Directors Seeking Re-Election - Key Information
+        *   Directors Seeking Re-Election - Conflict of Interests & Working Experience
+        *   Directors Seeking Re-Election - Other Matters (Summary of "No" answers)
+    *   **8.2 Anti-Corruption Performance**
+        *   Anti-Corruption Performance: Operations Assessed for Risks
+        *   Anti-Corruption Performance: Communication and Training for Governance Body Members
+        *   Anti-Corruption Performance: Communication and Training for Employees
+    *   **8.3 Remuneration**
+        *   Breakdown of Remuneration for Directors
+        *   Aggregate Remuneration Paid to Directors
+        *   Breakdown of Remuneration for Key Management Personnel (Excluding Directors and GCEO)
+        *   Aggregate Remuneration Paid to Key Management Personnel
+        *   Remuneration of Immediate Family Members of GCEO
+        *   Remuneration of Substantial Shareholder
+        *   Key Management Personnel Compensation
+    *   **8.4 Share-Based Payment Arrangements**
+        *   Awards Under the Fu Yu Restricted Share Plan for Directors
+        *   Movement in Share Awards Reserve
+        *   Reconciliation of Outstanding RSP Awards
+        *   Share-Based Payment Arrangements - Measurement of RSP Awards (Cash-Settled)
+        *   Movements of Cash-Settled Share-Based Payment Liabilities
+        *   Share-Based Payment Arrangements - Measurement of RSP Awards (Equity-Settled) - Key Assumptions
+        *   Key Assumptions for Financial Performance of Base Case Scenario (Manufacturing Segment)
+    *   **8.5 Shareholder Information**
+        *   Dividends Declared and Paid
+        *   Dividends Declared and Paid (Condensed)
+        *   Total Issued and Paid-up Share Capital
+        *   Distribution of Shareholdings
+        *   Substantial Shareholders as at 3 June 2025
+        *   Twenty Largest Shareholders
+    *   **8.6 Related Party Transactions**
+        *   Related Party Transactions - Purchase of Services
+        *   Managerial Position in Issuer/Principal Subsidiaries who is a Relative of Director/CEO/Substantial Shareholder
+
+**9. Corporate & General Information**
+    *   Corporate Information - Board of Directors & Committees
+    *   Our Business Memberships
+
+Implementing this hierarchical structure with more descriptive top-level and sub-level headings will dramatically improve the clarity and organization of this appendix, making it far more intuitive and efficient for any user seeking specific data.

@@ -1,0 +1,17 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When comparing non-financial metrics, scrutinize for changes in reporting methodology (e.g., outsourced workers) that compromise comparability."
+  section_number: 1
+  quality_score: 8
+  word_count: 20
+- instruction: "When significant assets are leased, quantify proportion to total; assess implications for control, flexibility, and strategic alignment."
+  section_number: 1
+  quality_score: 7
+  word_count: 20
+- instruction: "When strategic shifts involve segment reallocation, identify missing corresponding profitability or margin data as a critical assessment gap."
+  section_number: 1
+  quality_score: 8
+  word_count: 21
+- instruction: "When a qualified audit opinion is issued, analyze stated reasons as major red flag for systemic governance and internal control weaknesses."
+  section_number: 1
+  quality_score: 9
+  word_count: 22

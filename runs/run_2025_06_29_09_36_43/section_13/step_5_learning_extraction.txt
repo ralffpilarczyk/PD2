@@ -1,0 +1,31 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When analyzing strategic objectives related to technological advancement or high-precision capabilities, compare stated capital expenditure (CAPEX) with the ambition of the objective and the demands of the operating environment – a mismatch can indicate insufficient investment or unrealistic targets."
+  section_number: 13
+  quality_score: 9
+- instruction: "When evaluating claims of financial turnaround and cost management, critically assess the nature and aggressiveness of cost-cutting measures (e.g., in selling/admin expenses) against long-term growth objectives – aggressive cuts can impair future capabilities and contradict stated growth trajectories."
+  section_number: 13
+  quality_score: 10
+- instruction: "When assessing sustainability objectives, scrutinize the resource allocation for these initiatives relative to the company's immediate core strategic priorities (e.g., financial recovery, core business transformation) – significant diversions may indicate misaligned priorities or strain on critical resources."
+  section_number: 13
+  quality_score: 9
+- instruction: "When corporate strategies presented closely resemble core capabilities or business models, challenge management to articulate quantifiable competitive advantages and specific financial impact (e.g., higher margins, market share gain) beyond generic claims like 'one-stop solution'."
+  section_number: 13
+  quality_score: 10
+- instruction: "When evaluating geographical diversification strategies, analyze the direct profitability impact of shifts in manufacturing footprint between regions (e.g., from lower-cost to higher-cost locales) and cross-reference with any concurrent major events (e.g., scandals, discontinued operations) to discern true strategic intent from reactive changes."
+  section_number: 13
+  quality_score: 10
+- instruction: "When assessing customer-centric engagement strategies, demand specific, non-obvious activities that genuinely differentiate the company and quantify how these activities directly translate into securing higher-margin projects or enhanced customer lifetime value, beyond general claims of 'long-term partnerships'."
+  section_number: 13
+  quality_score: 9
+- instruction: "When evaluating claims of strong corporate governance and risk management, *always* cross-reference with the auditor's opinion (especially qualified opinions), ongoing investigations into past segments, and any significant shareholder activism (e.g., board requisition) – these are critical indicators of severe internal control weaknesses and management distraction."
+  section_number: 13
+  quality_score: 10
+- instruction: "When assessing management's 'growth trajectory' or 'optimistic outlook' claims, break down full-year financial performance into sequential (e.g., half-year) periods, meticulously separating continuing from discontinued operations to reveal the true underlying performance of core segments and identify any misleading aggregate figures."
+  section_number: 13
+  quality_score: 10
+- instruction: "For companies in knowledge-intensive or high-precision manufacturing sectors, critically cross-reference talent development and retention claims with key HR metrics like employee turnover rates and average training hours per employee – declining training hours or high turnover are severe red flags for long-term capability, quality, and innovation."
+  section_number: 13
+  quality_score: 10
+- instruction: "When evaluating strategic viability, assess the balance between net cash generated from operations and CAPEX, especially in the context of stated growth objectives, liquidity constraints, and overall debt levels – this reveals the true funding capacity for strategic initiatives."
+  section_number: 13
+  quality_score: 9

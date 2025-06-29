@@ -6,5 +6,104 @@
       "depth_ratio": 0.00014383660162055906
     },
     "average_depth_ratio": 0.00014383660162055906
+  },
+  "run_2": {
+    "section_1": {
+      "insights_count": 3,
+      "output_length": 1583,
+      "depth_ratio": 0.0018951358180669614
+    },
+    "section_7": {
+      "insights_count": 12,
+      "output_length": 1459,
+      "depth_ratio": 0.00822481151473612
+    },
+    "section_13": {
+      "insights_count": 8,
+      "output_length": 1406,
+      "depth_ratio": 0.005689900426742532
+    },
+    "section_21": {
+      "insights_count": 4,
+      "output_length": 1270,
+      "depth_ratio": 0.0031496062992125984
+    },
+    "section_29": {
+      "insights_count": 2,
+      "output_length": 1218,
+      "depth_ratio": 0.0016420361247947454
+    },
+    "section_32": {
+      "insights_count": 5,
+      "output_length": 20982,
+      "depth_ratio": 0.00023829949480507102
+    },
+    "average_depth_ratio": 0.0034732982797263385
+  },
+  "run_3": {
+    "section_1": {
+      "insights_count": 2,
+      "output_length": 1034,
+      "depth_ratio": 0.0019342359767891683
+    },
+    "section_7": {
+      "insights_count": 4,
+      "output_length": 1134,
+      "depth_ratio": 0.003527336860670194
+    },
+    "section_13": {
+      "insights_count": 4,
+      "output_length": 1417,
+      "depth_ratio": 0.0028228652081863093
+    },
+    "section_21": {
+      "insights_count": 5,
+      "output_length": 1253,
+      "depth_ratio": 0.0039904229848363925
+    },
+    "section_29": {
+      "insights_count": 3,
+      "output_length": 1833,
+      "depth_ratio": 0.0016366612111292963
+    },
+    "section_32": {
+      "insights_count": 12,
+      "output_length": 20201,
+      "depth_ratio": 0.000594029998514925
+    },
+    "average_depth_ratio": 0.0024175920400210473
+  },
+  "run_4": {
+    "section_1": {
+      "insights_count": 2,
+      "output_length": 1487,
+      "depth_ratio": 0.0013449899125756557
+    },
+    "section_7": {
+      "insights_count": 4,
+      "output_length": 804,
+      "depth_ratio": 0.004975124378109453
+    },
+    "section_13": {
+      "insights_count": 2,
+      "output_length": 572,
+      "depth_ratio": 0.0034965034965034965
+    },
+    "section_21": {
+      "insights_count": 4,
+      "output_length": 713,
+      "depth_ratio": 0.005610098176718092
+    },
+    "section_29": {
+      "insights_count": 2,
+      "output_length": 713,
+      "depth_ratio": 0.002805049088359046
+    },
+    "section_32": {
+      "insights_count": 8,
+      "output_length": 17242,
+      "depth_ratio": 0.00046398329660132234
+    },
+    "average_depth_ratio": 0.0031159580581445107
   }
 }

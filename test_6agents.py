@@ -11,7 +11,7 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Import test sections
-from test_sections import sections
+from src.profile_sections import sections
 
 class MultiSectionTester:
     def __init__(self, markdown_files: List[str]):

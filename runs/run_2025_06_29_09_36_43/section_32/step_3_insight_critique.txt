@@ -1,0 +1,96 @@
+This appendix is a commendable effort at consolidating data, demonstrating a clear understanding of the need for a central data reference. Here's a critique based on your specific criteria:
+
+## Critique of Appendix for Data Organization and Presentation
+
+**Overall Impression:**
+The appendix has a strong foundation, with a logical macro-structure and excellent adherence to sourcing. However, its utility as a "clean data reference tool" is significantly hampered by some tables containing narrative content and several critical tables suffering from severe formatting issues in Markdown, rendering them unusable.
+
+---
+
+### 1. Pure Data Focus: Remove any analytical narratives, insights, or "What-Why-So What" content
+
+*   **Strengths:**
+    *   **High Adherence in Most Tables:** The vast majority of tables successfully present raw, numerical, or factual data without interpretation. This includes operational KPIs, most financial statements (e.g., Balance Sheets, Income Statements), and granular financial details.
+    *   **Informative Footnotes:** Footnotes are used effectively to explain data nuances (e.g., restatements, unit changes, specific definitions), which supports data integrity without introducing analysis.
+*   **Weaknesses / Recommendations for Removal:**
+    *   **"Key Audit Matter: Impairment Assessment on the Group's Non-Current Assets (AC Comments)"**: This table is explicitly **narrative and analytical**. It describes the Audit Committee's review process, findings ("No impairment loss is required..."), and recognized impairment. This is "What-Why-So What" content and directly violates the pure data focus.
+        *   **Recommendation:** Remove this table.
+    *   **"United Nations Development Goals (UNSDGs) Supported"**: The "How we support" column contains lengthy, descriptive paragraphs about the company's initiatives. This is strategic narrative and not raw data.
+        *   **Recommendation:** Remove this table.
+    *   **"Stakeholder Engagement Methods, Frequency, Key Topics of Interest, and Responses"**: The "Engagement Methods," "Key Topics of Interest," and "Responses" columns are filled with descriptive text and bulleted lists explaining processes and qualitative information. This is highly narrative.
+        *   **Recommendation:** Remove this table.
+    *   **Minor Narrative Elements:** Tables like "Property, Plant and Equipment - Impairment Assessment - Fair Value Less Costs of Disposal" or "Directors Seeking Re-Election - Other Matters (Summary of 'No' answers)" contain descriptive text about methodologies or summarized disclosures. While they are "data" in a broad sense, they lean towards qualitative description rather than strict quantitative data. However, given they describe factual disclosures/methodologies, they are acceptable if strictly interpreted as *raw information* about policies/assertions. The three tables above are much clearer violations.
+
+---
+
+### 2. Table Organization: Are tables logically sequenced (operational → financial → governance)?
+
+*   **Strengths:**
+    *   **Excellent High-Level Structure:** The main sections ("1. Operational KPIs," "2. Consolidated Financials," "3. Supporting Financials," "4. Segment Reporting," "5. Shareholder & Governance Data," and "6. All Other Miscellaneous Data Tables") are very logical and align perfectly with standard reporting and analysis frameworks (ESG, core financials, detailed financials, business segments, and corporate governance).
+    *   **Logical Grouping within Sections:** Tables within each section are generally well-grouped by topic (e.g., all "Property, Plant and Equipment" details are together, followed by "Investment Property", then "Subsidiaries", etc. within "Supporting Financials"). This significantly aids navigation.
+*   **Weaknesses:** None at the high-level. The organization is a strong point.
+
+---
+
+### 3. Data Integrity: Are all important tables from source documents included?
+
+*   **Strengths:**
+    *   **Explicit Statement of Retention:** The introductory paragraph explicitly states that "All numerical data, figures, and formatting from the original tables have been retained without alteration or aggregation." This is a crucial claim for data integrity.
+    *   **Consistent Source Attribution:** Every single table includes a clear "Source: [Document Name], Page [Number]". This is outstanding for traceability and verification, directly supporting data integrity.
+    *   **Cross-Referenced Footnotes:** Many tables use footnotes that point to other related tables or notes within the original source document (e.g., `Note 3`, `Note 15`), which further enhances data integrity and context.
+*   **Weaknesses (Indirect):**
+    *   **Cannot Verify Completeness:** Without access to the original source documents, it's impossible to fully verify if *all* important tables were included.
+    *   **Formatting Issues Mask Verification:** The severe formatting issues in several tables (discussed in point 4) make it impossible to properly read or verify the data within those tables, thus indirectly impacting the perceived data integrity, even if the data was originally copied correctly. The blank cell in "Anti-Corruption Performance: Operations Assessed for Risks" might indicate a missing data point, which would be a data integrity issue if it was present in the source.
+
+---
+
+### 4. Clean Format: Are tables properly formatted in Markdown with clear headers?
+
+*   **Strengths:**
+    *   **Mostly Clean Formatting:** A large number of tables are well-formatted in Markdown. Headers are clear, alignment is consistent (`:---`, etc.), and the use of bolding and `<br>` for readability within cells is effective.
+    *   **Complex Header Successes:** The multi-level headers in tables like "Condensed Interim Consolidated Income Statement" and "Condensed Interim Consolidated Statement of Comprehensive Income" are exceptionally well-executed, demonstrating a good grasp of advanced Markdown table techniques for certain structures.
+*   **Weaknesses / Major Areas for Improvement:**
+    *   **Severe Formatting Breakdowns in Key Tables:** This is the **most critical flaw** in the appendix. Several tables are rendered as unreadable messes due to Markdown's limitations in handling complex original layouts (e.g., merged cells, highly nested headers without clear delimiters). These include:
+        *   "Total Number of Employees, by Gender and Region (Historical)"
+        *   "Number of New Hire & Hiring Rate"
+        *   "Number of Resignations and Turnover Rate"
+        *   "Condensed Interim Consolidated Statement of Cash Flows"
+        These tables contain jumbled data and header rows that do not align, making them unusable.
+    *   **Excessive Width:** While Markdown handles the structure, several detailed financial tables (e.g., "Condensed Interim Statements of Changes in Equity", "Property, Plant and Equipment (Group/Company)", "Segment Reporting (Full Data)") are extremely wide. This forces excessive horizontal scrolling on most screens, significantly degrading the user experience.
+    *   **Minor Ambiguity:** The "Work-Related Injuries" table's data columns (e.g., "— | 0.0") could be clarified with explicit headers for "Number" and "Rate" if that was the original intent.
+*   **Recommendation:** These broken tables must be *re-engineered* for Markdown. This may involve:
+    *   Splitting large tables into smaller, more manageable ones.
+    *   Re-orienting rows and columns to simplify the header structure.
+    *   Using introductory text to describe what the data represents if a direct Markdown table translation is impossible.
+    *   For excessively wide tables, consider if some data can be summarized or if the original source provided alternative, more condensed views.
+
+---
+
+### 5. Reference Utility: Is this easy to use as a data lookup tool?
+
+*   **Strengths:**
+    *   **Clear Sectioning and Sourcing:** The overall organization into well-named sections and the consistent source citations for every table greatly enhance the ability to find data quickly.
+    *   **Mostly Readable Tables:** For the majority of tables that are well-formatted, looking up specific data points is straightforward.
+*   **Weaknesses:**
+    *   **Unusable Tables:** The most significant detriment to reference utility is the presence of several completely broken and unreadable tables. If a user needs data from these specific tables, the appendix fails completely.
+    *   **Horizontal Scrolling Fatigue:** The extreme width of some tables, especially in the financial and segment reporting sections, makes them difficult to consume. Users may avoid these sections or find the experience frustrating.
+    *   **Narrative Interference:** The inclusion of non-data-focused tables (as identified in point 1) clutters the appendix and detracts from its intended purpose as a *pure data* reference.
+
+---
+
+## Summary of Recommendations:
+
+1.  **Strictly Enforce Pure Data Focus:**
+    *   **REMOVE:** "Key Audit Matter: Impairment Assessment on the Group's Non-Current Assets (AC Comments)"
+    *   **REMOVE:** "United Nations Development Goals (UNSDGs) Supported"
+    *   **REMOVE:** "Stakeholder Engagement Methods, Frequency, Key Topics of Interest, and Responses"
+2.  **Meticulously Reformat Broken Tables:** This is the highest priority. For tables like "Total Number of Employees, by Gender and Region (Historical)", "Number of New Hire & Hiring Rate", "Number of Resignations and Turnover Rate", and "Condensed Interim Consolidated Statement of Cash Flows", you must:
+    *   Analyze the original structure (e.g., merged cells, complex multi-year/multi-region headers).
+    *   Break them down into simpler, individual Markdown tables if necessary.
+    *   Ensure every header and data cell aligns correctly.
+    *   Consider re-orienting data (e.g., years as rows instead of columns) if it simplifies the Markdown representation.
+3.  **Optimize for Readability (Wide Tables):** For tables that are inherently very wide (e.g., Statements of Changes in Equity, Segment Reporting), while difficult to perfectly solve in Markdown, ensure they are as clear as possible. Acknowledge that horizontal scrolling may be required.
+4.  **Review Minor Ambiguities:** Clarify headers like in "Work-Related Injuries" to clearly separate numbers and rates if applicable.
+5.  **Re-evaluate "Corporate Information - Board of Directors & Committees":** While not a severe issue, consider converting this structured list into a formal Markdown table for consistency (e.g., "Role | Name" columns).
+
+By addressing these points, particularly the formatting of the broken tables and the removal of narrative content, this appendix can transform from a good attempt into an exceptionally valuable and user-friendly data reference tool.

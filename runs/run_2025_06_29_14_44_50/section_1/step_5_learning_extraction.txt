@@ -1,0 +1,9 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When significant operational shifts are framed positively, cross-reference auditor's reports for governance red flags and financial implications."
+  section_number: 1
+  quality_score: 8
+  word_count: 19
+- instruction: "When geographic revenue shifts occur, analyze associated cost structures (labor, logistics) to assess potential margin compression."
+  section_number: 1
+  quality_score: 8
+  word_count: 20

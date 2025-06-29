@@ -1,0 +1,60 @@
+RUN SUMMARY - 2025_06_29_09_36_43
+============================================================
+
+SECTIONS PROCESSED: [1, 7, 13, 21, 29, 32]
+
+QUALITY METRICS:
+{
+  "section_1": {
+    "insights_count": 3,
+    "output_length": 1583,
+    "depth_ratio": 0.0018951358180669614
+  },
+  "section_7": {
+    "insights_count": 12,
+    "output_length": 1459,
+    "depth_ratio": 0.00822481151473612
+  },
+  "section_13": {
+    "insights_count": 8,
+    "output_length": 1406,
+    "depth_ratio": 0.005689900426742532
+  },
+  "section_21": {
+    "insights_count": 4,
+    "output_length": 1270,
+    "depth_ratio": 0.0031496062992125984
+  },
+  "section_29": {
+    "insights_count": 2,
+    "output_length": 1218,
+    "depth_ratio": 0.0016420361247947454
+  },
+  "section_32": {
+    "insights_count": 5,
+    "output_length": 20982,
+    "depth_ratio": 0.00023829949480507102
+  }
+}
+
+INSIGHT MEMORY STATE (Instruction-based):
+- Active sections: [13, 29, 32, 7, 21]
+- Insights by section: {13: 2, 29: 1, 32: 1, 7: 1, 21: 1}
+- Total insights: 6/30 (20.0% utilized)
+- Quality threshold: 9+/10 for instruction value
+- Max per section: 6 analytical instructions
+- Display limit: Top 5 instructions shown per section
+
+INSIGHT OPTIMIZATION:
+- Section-based storage (no cross-section pollution)
+- Instruction format for analytical enhancement
+- LLM-driven diversity optimization
+- High-quality threshold (9+/10 only)
+
+OUTPUTS SAVED:
+- Individual section analyses: runs/run_2025_06_29_09_36_43/section_X/
+- Step-by-step process: Each step saved for review
+- Memory review: runs/run_2025_06_29_09_36_43/memory_review/
+- Quality metrics: quality_metrics/insight_depth_scores.json
+
+STATUS: Run completed successfully

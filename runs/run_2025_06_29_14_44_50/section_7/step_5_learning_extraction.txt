@@ -1,0 +1,9 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When discrepancies appear between different financial reports for the same period, reconcile them to assess data reliability."
+  section_number: 7
+  quality_score: 9
+  word_count: 20
+- instruction: "When a qualified audit opinion is issued, investigate its reasons deeply to assess full financial impact and implications."
+  section_number: 7
+  quality_score: 9
+  word_count: 21

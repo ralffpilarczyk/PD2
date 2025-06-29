@@ -1,0 +1,9 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When significant corporate actions occur or unusual performance appears, check the audit opinion for qualifications signaling severe control breakdowns."
+  section_number: 7
+  quality_score: 10
+  word_count: 24
+- instruction: "When operational earnings (EBITDA) are positive but operating cash flow is low or negative, investigate working capital for quality of earnings."
+  section_number: 7
+  quality_score: 9
+  word_count: 23

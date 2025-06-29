@@ -1,0 +1,62 @@
+RUN SUMMARY - 2025_06_29_10_54_17
+============================================================
+
+SECTIONS PROCESSED: [1, 7, 13, 21, 29, 32]
+
+QUALITY METRICS:
+{
+  "section_1": {
+    "insights_count": 2,
+    "output_length": 1034,
+    "depth_ratio": 0.0019342359767891683
+  },
+  "section_7": {
+    "insights_count": 4,
+    "output_length": 1134,
+    "depth_ratio": 0.003527336860670194
+  },
+  "section_13": {
+    "insights_count": 4,
+    "output_length": 1417,
+    "depth_ratio": 0.0028228652081863093
+  },
+  "section_21": {
+    "insights_count": 5,
+    "output_length": 1253,
+    "depth_ratio": 0.0039904229848363925
+  },
+  "section_29": {
+    "insights_count": 3,
+    "output_length": 1833,
+    "depth_ratio": 0.0016366612111292963
+  },
+  "section_32": {
+    "insights_count": 12,
+    "output_length": 20201,
+    "depth_ratio": 0.000594029998514925
+  }
+}
+
+INSIGHT MEMORY STATE (Instruction-based):
+- Active sections: [13, 29, 32, 7, 21, 1]
+- Insights by section: {13: 2, 29: 2, 32: 2, 7: 2, 21: 3, 1: 2}
+- Total insights: 13/36 (36.1% utilized)
+- Quality threshold: 9+/10 for instruction value
+- Max per section: 6 analytical instructions
+- Display limit: Top 5 instructions shown per section
+
+INSIGHT OPTIMIZATION:
+- Section-based storage (no cross-section pollution)
+- Instruction format for analytical enhancement
+- Two-stage process: Permissive collection + Harsh re-evaluation
+- Independent quality re-assessment ignoring original scores
+- Only 2-3 breakthrough insights (9-10/10) kept per section
+- Expect 60-80% rejection rate during harsh filtering
+
+OUTPUTS SAVED:
+- Individual section analyses: runs/run_2025_06_29_10_54_17/section_X/
+- Step-by-step process: Each step saved for review
+- Memory review: runs/run_2025_06_29_10_54_17/memory_review/
+- Quality metrics: quality_metrics/insight_depth_scores.json
+
+STATUS: Run completed successfully

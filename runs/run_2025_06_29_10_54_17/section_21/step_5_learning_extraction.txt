@@ -1,0 +1,9 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When management claims contradict auditor opinions or other external assessments, prioritize external assessment and highlight specific contradictions."
+  section_number: 21
+  quality_score: 10
+  word_count: 18
+- instruction: "When evaluating core business strengths, assess how material non-core or discontinued operations impact overall viability and financial stability."
+  section_number: 21
+  quality_score: 9
+  word_count: 20

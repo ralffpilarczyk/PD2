@@ -1,0 +1,25 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When analyzing competitive positioning, prioritize securing external quantitative comparisons (e.g., market share, pricing power, peer GPMs) against named competitors or broader industry averages - internal data alone, however positive, provides an incomplete and potentially misleading competitive picture."
+  section_number: 21
+  quality_score: 10
+- instruction: "When assessing claimed internal strengths or strategic shifts, differentiate clearly between internal improvements/initiatives and externally validated competitive advantages - internal performance must be benchmarked against external peers to prove superior market positioning or unique differentiation."
+  section_number: 21
+  quality_score: 10
+- instruction: "When evaluating management's qualitative claims (e.g., 'most advanced,' 'sticky revenue,' 'long-term sustainable revenue'), demand specific, quantifiable metrics or independent external verification - qualitative assertions without data or external validation are insufficient proof of competitive strength or operational quality."
+  section_number: 21
+  quality_score: 9
+- instruction: "Always reconcile positive segment-level performance (e.g., revenue growth, GPM expansion in core manufacturing) with the overall group's profitability and financial health - strong segments can mask severe competitive disadvantages or fundamental viability issues at the group level."
+  section_number: 21
+  quality_score: 10
+- instruction: "Calculate and critically assess the continuing operations' Profit Before Tax (PBT) margin relative to core revenue, and explicitly link extremely thin margins to severe competitive disadvantages such as minimal pricing power and limited capacity for crucial strategic investments (e.g., CAPEX, R&D, talent attraction) - this connection reveals deep-seated competitive vulnerabilities and future risks."
+  section_number: 21
+  quality_score: 10
+- instruction: "Investigate financial impairments (especially for discontinued operations) and qualified audit opinions not just for their immediate financial impact, but for their direct competitive implications on investor confidence, access to capital, and client trust - governance and credibility issues can be significant, non-operational competitive handicaps."
+  section_number: 21
+  quality_score: 10
+- instruction: "When analyzing impairments, particularly for discontinued operations, examine the *trend* of the impairment amounts - an increasing impairment for a divested entity signals unresolved issues and growing financial exposure, indicating a deeper, non-operational competitive handicap rooted in governance or credibility concerns."
+  section_number: 21
+  quality_score: 9
+- instruction: "When a company emphasizes a strategic shift towards 'high-growth, high-value' segments, demand specific segment-level profitability (e.g., GPMs or PBT margins for those segments) or market share data to prove the claim - general revenue growth within these areas is insufficient proof of superior competitive advantage or value capture."
+  section_number: 21
+  quality_score: 10

@@ -11,14 +11,13 @@
         "original_score": 10
       },
       {
-        "instruction": "When assessing long-term strategic viability, evaluate the impact of emerging regulatory changes or technological disruptions on core business models, even if not yet financially quantified.",
+        "instruction": "When evaluating resource allocation, specifically cross-reference capital expenditure (CAPEX) and human capital investments (e.g., training hours, strategic hires) with stated long-term strategic objectives and the evolving demands of the operating environment \u2013 this reveals potential underinvestment, misaligned priorities, or unrealistic targets that hinder future capability.",
         "section_number": 13,
         "quality_score": 10,
-        "word_count": 25,
         "added_date": "2025-06-29",
-        "run_number": 3,
+        "run_number": 1,
         "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 10
       }
     ],
     "section_29": [
@@ -39,7 +38,7 @@
         "added_date": "2025-06-29",
         "run_number": 2,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 7
       }
     ],
     "section_32": [
@@ -53,12 +52,12 @@
         "original_score": 10
       },
       {
-        "instruction": "When revenue growth outpaces gross margin growth, analyze changes in product mix, pricing strategies, or input costs to understand the erosion of underlying profitability.",
+        "instruction": "When labor costs fluctuate unexpectedly, disaggregate into headcount changes, wage rate changes, and productivity shifts to pinpoint the true driver and assess sustainability.",
         "section_number": 32,
         "quality_score": 10,
-        "word_count": 24,
+        "word_count": 23,
         "added_date": "2025-06-29",
-        "run_number": 3,
+        "run_number": 2,
         "harsh_reeval": true,
         "original_score": 8
       }
@@ -81,20 +80,19 @@
         "added_date": "2025-06-29",
         "run_number": 2,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When intercompany transactions or related-party disclosures are complex or material, analyze their terms against market rates and business rationale to identify potential value transfers or governance risks.",
-        "section_number": 7,
-        "quality_score": 10,
-        "word_count": 27,
-        "added_date": "2025-06-29",
-        "run_number": 3,
-        "harsh_reeval": true,
         "original_score": 8
       }
     ],
     "section_21": [
+      {
+        "instruction": "When assessing competitive positioning or claimed performance improvements, rigorously benchmark the company's metrics against 'best-in-class' industry peers, not just broad averages, across operational efficiency, profitability, and specific strategic capabilities \u2013 this distinguishes genuine competitive advantage from mere internal rebound or industry-wide trends.",
+        "section_number": 21,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
       {
         "instruction": "When new regulations are introduced, project their potential financial impact (e.g., compliance costs, revenue constraints) on the business model and overall viability, rather than solely relying on management's stated readiness.",
         "section_number": 21,
@@ -103,46 +101,42 @@
         "added_date": "2025-06-29",
         "run_number": 2,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
-        "instruction": "When significant legal or environmental contingencies are disclosed, assess the range of potential outcomes and their combined impact on future cash flows and long-term liabilities, beyond stated provisions.",
+        "instruction": "When assessing supply chain resilience, identify critical supplier and customer concentration risks and model their potential impact on revenue and operations if those relationships are disrupted.",
         "section_number": 21,
         "quality_score": 10,
-        "word_count": 28,
+        "word_count": 26,
         "added_date": "2025-06-29",
-        "run_number": 3,
+        "run_number": 2,
         "harsh_reeval": true,
-        "original_score": 8
+        "original_score": 7
       }
     ],
     "section_1": [
       {
-        "instruction": "When evaluating significant operational cost reductions, quantify the associated non-financial risks (e.g., employee morale impact, customer service degradation) to assess true long-term viability.",
+        "instruction": "When analyzing operational performance, correlate internal metrics with relevant external market trends (e.g., commodity prices, consumer confidence) to isolate controllable vs. uncontrollable factors impacting results.",
         "section_number": 1,
-        "quality_score": 10,
-        "word_count": 23,
+        "quality_score": 8,
+        "word_count": 25,
         "added_date": "2025-06-29",
-        "run_number": 2,
-        "harsh_reeval": true,
-        "original_score": 9
+        "run_number": 2
       },
       {
-        "instruction": "When cost reductions are announced, analyze their sustainability by distinguishing between one-off savings and structural efficiencies, looking for potential long-term operational impairment.",
+        "instruction": "When evaluating significant operational cost reductions, quantify the associated non-financial risks (e.g., employee morale impact, customer service degradation) to assess true long-term viability.",
         "section_number": 1,
-        "quality_score": 10,
-        "word_count": 22,
+        "quality_score": 9,
+        "word_count": 23,
         "added_date": "2025-06-29",
-        "run_number": 3,
-        "harsh_reeval": true,
-        "original_score": 8
+        "run_number": 2
       }
     ]
   },
   "meta": {
     "version": "3.0",
-    "total_runs": 3,
-    "last_updated": "2025_06_29_14_44_50",
+    "total_runs": 2,
+    "last_updated": "2025_06_29_10_54_17",
     "active_sections": [
       13,
       29,

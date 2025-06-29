@@ -1,0 +1,155 @@
+{
+  "insights": {
+    "section_13": [
+      {
+        "instruction": "When a company states a strategic shift (e.g., towards higher-value segments, digital transformation, asset-light model), cross-reference these claims with concurrent shifts in revenue recognition patterns, asset ownership structure (owned vs. leased), and detailed workforce composition changes \u2013 this verifies if strategic intent is genuinely reflected in underlying operational and financial mechanics.",
+        "section_number": 13,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
+        "instruction": "When assessing long-term strategic viability, evaluate the impact of emerging regulatory changes or technological disruptions on core business models, even if not yet financially quantified.",
+        "section_number": 13,
+        "quality_score": 10,
+        "word_count": 25,
+        "added_date": "2025-06-29",
+        "run_number": 3,
+        "harsh_reeval": true,
+        "original_score": 9
+      }
+    ],
+    "section_29": [
+      {
+        "instruction": "When analyzing sustainability or other non-financial initiatives, quantify the direct and indirect financial benefits (e.g., cost savings, revenue generation, risk mitigation) and demand detailed breakdowns (e.g., intensity vs. absolute, specific scope contribution) \u2013 this moves beyond generic claims to assess tangible business value and genuine impact.",
+        "section_number": 29,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
+        "instruction": "When capital is allocated to new projects, track the actual vs. projected returns of previous similar projects to assess the reliability of capital allocation processes.",
+        "section_number": 29,
+        "quality_score": 10,
+        "word_count": 25,
+        "added_date": "2025-06-29",
+        "run_number": 2,
+        "harsh_reeval": true,
+        "original_score": 10
+      }
+    ],
+    "section_32": [
+      {
+        "instruction": "When encountering 'Not Meaningful' (NM) percentage changes or extreme volatility in key financial or operational metrics, always revert to the absolute values and investigate the qualitative drivers (e.g., shift from loss to profit, one-off events, divestitures) \u2013 this uncovers the true magnitude and nature of change obscured by percentage figures and highlights underlying stability or instability.",
+        "section_number": 32,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
+        "instruction": "When revenue growth outpaces gross margin growth, analyze changes in product mix, pricing strategies, or input costs to understand the erosion of underlying profitability.",
+        "section_number": 32,
+        "quality_score": 10,
+        "word_count": 24,
+        "added_date": "2025-06-29",
+        "run_number": 3,
+        "harsh_reeval": true,
+        "original_score": 8
+      }
+    ],
+    "section_7": [
+      {
+        "instruction": "When analyzing significant operational events (e.g., site liquidations, business line cessations, asset impairments), investigate the root causes beyond immediate financial impacts or stated narratives, probing for links to governance failures, internal control weaknesses, or strategic missteps \u2013 this provides a comprehensive understanding of systemic issues rather than isolated incidents.",
+        "section_number": 7,
+        "quality_score": 10,
+        "added_date": "2025-06-29",
+        "run_number": 1,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
+        "instruction": "When significant non-recurring items impact earnings, analyze their cash flow impact and balance sheet implications to differentiate true one-off events from recurring issues masked as extraordinary.",
+        "section_number": 7,
+        "quality_score": 10,
+        "word_count": 26,
+        "added_date": "2025-06-29",
+        "run_number": 2,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
+        "instruction": "When intercompany transactions or related-party disclosures are complex or material, analyze their terms against market rates and business rationale to identify potential value transfers or governance risks.",
+        "section_number": 7,
+        "quality_score": 10,
+        "word_count": 27,
+        "added_date": "2025-06-29",
+        "run_number": 3,
+        "harsh_reeval": true,
+        "original_score": 8
+      }
+    ],
+    "section_21": [
+      {
+        "instruction": "When new regulations are introduced, project their potential financial impact (e.g., compliance costs, revenue constraints) on the business model and overall viability, rather than solely relying on management's stated readiness.",
+        "section_number": 21,
+        "quality_score": 10,
+        "word_count": 30,
+        "added_date": "2025-06-29",
+        "run_number": 2,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
+        "instruction": "When significant legal or environmental contingencies are disclosed, assess the range of potential outcomes and their combined impact on future cash flows and long-term liabilities, beyond stated provisions.",
+        "section_number": 21,
+        "quality_score": 10,
+        "word_count": 28,
+        "added_date": "2025-06-29",
+        "run_number": 3,
+        "harsh_reeval": true,
+        "original_score": 8
+      }
+    ],
+    "section_1": [
+      {
+        "instruction": "When evaluating significant operational cost reductions, quantify the associated non-financial risks (e.g., employee morale impact, customer service degradation) to assess true long-term viability.",
+        "section_number": 1,
+        "quality_score": 10,
+        "word_count": 23,
+        "added_date": "2025-06-29",
+        "run_number": 2,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
+      {
+        "instruction": "When cost reductions are announced, analyze their sustainability by distinguishing between one-off savings and structural efficiencies, looking for potential long-term operational impairment.",
+        "section_number": 1,
+        "quality_score": 10,
+        "word_count": 22,
+        "added_date": "2025-06-29",
+        "run_number": 3,
+        "harsh_reeval": true,
+        "original_score": 8
+      }
+    ]
+  },
+  "meta": {
+    "version": "3.0",
+    "total_runs": 3,
+    "last_updated": "2025_06_29_14_44_50",
+    "active_sections": [
+      13,
+      29,
+      32,
+      7,
+      21,
+      1
+    ]
+  }
+}

@@ -90,7 +90,7 @@ Create a thorough analysis that addresses all requirements. Focus on:
 4. Maintaining analytical rigor throughout
 
 MANDATORY TABLE REQUIREMENT:
-Include at least ONE well-formatted table that presents the most relevant numbers for this section. The table should:
+Include at least a small, well-formatted table that presents the most relevant numbers for this section. The table should:
 - Include proper headers and source references
 - Be formatted clearly in Markdown table syntax
 - Focus on the most important numerical data that supports your analysis
@@ -159,7 +159,7 @@ Evaluate systematically:
 3. SOURCE CITATIONS: Are all claims properly sourced with document references?
 4. TIME PERIODS: Are the proposed historical data requirements met?
 5. FORMAT REQUIREMENTS: Are tables, bullet points, etc. used as specified?
-6. TABLE REQUIREMENT: Is there at least one well-formatted table with the most relevant numbers for this section?
+6. TABLE REQUIREMENT: Is there at least one small, well-formatted table with the most relevant numbers for this section?
 7. COMPREHENSIVE CAPTURE: What additional relevant insights or data points would strengthen the analysis?
 
 For each gap identified, be specific about:
@@ -168,7 +168,7 @@ For each gap identified, be specific about:
 - How critical this gap is to meeting requirements
 - What additional relevant insights could be captured
 
-TABLE FOCUS: Ensure there is at least ONE table with the most relevant numbers for this section. If multiple tables exist, prioritize the most important one. The table can be small but must capture the key metrics that matter most for this specific section.
+TABLE FOCUS: Include at least one small table with the most relevant numbers for this section. Keep it concise but focused on the key metrics that matter most for this specific section.
 
 COMPREHENSIVE GOAL: This completeness phase should capture all material facts and requirements. 
 Subsequent phases will handle distillation and refinement. Focus on thoroughness over brevity."""
@@ -262,7 +262,7 @@ INSIGHT DISTILLATION APPROACH:
 - Prioritize insights that change how you view the business
 - Eliminate repetitive or less impactful content to reach {self.INSIGHT_WORDS} words
 
-TABLE EVALUATION: Does the analysis include at least one clear table with the MOST RELEVANT numbers for this section? Evaluate:
+TABLE EVALUATION: Does the analysis include at least one small, focused table with the MOST RELEVANT numbers for this section? Evaluate:
 - What specific metrics should be tabulated for maximum clarity and relevance
 - How time periods should be organized (columns for years/quarters)
 - What comparisons would be most valuable in table format
@@ -333,14 +333,14 @@ Evaluate:
 2. IMPACT: Are the highest-value insights prominently featured?
 3. EFFICIENCY: What redundant content can be removed without losing analytical power?
 4. CLARITY: Is the logic flow clear and well-structured?
-5. TABLE FOCUS: One essential table with the most critical numbers for this section
+5. TABLE FOCUS: One small, essential table with the most critical numbers for this section
 
 Focus on:
 - AGGRESSIVE CUTTING to reach {self.POLISH_WORDS} words exactly
 - Removing verbose explanations while keeping insights
 - Prioritizing breakthrough findings over routine observations
 - Maximum analytical impact per word
-- One focused table with the most essential metrics
+- One small, focused table with the most essential metrics
 
 Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words."""
         
@@ -370,7 +370,7 @@ Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words."""
                 phase_guidance = "FINAL PHASE: Concise and impactful."
             
             word_constraint = f"\nCONSTRAINT: Target {target_words} words - {phase_guidance}"
-            word_constraint += "\nTABLE REQUIREMENT: Ensure at least one well-formatted table with key numbers is included."
+            word_constraint += "\nTABLE REQUIREMENT: Ensure at least a small, well-formatted table with key numbers is included."
         
         prompt = f"""REVISE (do not rewrite) this analysis by applying the {critique_type} critique feedback.
 

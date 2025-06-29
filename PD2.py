@@ -7,6 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+import time
+import random
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +26,37 @@ def thread_safe_print(*args, **kwargs):
     """Thread-safe print function"""
     with print_lock:
         print(*args, **kwargs)
+
+def retry_with_backoff(func, max_retries=3, base_delay=1.0):
+    """Retry function with exponential backoff for rate limits"""
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+                if attempt < max_retries - 1:
+                    # Extract retry delay from error if available
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    if "retry_delay" in error_str:
+                        try:
+                            import re
+                            delay_match = re.search(r'seconds:\s*(\d+)', error_str)
+                            if delay_match:
+                                delay = max(delay, int(delay_match.group(1)))
+                        except:
+                            pass
+                    
+                    thread_safe_print(f"Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(delay)
+                    continue
+                else:
+                    thread_safe_print(f"Max retries exceeded for rate limit")
+                    raise
+            else:
+                # Non-rate-limit error, don't retry
+                raise
+    return None
 
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
@@ -95,10 +128,10 @@ class IntelligentAnalyst:
                     f.write(full_text)
                 
                 converted_files.append(str(output_path))
-                thread_safe_print(f"✅ Successfully converted: {output_path.name}")
+                thread_safe_print(f"Successfully converted: {output_path.name}")
                 
             except Exception as e:
-                thread_safe_print(f"❌ Failed to convert {Path(pdf_path).name}: {e}")
+                thread_safe_print(f"Failed to convert {Path(pdf_path).name}: {e}")
                 continue
         
         return converted_files
@@ -116,67 +149,67 @@ class IntelligentAnalyst:
             relevant_memory = self.insight_memory.get_relevant_memory(section_num)
             
             # Step 1: Initial Draft
-            thread_safe_print("Step 1: Creating initial draft...")
+            thread_safe_print(f"Section {section_num} - Step 1: Creating initial draft...")
             initial_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
             self.file_manager.save_step_output(section_num, "step_1_initial_draft.md", initial_draft)
             current_best = initial_draft
             
             # Step 2: Completeness Critique
-            thread_safe_print("Step 2: Completeness critique...")
+            thread_safe_print(f"Section {section_num} - Step 2: Completeness critique...")
             try:
                 completeness_critique = self.core_analyzer.completeness_critique(section, current_best)
                 self.file_manager.save_step_output(section_num, "step_2_completeness_critique.txt", completeness_critique)
                 
                 # Apply completeness critique immediately
-                thread_safe_print("Step 2b: Applying completeness critique...")
+                thread_safe_print(f"Section {section_num} - Step 2b: Applying completeness critique...")
                 current_best = self.core_analyzer.apply_critique(section, current_best, completeness_critique, "completeness")
                 self.file_manager.save_step_output(section_num, "step_2_after_completeness.md", current_best)
             except Exception as e:
-                thread_safe_print(f"  Warning: Completeness critique failed: {e}")
+                thread_safe_print(f"Section {section_num} - Warning: Completeness critique failed: {e}")
             
             # Step 3: Insight Critique (Critical step)
-            thread_safe_print("Step 3: Insight critique...")
+            thread_safe_print(f"Section {section_num} - Step 3: Insight critique...")
             try:
                 insight_critique = self.core_analyzer.insight_critique(section, current_best)
                 self.file_manager.save_step_output(section_num, "step_3_insight_critique.txt", insight_critique)
                 
                 # Apply insight critique immediately  
-                thread_safe_print("Step 3b: Applying insight critique...")
+                thread_safe_print(f"Section {section_num} - Step 3b: Applying insight critique...")
                 current_best = self.core_analyzer.apply_critique(section, current_best, insight_critique, "insight")
                 self.file_manager.save_step_output(section_num, "step_3_after_insights.md", current_best)
             except Exception as e:
-                thread_safe_print(f"  Warning: Insight critique failed: {e}")
+                thread_safe_print(f"Section {section_num} - Warning: Insight critique failed: {e}")
             
             # Step 4: Polish Critique
-            thread_safe_print("Step 4: Polish critique...")
+            thread_safe_print(f"Section {section_num} - Step 4: Polish critique...")
             try:
                 polish_critique = self.core_analyzer.polish_critique(section, current_best)
                 self.file_manager.save_step_output(section_num, "step_4_polish_critique.txt", polish_critique)
                 
                 # Apply polish critique immediately  
-                thread_safe_print("Step 4b: Applying polish critique (final output)...")
+                thread_safe_print(f"Section {section_num} - Step 4b: Applying polish critique (final output)...")
                 current_best = self.core_analyzer.apply_critique(section, current_best, polish_critique, "polish")
                 self.file_manager.save_step_output(section_num, "step_4_final_output.md", current_best)
             except Exception as e:
-                thread_safe_print(f"  Warning: Polish critique failed: {e}")
+                thread_safe_print(f"Section {section_num} - Warning: Polish critique failed: {e}")
             
             # Step 5: Learning Extraction
-            thread_safe_print("Step 5: Learning extraction...")
+            thread_safe_print(f"Section {section_num} - Step 5: Learning extraction...")
             try:
                 learning_insights = self.core_analyzer.extract_learning(section, current_best)
                 self.file_manager.save_step_output(section_num, "step_5_learning_extraction.txt", learning_insights)
             except Exception as e:
-                thread_safe_print(f"  Warning: Learning extraction failed: {e}")
+                thread_safe_print(f"Section {section_num} - Warning: Learning extraction failed: {e}")
                 learning_insights = "Learning extraction failed"
             
             # Calculate quality metrics for this section
             self.quality_tracker.calculate_section_metrics(section_num, current_best)
             
-            thread_safe_print(f"Section {section_num} completed successfully")
+            thread_safe_print(f"Section {section_num} - Completed successfully")
             return current_best
             
         except Exception as e:
-            thread_safe_print(f"Critical error in section {section_num}: {e}")
+            thread_safe_print(f"Section {section_num} - Critical error: {e}")
             # Return minimal fallback
             return f"# Section {section_num}: {section['title']}\n\nAnalysis failed due to system error."
     
@@ -188,18 +221,20 @@ class IntelligentAnalyst:
         results = {}
         
         # Determine optimal number of workers (don't exceed API rate limits)
-        actual_workers = min(max_workers, len(section_numbers), 4)  # Cap at 4 to avoid rate limits
+        actual_workers = min(max_workers, len(section_numbers), 3)  # Cap at 3 to avoid rate limits
         
         if actual_workers > 1:
             # Parallel processing mode
-            thread_safe_print(f"🚀 Processing {len(section_numbers)} sections with {actual_workers} parallel workers...")
+            thread_safe_print(f"Processing {len(section_numbers)} sections with {actual_workers} parallel workers...")
             
             with ThreadPoolExecutor(max_workers=actual_workers) as executor:
-                # Submit all section analysis tasks
-                future_to_section = {
-                    executor.submit(self.analyze_section, section_num): section_num 
-                    for section_num in section_numbers
-                }
+                # Submit section analysis tasks with staggered start to avoid rate limit spike
+                future_to_section = {}
+                for i, section_num in enumerate(section_numbers):
+                    future_to_section[executor.submit(self.analyze_section, section_num)] = section_num
+                    # Small delay between submissions to stagger API calls
+                    if i < len(section_numbers) - 1:  # Don't delay after last submission
+                        time.sleep(0.5)
                 
                 # Collect results as they complete
                 completed_count = 0
@@ -209,13 +244,17 @@ class IntelligentAnalyst:
                         result = future.result()
                         results[section_num] = result
                         completed_count += 1
-                        thread_safe_print(f"✅ Completed {completed_count}/{len(section_numbers)} sections (Section {section_num})")
+                        thread_safe_print(f"Section {section_num} - Completed ({completed_count}/{len(section_numbers)} sections done)")
                     except Exception as e:
-                        thread_safe_print(f"❌ Failed to process section {section_num}: {e}")
+                        error_str = str(e)
+                        if "429" in error_str or "quota" in error_str.lower():
+                            thread_safe_print(f"Section {section_num} - Hit rate limit: {e}")
+                        else:
+                            thread_safe_print(f"Section {section_num} - Failed to process: {e}")
                         results[section_num] = f"Processing failed: {e}"
                         completed_count += 1
             
-            thread_safe_print(f"🎉 All {len(section_numbers)} sections completed! Moving to memory review...")
+            thread_safe_print(f"All {len(section_numbers)} sections completed! Moving to memory review...")
         else:
             # Sequential processing mode (original behavior)
             for section_num in section_numbers:
@@ -223,7 +262,7 @@ class IntelligentAnalyst:
                     result = self.analyze_section(section_num)
                     results[section_num] = result
                 except Exception as e:
-                    thread_safe_print(f"Failed to process section {section_num}: {e}")
+                    thread_safe_print(f"Section {section_num} - Failed to process: {e}")
                     results[section_num] = f"Processing failed: {e}"
         
         # Post-run memory review and update
@@ -470,7 +509,7 @@ if __name__ == "__main__":
     try:
         analyst = IntelligentAnalyst(pdf_files)
     except Exception as e:
-        thread_safe_print(f"\n❌ Failed to initialize analyst: {e}")
+        thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your PDF files and try again.")
         exit()
     
@@ -518,14 +557,17 @@ if __name__ == "__main__":
         thread_safe_print("Please enter 'y' or 'n'")
     
     if parallel_choice in ['y', 'yes']:
+        thread_safe_print("Note: Higher parallelism may hit API rate limits (1M tokens/minute)")
         while True:
             try:
-                worker_input = input("Number of parallel workers (1-4, recommended: 3): ").strip()
+                worker_input = input("Number of parallel workers (1-3, recommended: 2 for rate limit safety): ").strip()
                 max_workers = int(worker_input)
-                if 1 <= max_workers <= 4:
+                if 1 <= max_workers <= 3:
+                    if max_workers > 3:
+                        thread_safe_print("Using >3 workers may cause rate limit issues")
                     break
                 else:
-                    thread_safe_print("Please enter a number between 1 and 4")
+                    thread_safe_print("Please enter a number between 1 and 3")
             except ValueError:
                 thread_safe_print("Please enter a valid number")
     else:
@@ -538,7 +580,7 @@ if __name__ == "__main__":
     thread_safe_print(f"\n{'='*60}")
     thread_safe_print("ANALYSIS COMPLETE!")
     thread_safe_print(f"{'='*60}")
-    thread_safe_print(f"📁 Run folder: runs/run_{analyst.run_timestamp}/")
-    thread_safe_print(f"📄 Professional HTML profile generated")
-    thread_safe_print(f"📊 Quality metrics and learning insights saved")
-    thread_safe_print(f"🔍 Step-by-step analysis available for review") 
+    thread_safe_print(f"Run folder: runs/run_{analyst.run_timestamp}/")
+    thread_safe_print(f"Professional HTML profile generated")
+    thread_safe_print(f"Quality metrics and learning insights saved")
+    thread_safe_print(f"Step-by-step analysis available for review") 

@@ -89,7 +89,7 @@ class ProfileGenerator:
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
         
-        print(f"✅ HTML profile saved: {html_path}")
+        print(f"HTML profile saved: {html_path}")
         return html_path
     
     def _extract_company_name(self, full_context: str) -> str:

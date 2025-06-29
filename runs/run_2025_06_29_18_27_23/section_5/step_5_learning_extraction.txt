@@ -1,0 +1,9 @@
+ANALYTICAL_INSTRUCTIONS:
+- instruction: "When strategic shifts require investment, assess capital expenditure trends against future funding capacity to gauge readiness."
+  section_number: 5
+  quality_score: 8
+  word_count: 20
+- instruction: "When average revenue per user/customer declines, analyze if volume gains offset value erosion, indicating pricing competition and cost discipline pressure."
+  section_number: 5
+  quality_score: 8
+  word_count: 28

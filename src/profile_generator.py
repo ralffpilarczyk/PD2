@@ -1,8 +1,13 @@
 import os
+import glob
 from typing import Dict, List
 from datetime import datetime
 from pathlib import Path
 import google.generativeai as genai
+from .utils import retry_with_backoff
+from .profile_sections import sections
+import markdown
+from markdown.extensions import tables
 
 
 class ProfileGenerator:
@@ -17,81 +22,195 @@ class ProfileGenerator:
             generation_config=genai.types.GenerationConfig(temperature=0.6)
         )
     
-    def generate_html_profile(self, results: Dict, section_numbers: List[int], full_context: str, sections: List[Dict]):
-        """Generate complete HTML profile document"""
+    def generate_html_profile(self, results: Dict, section_numbers: List[int], full_context: str, sections_param: List[Dict]):
+        """Generate complete markdown and HTML profile documents from existing section files"""
         
         # Extract company name
         company_name = self._extract_company_name(full_context)
-        print(f"Generating profile for: {company_name}")
+        print(f"Generating combined profile for: {company_name}")
+        
+        # Collect markdown from existing section files
+        combined_markdown, processed_sections = self._collect_section_markdown()
+        
+        if not combined_markdown:
+            print("No section markdown files found!")
+            return None
+        
+        # Clean company name for filename
+        clean_company_name = company_name.replace(' ', '_').replace('.', '').replace(',', '').replace('/', '_')
+        
+        # Save combined markdown file
+        md_filename = f"{clean_company_name}_profile.md"
+        md_path = f"runs/run_{self.run_timestamp}/{md_filename}"
+        
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(combined_markdown)
+        print(f"Combined markdown saved: {md_path}")
+        
+        # Generate HTML from combined markdown
+        html_path = self._generate_html_from_markdown(combined_markdown, processed_sections, company_name, clean_company_name)
+        
+        return html_path
+    
+    def _collect_section_markdown(self):
+        """Collect all section markdown files from the current run directory"""
+        combined_markdown = ""
+        processed_sections = []
+        
+        run_dir = f"runs/run_{self.run_timestamp}"
+        
+        # Look for section directories (section_01, section_02, etc.)
+        section_dirs = glob.glob(f"{run_dir}/section_*")
+        # Sort numerically by section number
+        section_dirs = sorted(section_dirs, key=lambda x: int(os.path.basename(x).split('_')[1]))
+        
+        for section_dir in section_dirs:
+            section_num = int(os.path.basename(section_dir).split('_')[1])
+            section_title = self._get_section_title(section_num)
+            
+            # Look for markdown files in the section directory
+            md_files = glob.glob(f"{section_dir}/*.md")
+            
+            if md_files:
+                # Use the first markdown file found
+                md_file = md_files[0]
+                
+                print(f"Reading section {section_num}: {section_title} - {md_file}")
+                
+                with open(md_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Clean up problematic code block wrappers
+                content = self._clean_markdown_content(content)
+                    
+                # Add section with proper title and anchor
+                combined_markdown += f'\n\n<a id="section_{section_num}"></a>\n\n# Section {section_num}: {section_title}\n\n'
+                combined_markdown += content
+                combined_markdown += f"\n\n---\n\n"
+                
+                # Track processed sections for TOC
+                processed_sections.append((section_num, section_title))
+        
+        return combined_markdown, processed_sections
+    
+    def _clean_markdown_content(self, content):
+        """Clean up problematic markdown code block wrappers from section content"""
+        content = content.strip()
+        
+        # Check if content is wrapped in markdown code block
+        if content.startswith('```markdown\n') and content.endswith('\n```'):
+            # Remove the wrapper
+            content = content[12:-4]  # Remove ```markdown\n at start and \n``` at end
+            content = content.strip()
+            print("  → Cleaned problematic markdown code block wrapper")
+        elif content.startswith('```markdown'):
+            # Handle case without newline after ```markdown
+            content = content[11:]  # Remove ```markdown at start
+            if content.endswith('```'):
+                content = content[:-3]  # Remove ``` at end
+            content = content.strip()
+            print("  → Cleaned problematic markdown code block wrapper")
+            
+        return content
+    
+    def _get_section_title(self, section_num):
+        """Get the proper section title from section definitions"""
+        for section in sections:
+            if section['number'] == section_num:
+                return section['title']
+        return f"Section {section_num}"
+    
+    def _generate_html_from_markdown(self, combined_markdown, processed_sections, company_name, clean_company_name):
+        """Generate HTML file from combined markdown"""
+        
+        # Generate cover page
+        cover_html = self._generate_cover_page(processed_sections, company_name)
+        
+        # Convert content to HTML
+        content_html = self._markdown_to_html(combined_markdown)
+        css_styles = self._get_css_styles()
         
         # Get current date
         generation_date = datetime.now().strftime('%B %d, %Y')
         
-        # Generate table of contents
-        toc_html = self._generate_section_toc(section_numbers, sections)
-        
-        # Generate section content
-        content_html = ""
-        for section_num in sorted(section_numbers):
-            if section_num in results:
-                section_info = next(s for s in sections if s['number'] == section_num)
-                content_html += f'''
-<div class="section" id="section_{section_num}">
-    <h1>Section {section_num}: {section_info["title"]}</h1>
-    <div class="section-content">
-        {self._markdown_to_html(results[section_num])}
-    </div>
-</div>
-<div class="page-break"></div>
-'''
-        
-        # Complete HTML document
-        html_content = f'''<!DOCTYPE html>
+        # Create complete HTML document with cover page
+        full_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{company_name} - ProfileDash 2.0</title>
     <style>
-        {self._get_css_styles()}
+{css_styles}
     </style>
 </head>
 <body>
-    <!-- Cover Page -->
-    <div class="cover-page">
-        <div class="company-name">{company_name}</div>
-        <div class="product-name">ProfileDash 2.0</div>
-        <div class="generation-info">
-            Profile generated via Gemini 2.5 Flash on {generation_date}<br>
-            Under MIT License
-        </div>
-        
-        <div class="toc-section">
-            <h2>Table of Contents</h2>
-            {toc_html}
-        </div>
-    </div>
-    
-    <!-- Page Break before content -->
-    <div class="page-break"></div>
-    
-    <!-- Profile Content -->
+{cover_html}
     <div class="profile-content">
-        {content_html}
+        <div class="section">
+            <div class="section-content">
+{content_html}
+            </div>
+        </div>
     </div>
 </body>
-</html>'''
+</html>"""
         
         # Save HTML file
-        html_filename = f"{company_name.replace(' ', '_').replace('.', '').replace(',', '')}_Profile.html"
+        html_filename = f"{clean_company_name}_profile.html"
         html_path = f"runs/run_{self.run_timestamp}/{html_filename}"
         
         with open(html_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
+            f.write(full_html)
         
-        print(f"HTML profile saved: {html_path}")
+        print(f"Combined HTML profile saved: {html_path}")
+        print(f"Processed {len(processed_sections)} sections")
+        
         return html_path
     
+    def _generate_cover_page(self, processed_sections, company_name):
+        """Generate cover page with table of contents"""
+        
+        # Get current date
+        generation_date = datetime.now().strftime('%B %d, %Y')
+        
+        # Group sections by category (like the real system does)
+        groups = {
+            "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 14],
+            "SWOT Analysis": [s for s in processed_sections if 15 <= s[0] <= 18], 
+            "Sellside Positioning": [s for s in processed_sections if 19 <= s[0] <= 25],
+            "Buyside Due Diligence": [s for s in processed_sections if 26 <= s[0] <= 31],
+            "Data Book": [s for s in processed_sections if s[0] == 32]
+        }
+        
+        cover_html = f'''
+        <div class="cover-page">
+            <h1 class="company-name">{company_name}</h1>
+            <h2 class="product-name">ProfileDash 2.0</h2>
+            <div class="generation-info">
+                Profile generated via Gemini 2.5 Flash on {generation_date}<br>
+                Under MIT License
+            </div>
+            
+            <div class="toc-section">
+                <h2>Table of Contents</h2>
+        '''
+        
+        for group_name, group_sections in groups.items():
+            if group_sections:
+                cover_html += f'<div class="toc-group"><strong>{group_name}</strong></div>\n'
+                for section_num, section_title in sorted(group_sections):
+                    cover_html += f'<div class="toc-item"><a href="#section_{section_num}">Section {section_num}: {section_title}</a></div>\n'
+                cover_html += "<br>\n"
+        
+        cover_html += '''
+            </div>
+        </div>
+        <div class="page-break"></div>
+        '''
+        
+        return cover_html
+
     def _extract_company_name(self, full_context: str) -> str:
         """Extract company name from document context via LLM"""
         try:
@@ -117,8 +236,9 @@ Examples:
 - "Tesla, Inc." → "Tesla, Inc."
 """
             
-            response = self.model.generate_content(prompt)
-            company_name = response.text.strip()
+            company_name = retry_with_backoff(
+                lambda: self.model.generate_content(prompt).text.strip()
+            )
             
             # Basic validation
             if len(company_name) > 100 or len(company_name) < 2:
@@ -130,72 +250,10 @@ Examples:
             print(f"Company name extraction failed: {e}")
             return "Company Profile"
     
-    def _generate_section_toc(self, section_numbers: List[int], sections: List[Dict]) -> str:
-        """Generate table of contents for selected sections"""
-        toc_html = ""
-        
-        # Group sections by category
-        groups = {
-            "Company Profile": [s for s in section_numbers if 1 <= s <= 14],
-            "SWOT Analysis": [s for s in section_numbers if 15 <= s <= 18], 
-            "Sellside Positioning": [s for s in section_numbers if 19 <= s <= 25],
-            "Buyside Due Diligence": [s for s in section_numbers if 26 <= s <= 31],
-            "Data Book": [s for s in section_numbers if s == 32]
-        }
-        
-        for group_name, group_sections in groups.items():
-            if group_sections:
-                toc_html += f'<div class="toc-group"><strong>{group_name}</strong></div>\n'
-                for section_num in sorted(group_sections):
-                    section_info = next(s for s in sections if s['number'] == section_num)
-                    toc_html += f'<div class="toc-item"><a href="#section_{section_num}">Section {section_num}: {section_info["title"]}</a></div>\n'
-                toc_html += "<br>\n"
-        
-        return toc_html
-    
     def _markdown_to_html(self, markdown_content: str) -> str:
-        """Convert markdown content to HTML"""
-        # Basic markdown to HTML conversion
-        html = markdown_content
-        
-        # Headers
-        html = html.replace('### ', '<h3>').replace('\n# ', '</h3>\n<h1>').replace('\n## ', '</h1>\n<h2>').replace('\n### ', '</h2>\n<h3>')
-        
-        # Add closing tags for headers at end of lines
-        lines = html.split('\n')
-        processed_lines = []
-        
-        for line in lines:
-            if line.startswith('<h1>') and not line.endswith('</h1>'):
-                line = line + '</h1>'
-            elif line.startswith('<h2>') and not line.endswith('</h2>'):
-                line = line + '</h2>'
-            elif line.startswith('<h3>') and not line.endswith('</h3>'):
-                line = line + '</h3>'
-            
-            # Bold text
-            if '**' in line:
-                line = line.replace('**', '<strong>', 1).replace('**', '</strong>', 1)
-            
-            # Tables - basic support
-            if '|' in line and line.count('|') >= 2:
-                if '---' in line:
-                    line = ''  # Remove separator line
-                else:
-                    cells = [cell.strip() for cell in line.split('|')[1:-1]]
-                    if processed_lines and '<table>' not in processed_lines[-1]:
-                        processed_lines.append('<table class="data-table">')
-                    line = '<tr>' + ''.join(f'<td>{cell}</td>' for cell in cells) + '</tr>'
-            elif processed_lines and '<table>' in processed_lines[-1] and '|' not in line:
-                processed_lines.append('</table>')
-            
-            processed_lines.append(line)
-        
-        # Close any open table
-        if '<table>' in processed_lines[-1]:
-            processed_lines.append('</table>')
-        
-        return '<br>'.join(processed_lines)
+        """Convert markdown content to HTML using proper markdown parser"""
+        md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br'])
+        return md.convert(markdown_content)
     
     def _get_css_styles(self) -> str:
         """Return CSS styles for professional document formatting"""
@@ -209,22 +267,24 @@ Examples:
         }
         
         .cover-page {
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             text-align: center;
-            padding: 40px;
+            padding: 60px 40px 40px 40px;
             page-break-after: always;
         }
         
         .company-name {
-            font-size: 3.5em;
+            font-size: 3.2em;
             font-weight: bold;
             color: #1a365d;
+            margin-top: 80px;
             margin-bottom: 30px;
             letter-spacing: 2px;
+            line-height: 1.1;
         }
         
         .product-name {
@@ -245,6 +305,7 @@ Examples:
             text-align: left;
             max-width: 600px;
             width: 100%;
+            flex-grow: 1;
         }
         
         .toc-section h2 {
@@ -291,58 +352,66 @@ Examples:
             margin-bottom: 40px;
         }
         
-        .section h1 {
-            color: #1a365d;
-            font-size: 1.8em;
-            border-bottom: 3px solid #2d5a87;
-            padding-bottom: 10px;
-            margin-bottom: 25px;
-        }
-        
         .section-content {
             font-size: 1em;
             line-height: 1.7;
         }
         
-        .section-content h2 {
-            color: #2d5a87;
-            font-size: 1.3em;
-            margin-top: 25px;
-            margin-bottom: 15px;
-        }
-        
-        .section-content h3 {
-            color: #4a5568;
-            font-size: 1.1em;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-        
-        .data-table {
+        .data-table, table {
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
             font-size: 0.9em;
         }
         
-        .data-table td {
+        .data-table td, table td, table th {
             border: 1px solid #ddd;
             padding: 8px 12px;
             text-align: left;
         }
         
-        .data-table tr:first-child td {
+        .data-table tr:first-child td, table thead th, table tr:first-child td {
             background-color: #f8f9fa;
             font-weight: bold;
             color: #2d5a87;
         }
         
-        .data-table tr:nth-child(even) {
+        .data-table tr:nth-child(even), table tr:nth-child(even) {
             background-color: #f8f9fa;
         }
         
         strong {
             color: #2d5a87;
+            font-weight: bold;
+        }
+        
+        p {
+            margin: 10px 0;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+        
+        h1 {
+            color: #1a365d;
+            font-size: 1.8em;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #2d5a87;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            color: #2d5a87;
+            font-size: 1.3em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        
+        h3 {
+            color: #4a5568;
+            font-size: 1.1em;
+            margin-top: 20px;
+            margin-bottom: 10px;
         }
         
         @media print {
@@ -352,6 +421,12 @@ Examples:
             
             .cover-page {
                 page-break-after: always;
+                min-height: auto;
+                height: auto;
+            }
+            
+            .company-name {
+                margin-top: 40px;
             }
         }
         ''' 

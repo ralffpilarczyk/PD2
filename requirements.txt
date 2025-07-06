@@ -2,3 +2,4 @@ marker-pdf
 markitdown[all]
 python-dotenv
 google-generativeai
+markdown

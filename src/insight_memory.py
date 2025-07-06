@@ -4,6 +4,7 @@ import re
 from typing import Dict, List
 from datetime import datetime
 import google.generativeai as genai
+from .utils import retry_with_backoff
 
 class InsightMemory:
     """Clean, flexible insight memory system for section-based analytical instructions"""
@@ -246,8 +247,10 @@ Briefly explain why each selected instruction deserves 9-10/10.
 Be ruthless - most instructions should NOT make the cut. Only keep true analytical breakthroughs."""
 
             try:
-                response = model.generate_content(prompt)
-                selected_instructions = self._parse_selected_instructions(response.text)
+                response_text = retry_with_backoff(
+                    lambda: model.generate_content(prompt).text
+                )
+                selected_instructions = self._parse_selected_instructions(response_text)
                 
                 if selected_instructions:
                     # Keep only the harshly selected instructions

@@ -10,6 +10,7 @@ from .quality_tracker import QualityTracker
 from .file_manager import FileManager
 from .profile_generator import ProfileGenerator
 from .profile_sections import sections
+from . import utils
 
 __all__ = [
     'CoreAnalyzer',
@@ -17,7 +18,8 @@ __all__ = [
     'QualityTracker',
     'FileManager',
     'ProfileGenerator',
-    'sections'
+    'sections',
+    'utils'
 ]
 
 # Version info

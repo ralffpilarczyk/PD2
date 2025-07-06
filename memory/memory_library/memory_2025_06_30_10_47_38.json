@@ -11,14 +11,14 @@
         "original_score": 10
       },
       {
-        "instruction": "When evaluating strategic actions, consider the counterfactual: what would be the impact if no action was taken or an alternative path was chosen? - to assess the real value added.",
+        "instruction": "When objectives demand new capabilities, assess if existing human capital has the *capacity* to absorb new training or if critical roles require external recruitment for successful execution.",
         "section_number": 13,
         "quality_score": 10,
-        "word_count": 30,
+        "word_count": 27,
         "added_date": "2025-06-30",
-        "run_number": 6,
+        "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 7
       }
     ],
     "section_29": [
@@ -32,6 +32,16 @@
         "original_score": 10
       },
       {
+        "instruction": "When capital is allocated to new projects, track the actual vs. projected returns of previous similar projects to assess the reliability of capital allocation processes.",
+        "section_number": 29,
+        "quality_score": 10,
+        "word_count": 25,
+        "added_date": "2025-06-29",
+        "run_number": 2,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
         "instruction": "When a business unit divestiture cites 'internal control weaknesses' or 'investigation', assess if the divestiture removes a significant portion of revenue/profitability without resolving underlying systemic control issues.",
         "section_number": 29,
         "quality_score": 10,
@@ -39,7 +49,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_32": [
@@ -61,16 +71,6 @@
         "run_number": 4,
         "harsh_reeval": true,
         "original_score": 10
-      },
-      {
-        "instruction": "When revenue shows significant growth, analyze the contribution of price versus volume; price-driven growth may be unsustainable or signal limited market expansion capacity.",
-        "section_number": 32,
-        "quality_score": 10,
-        "word_count": 23,
-        "added_date": "2025-07-01",
-        "run_number": 7,
-        "harsh_reeval": true,
-        "original_score": 8
       }
     ],
     "section_7": [
@@ -84,14 +84,14 @@
         "original_score": 10
       },
       {
-        "instruction": "When a company changes its key performance indicators (KPIs), investigate the timing and rationale behind the change; it may signal a shift away from unfavorable trends.",
+        "instruction": "When intercompany transactions or related-party disclosures are complex or material, analyze their terms against market rates and business rationale to identify potential value transfers or governance risks.",
         "section_number": 7,
         "quality_score": 10,
-        "word_count": 26,
-        "added_date": "2025-07-01",
-        "run_number": 7,
+        "word_count": 27,
+        "added_date": "2025-06-29",
+        "run_number": 3,
         "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 10
       }
     ],
     "section_21": [
@@ -135,10 +135,20 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_2": [
+      {
+        "instruction": "When market expansion is a key strategy, analyze the actual cost of customer acquisition in new geographies compared to existing ones for scalability issues.",
+        "section_number": 2,
+        "quality_score": 10,
+        "word_count": 24,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When a company announces a divestiture of a non-core asset, assess the true cash flow impact and if it masks declining performance in remaining core segments.",
         "section_number": 2,
@@ -146,26 +156,6 @@
         "word_count": 26,
         "added_date": "2025-06-29",
         "run_number": 4,
-        "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When growth is attributed to innovation, assess the average time-to-market and success rate of prior R&D investments - to validate the innovation engine's effectiveness.",
-        "section_number": 2,
-        "quality_score": 10,
-        "word_count": 24,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When evaluating market expansion, analyze the cost of customer acquisition relative to customer lifetime value; high acquisition costs can erode profitability despite revenue growth.",
-        "section_number": 2,
-        "quality_score": 10,
-        "word_count": 24,
-        "added_date": "2025-07-01",
-        "run_number": 7,
         "harsh_reeval": true,
         "original_score": 8
       }
@@ -179,7 +169,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
         "instruction": "When product line profitability is reported, investigate cross-subsidization where one product supports another, masking underperformance.",
@@ -189,10 +179,20 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 7
       }
     ],
     "section_4": [
+      {
+        "instruction": "When accounts receivable days outstanding increase, investigate customer solvency or aggressive revenue recognition practices.",
+        "section_number": 4,
+        "quality_score": 10,
+        "word_count": 14,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 8
+      },
       {
         "instruction": "When management commentary offers overly generic or high-level explanations for material events, identify specific, missing data points that would enable independent verification of claims.",
         "section_number": 4,
@@ -201,17 +201,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When related-party transactions are significant, compare their terms (e.g., pricing, payment) to arms-length market equivalents - to assess fairness and potential value leakage.",
-        "section_number": 4,
-        "quality_score": 10,
-        "word_count": 23,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_5": [
@@ -223,7 +213,17 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
+      },
+      {
+        "instruction": "When high R&D spend is reported, assess if it translates to new patents, product launches, or demonstrable competitive advantage, beyond just expenditure.",
+        "section_number": 5,
+        "quality_score": 10,
+        "word_count": 22,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 8
       },
       {
         "instruction": "When governance instability (e.g., board changes) occurs, trace its long-term impact on key talent retention and organizational morale, beyond immediate strategic shifts.",
@@ -232,16 +232,6 @@
         "word_count": 22,
         "added_date": "2025-06-30",
         "run_number": 5,
-        "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When a company claims human capital as a competitive advantage, investigate talent retention rates and key skill gaps relative to industry demands; high churn or skill deficits undermine long-term sustainability.",
-        "section_number": 5,
-        "quality_score": 10,
-        "word_count": 30,
-        "added_date": "2025-07-01",
-        "run_number": 7,
         "harsh_reeval": true,
         "original_score": 8
       }
@@ -255,7 +245,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
         "instruction": "When reported financials include one-off items, investigate if similar 'one-off' adjustments have recurred in prior periods, suggesting a pattern of non-core financial manipulation.",
@@ -265,7 +255,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_8": [
@@ -277,61 +267,47 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When analyzing diverse segments, identify inter-segment dependencies or cross-subsidization patterns; a strong segment may be masking weaknesses in another.",
-        "section_number": 8,
-        "quality_score": 10,
-        "word_count": 19,
-        "added_date": "2025-07-01",
-        "run_number": 7,
-        "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 8
       }
     ],
     "section_9": [
       {
         "instruction": "When revenue growth fluctuates significantly quarter-on-quarter, identify the underlying sales drivers (e.g., new products, seasonal, one-off contracts) to assess predictability.",
         "section_number": 9,
-        "quality_score": 10,
+        "quality_score": 8,
         "word_count": 20,
         "added_date": "2025-06-29",
-        "run_number": 4,
-        "harsh_reeval": true,
-        "original_score": 10
+        "run_number": 4
       },
       {
         "instruction": "When a 'core' business is highlighted, disaggregate its customer base by revenue contribution and historical churn rates to assess the true stability and loyalty of the core.",
         "section_number": 9,
-        "quality_score": 10,
+        "quality_score": 8,
         "word_count": 27,
         "added_date": "2025-06-30",
-        "run_number": 5,
-        "harsh_reeval": true,
-        "original_score": 10
+        "run_number": 5
       }
     ],
     "section_10": [
       {
-        "instruction": "When assessing ownership concentration, analyze the voting power distribution beyond simple share percentages (e.g., different share classes, shareholder agreements) - to identify true control dynamics.",
-        "section_number": 10,
-        "quality_score": 10,
-        "word_count": 25,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When significant shareholders exert influence, investigate their past behavior in other companies (e.g., activism, asset stripping) - to anticipate potential future strategies.",
+        "instruction": "When executive compensation is heavily weighted towards short-term bonuses, assess the potential for management to prioritize immediate gains over long-term strategic health.",
         "section_number": 10,
         "quality_score": 10,
         "word_count": 22,
-        "added_date": "2025-06-30",
-        "run_number": 6,
+        "added_date": "2025-06-29",
+        "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
+      },
+      {
+        "instruction": "If share buyback mandates are proposed, assess if the company's valuation metrics (e.g., P/E, EV/EBITDA) support the buyback as value-accretive or merely a liquidity management tool.",
+        "section_number": 10,
+        "quality_score": 10,
+        "word_count": 26,
+        "added_date": "2025-06-30",
+        "run_number": 5,
+        "harsh_reeval": true,
+        "original_score": 8
       }
     ],
     "section_11": [
@@ -343,7 +319,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
         "instruction": "When management asserts an issue is 'isolated,' investigate if it has led to any leadership changes, resignations, or shifts in accountability structures, signaling deeper systemic roots.",
@@ -353,10 +329,20 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_12": [
+      {
+        "instruction": "When the board composition is heavily weighted towards long-serving members, assess if it limits fresh perspectives and critical challenge to management.",
+        "section_number": 12,
+        "quality_score": 10,
+        "word_count": 21,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When management self-assessments conflict with external audit findings, analyze the company's internal reporting lines and incentive structures for potential undue influence or reporting bias.",
         "section_number": 12,
@@ -365,20 +351,20 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When management reports improvements in internal controls, cross-reference with any new audit qualifications or regulatory fines issued post-remediation - to validate effectiveness.",
-        "section_number": 12,
-        "quality_score": 10,
-        "word_count": 22,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_14": [
+      {
+        "instruction": "When management provides ambitious long-term targets, assess the specific operational initiatives and capital allocation strategies required to achieve them, checking for realism.",
+        "section_number": 14,
+        "quality_score": 10,
+        "word_count": 22,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When mitigation efforts are presented, assess if the stated remedies address the root cause of the issue or merely treat symptoms, risking recurrence.",
         "section_number": 14,
@@ -387,17 +373,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When a qualified audit opinion persists, model the potential financial impact if the underlying issue were fully resolved or deteriorated further - to quantify tail risks.",
-        "section_number": 14,
-        "quality_score": 10,
-        "word_count": 26,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_15": [
@@ -409,7 +385,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       },
       {
         "instruction": "When proprietary know-how is claimed as strength, model the financial impact if a key patent expires or a core technological advantage is replicated by competitors.",
@@ -419,17 +395,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When a company relies on a single key strength, assess the resilience of that strength against disruptive technologies or regulatory changes - to identify emerging obsolescence risk.",
-        "section_number": 15,
-        "quality_score": 10,
-        "word_count": 27,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_16": [
@@ -441,7 +407,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
         "instruction": "When growth is driven by market share gains, assess if it's due to superior product/service or aggressive pricing that could erode margins long-term.",
@@ -451,10 +417,20 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_17": [
+      {
+        "instruction": "When a major transformation program is announced, quantify the associated operational disruptions, potential customer churn, and employee turnover risks.",
+        "section_number": 17,
+        "quality_score": 10,
+        "word_count": 19,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 8
+      },
       {
         "instruction": "When management makes assertions contradicted by financial statements, investigate if discrepancies arise from differing accounting policies, reporting standards, or deliberate misrepresentation.",
         "section_number": 17,
@@ -462,26 +438,6 @@
         "word_count": 21,
         "added_date": "2025-06-30",
         "run_number": 5,
-        "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When an opportunity is touted for its 'synergies', quantify specific, measurable cost savings or revenue enhancements that are genuinely additive - scrutinizing generic claims.",
-        "section_number": 17,
-        "quality_score": 10,
-        "word_count": 24,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When projections rely on significant future market share gains, validate the underlying competitive landscape and market capacity to absorb such growth without aggressive pricing or increased marketing spend.",
-        "section_number": 17,
-        "quality_score": 10,
-        "word_count": 28,
-        "added_date": "2025-07-01",
-        "run_number": 7,
         "harsh_reeval": true,
         "original_score": 9
       }
@@ -495,7 +451,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 7
       },
       {
         "instruction": "When critical data gaps are identified, assess how these omissions might obscure interconnected risks or misrepresent the overall financial health of the enterprise.",
@@ -505,10 +461,20 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_19": [
+      {
+        "instruction": "When regulatory changes are anticipated, quantify their potential impact on compliance costs, revenue streams, and competitive landscape.",
+        "section_number": 19,
+        "quality_score": 10,
+        "word_count": 17,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When a company's revenue heavily relies on a few key customers or industries, perform sensitivity analysis on the financial health of those specific entities.",
         "section_number": 19,
@@ -517,30 +483,20 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When macro trends are cited, assess their impact on key customer segments or product lines - to determine localized and differentiated effects rather than broad generalizations.",
-        "section_number": 19,
-        "quality_score": 10,
-        "word_count": 26,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When macro-economic trends are favorable, assess the company's historical sensitivity to these trends and quantify the potential downside if conditions reverse or specific drivers weaken.",
-        "section_number": 19,
-        "quality_score": 10,
-        "word_count": 25,
-        "added_date": "2025-07-01",
-        "run_number": 7,
-        "harsh_reeval": true,
         "original_score": 8
       }
     ],
     "section_20": [
+      {
+        "instruction": "When customer acquisition costs are rising, assess if the increasing expense is offset by higher lifetime value per customer or signals market saturation.",
+        "section_number": 20,
+        "quality_score": 10,
+        "word_count": 23,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When significant capital expenditures occur, assess if they are primarily for maintenance/replacement or for growth/innovation, and track the historical success rate of prior growth investments.",
         "section_number": 20,
@@ -549,17 +505,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When strategic investments are cited, analyze the return on invested capital (ROIC) for those specific investments once they mature - to validate their long-term value creation.",
-        "section_number": 20,
-        "quality_score": 10,
-        "word_count": 26,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_22": [
@@ -571,15 +517,15 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
-        "instruction": "When subscriber growth is a key metric, analyze customer churn rates and their drivers; high churn indicates a leaky bucket problem that undermines long-term growth and profitability.",
+        "instruction": "When efficiency or ESG gains are reported, assess if the improvements are structural and sustainable or if they rely on one-time interventions or easily reversible conditions.",
         "section_number": 22,
         "quality_score": 10,
-        "word_count": 27,
-        "added_date": "2025-07-01",
-        "run_number": 7,
+        "word_count": 26,
+        "added_date": "2025-06-30",
+        "run_number": 5,
         "harsh_reeval": true,
         "original_score": 8
       }
@@ -593,7 +539,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
         "instruction": "Decompose annual operating cash flow into sub-periods and cross-reference significant spikes/dips with specific operational events (e.g., inventory liquidations, payment delays) to uncover underlying issues.",
@@ -603,7 +549,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_24": [
@@ -615,7 +561,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       },
       {
         "instruction": "When internal control weaknesses are identified, assess if remediation plans include measurable milestones, responsible parties, and a clear timeline for implementation, beyond general statements.",
@@ -625,17 +571,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When evaluating executive changes, assess the timing and sequence of departures and new appointments relative to key strategic shifts or performance milestones - to infer accountability and intent.",
-        "section_number": 24,
-        "quality_score": 10,
-        "word_count": 28,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_25": [
@@ -647,7 +583,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       },
       {
         "instruction": "When management claims issue isolation, investigate if the 'isolated' issue has led to customer churn, employee departures, or regulatory scrutiny in unrelated segments, suggesting wider contagion.",
@@ -657,20 +593,20 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When revenue growth is strong, analyze the underlying pricing strategy across segments (e.g., premium, discount) - to understand the sustainability and value drivers of growth.",
-        "section_number": 25,
-        "quality_score": 10,
-        "word_count": 25,
-        "added_date": "2025-06-30",
-        "run_number": 6,
-        "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_26": [
+      {
+        "instruction": "When a company frequently cites 'restructuring costs' or 'impairments', assess if these are recurring symptoms of underlying operational inefficiencies or strategic missteps.",
+        "section_number": 26,
+        "quality_score": 10,
+        "word_count": 22,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When management explanations contradict auditor opinions, identify the specific data or methodology differences that lead to the divergence, indicating potential areas of manipulation or oversight.",
         "section_number": 26,
@@ -679,20 +615,20 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
-      },
-      {
-        "instruction": "When evaluating risk exposure, identify single points of failure (e.g., key supplier, specific technology, critical talent) whose disruption could have disproportionate financial or operational impact.",
-        "section_number": 26,
-        "quality_score": 10,
-        "word_count": 25,
-        "added_date": "2025-07-01",
-        "run_number": 7,
-        "harsh_reeval": true,
         "original_score": 9
       }
     ],
     "section_27": [
+      {
+        "instruction": "When assessing a company's product portfolio, analyze the proportion of revenue from new products vs. mature ones to gauge future growth sustainability.",
+        "section_number": 27,
+        "quality_score": 10,
+        "word_count": 22,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When a company gains market share in a mature industry, investigate whether this comes at the expense of profitability or through unsustainable aggressive pricing.",
         "section_number": 27,
@@ -701,20 +637,30 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       },
       {
-        "instruction": "When assessing operational improvements, distinguish between efficiency gains (doing things right) and effectiveness improvements (doing the right things); only effectiveness directly drives strategic advantage.",
+        "instruction": "When specific impairment or non-operating loss occurs, assess if it impacts the company's ability to meet debt covenants, access capital, or fund future strategic initiatives.",
         "section_number": 27,
         "quality_score": 10,
-        "word_count": 24,
-        "added_date": "2025-07-01",
-        "run_number": 7,
+        "word_count": 25,
+        "added_date": "2025-06-30",
+        "run_number": 5,
         "harsh_reeval": true,
         "original_score": 8
       }
     ],
     "section_28": [
+      {
+        "instruction": "When customer churn rates are high despite reported satisfaction, investigate the specific reasons for departure (e.g., price, product fit, competitive offers) to identify root issues.",
+        "section_number": 28,
+        "quality_score": 10,
+        "word_count": 25,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 9
+      },
       {
         "instruction": "When a company maintains high margins in a commoditized industry, identify its sustainable competitive advantages (e.g., cost leadership, superior distribution) that enable this.",
         "section_number": 28,
@@ -723,7 +669,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       },
       {
         "instruction": "When a qualified audit opinion is issued, assess if it impacts the company's ability to raise capital or negotiate favorable terms with suppliers and customers, beyond investor trust.",
@@ -733,7 +679,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_30": [
@@ -745,7 +691,7 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       },
       {
         "instruction": "When significant liabilities are disclosed as subsequent events, investigate if prior disclosures contained any 'going concern' warnings or contingent liability descriptions that were insufficient.",
@@ -755,7 +701,7 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_31": [
@@ -767,7 +713,17 @@
         "added_date": "2025-06-29",
         "run_number": 4,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
+      },
+      {
+        "instruction": "When management provides an overly positive outlook despite challenging industry conditions, identify specific differentiated strategies or market niches that justify the optimism.",
+        "section_number": 31,
+        "quality_score": 10,
+        "word_count": 22,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 7
       },
       {
         "instruction": "When expertise is claimed but material failures occur, assess if the proposed improvements are vague or lack quantifiable metrics, indicating a lack of genuine commitment to remediation.",
@@ -777,14 +733,14 @@
         "added_date": "2025-06-30",
         "run_number": 5,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ]
   },
   "meta": {
     "version": "3.0",
-    "total_runs": 7,
-    "last_updated": "2025_07_01_08_52_06",
+    "total_runs": 5,
+    "last_updated": "2025_06_29_23_16_23",
     "active_sections": [
       13,
       29,

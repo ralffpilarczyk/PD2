@@ -61,26 +61,47 @@ def retry_with_backoff(func, max_retries=3, base_delay=1.0):
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
     
-    def __init__(self, pdf_files: List[str]):
-        """Initialize ProfileDash with modular components"""
+    def __init__(self, source_files: dict):
+        """Initialize ProfileDash with modular components
+        
+        Args:
+            source_files: Dict with 'pdf_files' and 'md_files' lists
+        """
         # Generate run timestamp
         self.run_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         
         # Initialize file manager first
         self.file_manager = FileManager(self.run_timestamp)
         
-        # Setup directories and ensure memory file exists (before PDF conversion)
+        # Setup directories and ensure memory file exists (before file processing)
         self.file_manager.setup_directories(sections)
         
-        # Convert PDFs to markdown and save to run folder
-        thread_safe_print("Converting PDF files to markdown...")
-        markdown_files = self._convert_pdfs_to_markdown(pdf_files)
+        # Process both PDF and markdown files
+        thread_safe_print("Processing source files...")
         
-        if not markdown_files:
-            raise Exception("No PDF files were successfully converted to markdown")
+        pdf_files = source_files.get('pdf_files', [])
+        md_files = source_files.get('md_files', [])
         
-        # Load converted markdown files
-        self.full_context = self.file_manager.load_markdown_files(markdown_files)
+        all_markdown_files = []
+        
+        # Convert PDFs to markdown if any exist
+        if pdf_files:
+            thread_safe_print(f"Converting {len(pdf_files)} PDF file(s) to markdown...")
+            converted_files = self._convert_pdfs_to_markdown(pdf_files)
+            all_markdown_files.extend(converted_files)
+        
+        # Add markdown files directly (no conversion needed)
+        if md_files:
+            thread_safe_print(f"Using {len(md_files)} markdown file(s) directly...")
+            all_markdown_files.extend(md_files)
+        
+        if not all_markdown_files:
+            raise Exception("No files were successfully processed")
+        
+        thread_safe_print(f"Total files for analysis: {len(all_markdown_files)}")
+        
+        # Load all markdown files using existing method
+        self.full_context = self.file_manager.load_markdown_files(all_markdown_files)
         
         # Initialize other components
         self.core_analyzer = CoreAnalyzer(self.full_context)
@@ -356,8 +377,9 @@ Generate comprehensive candidates - subsequent harsh filtering will select only 
 """
         
         model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt)
-        new_insights_text = response.text
+        new_insights_text = retry_with_backoff(
+            lambda: model.generate_content(prompt).text
+        )
         
         self.file_manager.save_memory_state({"new_insights": new_insights_text}, "new_insights.txt")
         
@@ -435,8 +457,6 @@ STATUS: Run completed successfully
         
         self.file_manager.save_run_summary(summary)
         thread_safe_print(summary)
-    
-
 
 
 # Section Groups Configuration
@@ -464,8 +484,8 @@ SECTION_GROUPS = {
 }
 
 # PDF Selection Functions
-def select_pdf_files():
-    """Select PDF files with retry on failure"""
+def select_source_files():
+    """Select PDF and/or Markdown files with retry on failure"""
     from tkinter import filedialog, messagebox
     import tkinter as tk
     
@@ -473,44 +493,79 @@ def select_pdf_files():
         root = tk.Tk()
         root.withdraw()
         
-        thread_safe_print("\nSelect PDF files for analysis...")
-        pdf_files = filedialog.askopenfilenames(
-            title="Select PDF Files for Analysis",
-            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+        thread_safe_print("\nSelect PDF files (for conversion) and/or Markdown files (direct use)...")
+        source_files = filedialog.askopenfilenames(
+            title="Select PDF and/or Markdown Files for Analysis",
+            filetypes=[
+                ("PDF files", "*.pdf"), 
+                ("Markdown files", "*.md"),
+                ("All files", "*.*")
+            ]
         )
         
         root.destroy()
         
-        if not pdf_files:
+        if not source_files:
             thread_safe_print("No files selected.")
             retry = input("Would you like to try selecting files again? (y/n): ").strip().lower()
             if retry not in ['y', 'yes']:
                 return None
             continue
         
-        thread_safe_print(f"Selected {len(pdf_files)} PDF file(s):")
-        for pdf in pdf_files:
-            thread_safe_print(f"  - {Path(pdf).name}")
+        # Categorize files
+        pdf_files = [f for f in source_files if f.lower().endswith('.pdf')]
+        md_files = [f for f in source_files if f.lower().endswith('.md')]
+        other_files = [f for f in source_files if not (f.lower().endswith('.pdf') or f.lower().endswith('.md'))]
         
-        return list(pdf_files)
+        thread_safe_print(f"Selected {len(source_files)} file(s):")
+        if pdf_files:
+            thread_safe_print(f"  PDF files (will be converted): {len(pdf_files)}")
+            for pdf in pdf_files:
+                thread_safe_print(f"    - {Path(pdf).name}")
+        if md_files:
+            thread_safe_print(f"  Markdown files (direct use): {len(md_files)}")
+            for md in md_files:
+                thread_safe_print(f"    - {Path(md).name}")
+        if other_files:
+            thread_safe_print(f"  Warning: Unsupported files (will be skipped): {len(other_files)}")
+            for other in other_files:
+                thread_safe_print(f"    - {Path(other).name}")
+        
+        if not pdf_files and not md_files:
+            thread_safe_print("No PDF or Markdown files found. Please select supported file types.")
+            continue
+        
+        return {
+            'pdf_files': pdf_files,
+            'md_files': md_files,
+            'other_files': other_files
+        }
+
+def select_pdf_files():
+    """Legacy function for backwards compatibility - now redirects to select_source_files"""
+    file_selection = select_source_files()
+    if file_selection:
+        # Return all files for backwards compatibility, let the class handle the logic
+        return file_selection['pdf_files'] + file_selection['md_files']
+    return None
 
 # Usage interface
 if __name__ == "__main__":
     thread_safe_print("PROFILEDASH 2.0 - with Learning Memory")
     thread_safe_print("="*60)
     
-    # Select PDF files with retry capability
-    pdf_files = select_pdf_files()
-    if not pdf_files:
+    # Select source files (PDF and/or MD) with retry capability
+    source_file_selection = select_source_files()
+    if not source_file_selection:
         thread_safe_print("No files selected. Exiting.")
         exit()
     
-    # Initialize ProfileDash with PDF files
+    # Initialize ProfileDash with source files
     try:
-        analyst = IntelligentAnalyst(pdf_files)
+        analyst = IntelligentAnalyst(source_file_selection)
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
-        thread_safe_print("Please check your PDF files and try again.")
+        thread_safe_print("Please check your files and try again.")
         exit()
     
     # Available sections for validation
@@ -557,14 +612,16 @@ if __name__ == "__main__":
         thread_safe_print("Please enter 'y' or 'n'")
     
     if parallel_choice in ['y', 'yes']:
-        thread_safe_print("Note: Higher parallelism may hit API rate limits (1M tokens/minute)")
+        thread_safe_print("Note: Rate limiting protection enabled")
+        thread_safe_print("- Automatic retry with exponential backoff for rate limits")
+        thread_safe_print("- Extracts retry delays from API responses")
+        thread_safe_print("- Up to 3 retry attempts with intelligent delays")
+        
         while True:
             try:
-                worker_input = input("Number of parallel workers (1-3, recommended: 2 for rate limit safety): ").strip()
+                worker_input = input("Number of parallel workers (1-3, recommended: 2): ").strip()
                 max_workers = int(worker_input)
                 if 1 <= max_workers <= 3:
-                    if max_workers > 3:
-                        thread_safe_print("Using >3 workers may cause rate limit issues")
                     break
                 else:
                     thread_safe_print("Please enter a number between 1 and 3")

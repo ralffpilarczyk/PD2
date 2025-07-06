@@ -1,6 +1,7 @@
 import google.generativeai as genai
 from typing import Dict
 import re
+from .utils import retry_with_backoff
 
 
 class CoreAnalyzer:
@@ -101,8 +102,9 @@ Output in clean Markdown format with proper headers, tables, and bullet points.
 """
         
         # Use medium temperature for initial draft - balanced comprehensive analysis
-        response = self.model_medium_temp.generate_content(prompt)
-        return response.text
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text
+        )
     
     def completeness_critique(self, section: Dict, draft: str) -> str:
         """Step 2: Critique completeness against requirements"""
@@ -139,8 +141,11 @@ Focus on making this a comprehensive data reference appendix."""
         else:
             prompt = f"""Critique this analysis for COMPLETENESS against the specific requirements.
 
-ORIGINAL REQUIREMENTS:
+ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
 {section['specs']}
+
+CRITICAL: Your critique must only suggest improvements that ALIGN with the section specifications above. 
+DO NOT suggest adding content that contradicts or goes beyond the specified scope.
 
 DRAFT ANALYSIS:
 {draft}
@@ -149,33 +154,41 @@ CURRENT WORD COUNT: {word_count} words
 TARGET: {self.INITIAL_WORDS} words (COMPLETENESS PHASE - capture everything important)
 
 COMPLETENESS FOCUS - This is the comprehensive phase:
-- Prioritize capturing ALL required elements over brevity
+- Prioritize capturing ALL required elements from the section specifications
 - Better to be slightly over word count than miss critical requirements
 - Next phases will distill and refine the content
+- STAY WITHIN the section specifications - do not suggest out-of-scope content
 
 Evaluate systematically:
-1. REQUIRED DATA POINTS: Are all specified metrics, time periods, and data elements included?
-2. COVERAGE GAPS: What specific requirements are missing or inadequately addressed?
-3. SOURCE CITATIONS: Are all claims properly sourced with document references?
-4. TIME PERIODS: Are the proposed historical data requirements met?
-5. FORMAT REQUIREMENTS: Are tables, bullet points, etc. used as specified?
-6. TABLE REQUIREMENT: Is there at least one small, well-formatted table with the most relevant numbers for this section?
-7. COMPREHENSIVE CAPTURE: What additional relevant insights or data points would strengthen the analysis?
+1. SECTION SCOPE COMPLIANCE: Does the analysis stay strictly within the section specifications?
+2. REQUIRED DATA POINTS: Are all specified metrics, time periods, and data elements included?
+3. COVERAGE GAPS: What specific requirements from the section specs are missing or inadequately addressed?
+4. SOURCE CITATIONS: Are all claims properly sourced with document references?
+5. TIME PERIODS: Are the proposed historical data requirements met?
+6. FORMAT REQUIREMENTS: Are tables, bullet points, etc. used as specified?
+7. TABLE REQUIREMENT: Is there at least one small, well-formatted table with the most relevant numbers for this section?
+8. OUT-OF-SCOPE CHECK: Are there any suggestions that would add content beyond the section specifications?
 
 For each gap identified, be specific about:
-- What exactly is missing
+- What exactly is missing from the section specifications
 - Where it should be found in the source documents  
-- How critical this gap is to meeting requirements
-- What additional relevant insights could be captured
+- How critical this gap is to meeting the specified requirements
+- What additional relevant insights could be captured WITHIN the section scope
+
+SCOPE BOUNDARY ENFORCEMENT:
+- Only suggest additions that directly fulfill the section specifications
+- Do not suggest content that belongs in other sections
+- Focus on what the section specifications explicitly require
 
 TABLE FOCUS: Include at least one small table with the most relevant numbers for this section. Keep it concise but focused on the key metrics that matter most for this specific section.
 
-COMPREHENSIVE GOAL: This completeness phase should capture all material facts and requirements. 
-Subsequent phases will handle distillation and refinement. Focus on thoroughness over brevity."""
+COMPREHENSIVE GOAL: This completeness phase should capture all material facts and requirements WITHIN the section specifications. 
+Subsequent phases will handle distillation and refinement. Focus on thoroughness within scope."""
         
         # Use low temperature for completeness critique - systematic, methodical analysis
-        response = self.model_low_temp.generate_content(prompt)
-        return response.text
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(prompt).text
+        )
     
     def insight_critique(self, section: Dict, draft: str) -> str:
         """Step 3: Deep insight critique using What-Why-So What framework"""
@@ -213,6 +226,12 @@ The goal is a clean, organized collection of data tables - not analysis."""
         else:
             prompt = f"""Conduct a deep analytical critique of this business analysis using investigative thinking.
 
+ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
+{section['specs']}
+
+CRITICAL SCOPE BOUNDARY: Your critique must only suggest analytical approaches that ALIGN with the section specifications above.
+DO NOT suggest insights or analysis that contradicts or goes beyond the specified section scope.
+
 ANALYSIS TO CRITIQUE:
 {draft}
 
@@ -220,9 +239,9 @@ CURRENT WORD COUNT: {word_count} words
 TARGET: {self.INSIGHT_WORDS} words (INSIGHT PHASE - distill to key analytical patterns)
 
 DISTILLATION FOCUS - This is the analytical thinking phase:
-- Move from comprehensive capture to focused insight extraction
-- Identify the most important analytical patterns and relationships
-- Cut lower-value content to make room for deeper insights
+- Move from comprehensive capture to focused insight extraction WITHIN the section scope
+- Identify the most important analytical patterns and relationships specified in the section requirements
+- Cut lower-value content to make room for deeper insights WITHIN the section specifications
 - Next phase will further distill to final concise output
 
 CRITICAL PERSPECTIVE - Remember management documents are biased:
@@ -231,48 +250,53 @@ CRITICAL PERSPECTIVE - Remember management documents are biased:
 - Where do the numbers contradict the narrative?
 - What context is missing that could change the interpretation?
 
-Apply the What-Why-So What framework systematically:
+Apply the What-Why-So What framework systematically WITHIN the section specifications:
 
-1. WHAT (Pattern Detection):
-   - Scan for mathematical/logical anomalies (revenue up, margins down, unit economics change, etc.)
-   - Identify temporal inconsistencies (guidance vs results?)
-   - Spot cross-metric relationships that need explanation
-   - Find strategic disconnects (says vs does?)
-   - Look for numbers that contradict management narrative
+1. WHAT (Pattern Detection WITHIN SECTION SCOPE):
+   - Scan for mathematical/logical anomalies relevant to this section's focus
+   - Identify temporal inconsistencies that relate to the section specifications
+   - Spot cross-metric relationships that the section specifications require
+   - Find strategic disconnects relevant to this section's purpose
+   - Look for numbers that contradict management narrative WITHIN this section's domain
 
-2. WHY (Investigation):
+2. WHY (Investigation WITHIN SECTION SCOPE):
    - For each unusual pattern: WHY did this happen? What's the business logic?
-   - Are there hidden relationships not explored?
-   - What explanations are missing that an experienced analyst would ask?
-   - What cross-document inconsistencies need reconciliation?
-   - What isn't management telling us?
+   - Are there hidden relationships that the section specifications call for?
+   - What explanations are missing that relate to the section requirements?
+   - What cross-document inconsistencies need reconciliation WITHIN this section's focus?
+   - What insights align with the section's analytical purpose?
 
-3. SO WHAT (Implication):
-   - For each unexplained pattern: What business risk or opportunity does this create?
-   - What are the investment/strategic implications?
-   - What would a skeptical investor want to know?
-   - What material insights are missing?
-   - What red flags should buyers investigate further?
+3. SO WHAT (Implication WITHIN SECTION SCOPE):
+   - For each unexplained pattern: What business risk or opportunity does this create within this section's domain?
+   - What are the investment/strategic implications relevant to this section?
+   - What material insights are missing that the section specifications require?
+   - What red flags should buyers investigate that relate to this section's focus?
 
-Focus on logical gaps that would make an experienced business analyst say "wait, that doesn't make sense" or "you need to explain why..."
+SCOPE COMPLIANCE CHECK:
+- Does each suggested insight align with the section specifications?
+- Are you suggesting analysis that belongs in other sections?
+- Does the analytical approach match what the section specifications require?
+
+Focus on logical gaps that would make an experienced business analyst say "wait, that doesn't make sense" or "you need to explain why..." BUT only within this section's specified scope.
 
 INSIGHT DISTILLATION APPROACH:
-- Focus on the 2-3 most material analytical insights that truly matter
-- Cut routine observations to make room for breakthrough findings
-- Prioritize insights that change how you view the business
-- Eliminate repetitive or less impactful content to reach {self.INSIGHT_WORDS} words
+- Focus on the 2-3 most material analytical insights that truly matter FOR THIS SECTION
+- Cut routine observations to make room for breakthrough findings WITHIN the section scope
+- Prioritize insights that change how you view the business aspect covered by this section
+- Eliminate repetitive or less impactful content to reach target words
 
 TABLE EVALUATION: Does the analysis include at least one small, focused table with the MOST RELEVANT numbers for this section? Evaluate:
-- What specific metrics should be tabulated for maximum clarity and relevance
+- What specific metrics should be tabulated for maximum clarity and relevance TO THIS SECTION
 - How time periods should be organized (columns for years/quarters)
-- What comparisons would be most valuable in table format
+- What comparisons would be most valuable in table format FOR THIS SECTION'S PURPOSE
 - If multiple tables exist, which one is most essential for this section's purpose
 
-Identify specific analytical improvements needed while targeting {self.INSIGHT_WORDS} words."""
+Identify specific analytical improvements needed while targeting {self.INSIGHT_WORDS} words and staying strictly within the section specifications."""
         
         # Use high temperature for insight critique - creative breakthrough thinking
-        response = self.model_high_temp.generate_content(prompt)
-        return response.text
+        return retry_with_backoff(
+            lambda: self.model_high_temp.generate_content(prompt).text
+        )
     
     def polish_critique(self, section: Dict, draft: str) -> str:
         """Step 4: Critique for clarity and conciseness"""
@@ -310,6 +334,12 @@ Focus on:
         else:
             prompt = f"""Critique this analysis for CLARITY and EFFICIENCY.
 
+ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
+{section['specs']}
+
+CRITICAL SCOPE BOUNDARY: Your critique must only suggest improvements that ALIGN with the section specifications above.
+DO NOT suggest removing content that the section specifications require or adding content beyond the specified scope.
+
 ANALYSIS:
 {draft}
 
@@ -317,36 +347,44 @@ CURRENT WORD COUNT: {word_count} words
 TARGET: {self.POLISH_WORDS} words (FINAL POLISH PHASE - maximum impact per word)
 
 DISTILLATION FOCUS - This is the final refinement phase:
-- Ruthlessly prioritize only the most impactful insights
-- Every sentence must deliver significant analytical value
-- Cut redundant content while preserving core insights
-- Optimize for clarity and conciseness
+- Ruthlessly prioritize only the most impactful insights WITHIN the section specifications
+- Every sentence must deliver significant analytical value FOR THIS SECTION'S PURPOSE
+- Cut redundant content while preserving core insights required by the section specifications
+- Optimize for clarity and conciseness WITHIN the specified scope
 
 CRITICAL REQUIREMENTS:
-1. STRICT LENGTH: Must reach {self.POLISH_WORDS} words - provide specific cuts to achieve this
-2. PRIORITIZE: Keep only the most important insights and data points
-3. CUT: Redundant explanations, excessive examples, verbose phrasing
-4. PRESERVE: Key data points, sources, and breakthrough insights
+1. SECTION SCOPE COMPLIANCE: Ensure all required elements from section specifications are preserved
+2. STRICT LENGTH: Must reach {self.POLISH_WORDS} words - provide specific cuts to achieve this
+3. PRIORITIZE: Keep only the most important insights and data points REQUIRED by the section specifications
+4. CUT: Redundant explanations, excessive examples, verbose phrasing
+5. PRESERVE: Key data points, sources, and breakthrough insights that align with section requirements
 
 Evaluate:
-1. LENGTH: Specific guidance to reach {self.POLISH_WORDS} words - what must be cut?
-2. IMPACT: Are the highest-value insights prominently featured?
-3. EFFICIENCY: What redundant content can be removed without losing analytical power?
-4. CLARITY: Is the logic flow clear and well-structured?
-5. TABLE FOCUS: One small, essential table with the most critical numbers for this section
+1. SCOPE COMPLIANCE: Does the analysis still cover all requirements from the section specifications?
+2. LENGTH: Specific guidance to reach {self.POLISH_WORDS} words - what must be cut?
+3. IMPACT: Are the highest-value insights required by this section prominently featured?
+4. EFFICIENCY: What redundant content can be removed without losing analytical power WITHIN the section scope?
+5. CLARITY: Is the logic flow clear and well-structured?
+6. TABLE FOCUS: One small, essential table with the most critical numbers for this section
+
+SCOPE PROTECTION:
+- Do not suggest removing content that directly fulfills section specifications
+- Do not suggest adding content that belongs in other sections
+- Focus cuts on redundancy, not required section elements
 
 Focus on:
-- AGGRESSIVE CUTTING to reach {self.POLISH_WORDS} words exactly
-- Removing verbose explanations while keeping insights
-- Prioritizing breakthrough findings over routine observations
-- Maximum analytical impact per word
-- One small, focused table with the most essential metrics
+- AGGRESSIVE CUTTING to reach {self.POLISH_WORDS} words exactly WHILE preserving section requirements
+- Removing verbose explanations while keeping insights required by the section specifications
+- Prioritizing breakthrough findings that align with the section's analytical purpose
+- Maximum analytical impact per word WITHIN the section scope
+- One small, focused table with the most essential metrics for this section
 
-Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words."""
+Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words while maintaining compliance with section specifications."""
         
         # Use medium temperature for polish critique - balanced refinement
-        response = self.model_medium_temp.generate_content(prompt)
-        return response.text
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text
+        )
     
     def apply_critique(self, section: Dict, current_draft: str, critique: str, critique_type: str) -> str:
         """Apply a specific critique to improve the current draft"""
@@ -374,6 +412,16 @@ Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words."""
         
         prompt = f"""REVISE (do not rewrite) this analysis by applying the {critique_type} critique feedback.
 
+ORIGINAL SECTION SPECIFICATIONS (CRITICAL - MUST COMPLY):
+{section['specs']}
+
+CRITICAL SCOPE BOUNDARY
+- You MUST stay strictly within the section specifications above
+- Do NOT add content that belongs in other sections
+- Do NOT remove content that the section specifications require
+- Do NOT change the analytical focus beyond what the section specifications define
+- The critique feedback should only be applied if it aligns with the section specifications
+
 CURRENT ANALYSIS TO REVISE:
 {current_draft}
 
@@ -386,22 +434,32 @@ SOURCE DOCUMENTS (only for implementing specific feedback):
 CRITICAL REVISION APPROACH:
 - START with the current analysis above as your foundation
 - KEEP all valuable content, insights, and structure from the current analysis
-- ONLY make targeted improvements based on the specific critique feedback
+- ONLY make targeted improvements based on the critique feedback that ALIGN with section specifications
+- REJECT any critique suggestions that would violate the section specifications
 - DO NOT start over or create an entirely new analysis
+
+SECTION SPECIFICATION COMPLIANCE CHECK:
+Before implementing any critique suggestion, ask:
+1. Does this change align with the section specifications?
+2. Am I staying within the defined scope of this section?
+3. Am I preserving all required elements from the section specifications?
+4. Would this change cause the section to cover topics that belong elsewhere?
 
 CRITICAL STANCE - Maintain skeptical analysis:
 - Challenge management claims with data
 - Highlight disconnects between numbers and narrative
 - Identify what's missing or downplayed
+- BUT only within the scope defined by the section specifications
 
 Instructions:
-1. Address all specific issues raised in the critique
-2. PRESERVE the existing analysis structure and all valuable content
-3. ADD missing elements identified in the critique - use source documents ONLY to find specific data points mentioned in the critique
-4. ENHANCE the analysis based on feedback - improve what exists rather than replacing it
-5. For {critique_type} phase: Balance enhancement with appropriate distillation{word_constraint}
+1. Address critique issues that align with the section specifications
+2. PRESERVE the existing analysis structure and all valuable content required by section specifications
+3. ADD missing elements identified in the critique - use source documents ONLY to find specific data points mentioned in the critique that align with section specifications
+4. ENHANCE the analysis based on feedback that supports the section specifications
+5. IGNORE or REJECT critique suggestions that would violate the section specifications
+6. For {critique_type} phase: Balance enhancement with appropriate distillation{word_constraint}
 
-REVISION APPROACH: This is about improving and enhancing the existing analysis, not creating a new one. The source documents are provided only to help you implement specific critique feedback that requires additional data.
+REVISION APPROACH: This is about improving and enhancing the existing analysis WITHIN the section specifications, not creating a new one. The source documents are provided only to help you implement specific critique feedback that aligns with the section requirements.
 
 Output the REVISED analysis in clean Markdown format."""
         
@@ -419,8 +477,9 @@ Output the REVISED analysis in clean Markdown format."""
             # Default to medium temperature
             model = self.model_medium_temp
         
-        response = model.generate_content(prompt)
-        return response.text
+        return retry_with_backoff(
+            lambda: model.generate_content(prompt).text
+        )
     
     def extract_learning(self, section: Dict, final_output: str) -> str:
         """Step 5: Extract analytical instruction insights for memory"""
@@ -539,5 +598,6 @@ Each instruction must be universally applicable across industries and sectors.
 """
         
         # Use medium temperature for learning extraction - balanced analysis
-        response = self.model_medium_temp.generate_content(prompt)  
-        return response.text 
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text
+        ) 

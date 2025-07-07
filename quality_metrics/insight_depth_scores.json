@@ -757,5 +757,168 @@
       "depth_ratio": 0.0006148710966665203
     },
     "average_depth_ratio": 0.0025885257108287565
+  },
+  "run_9": {
+    "section_2": {
+      "insights_count": 1,
+      "output_length": 631,
+      "depth_ratio": 0.001584786053882726
+    },
+    "section_1": {
+      "insights_count": 1,
+      "output_length": 612,
+      "depth_ratio": 0.0016339869281045752
+    },
+    "section_3": {
+      "insights_count": 2,
+      "output_length": 1541,
+      "depth_ratio": 0.0012978585334198572
+    },
+    "section_4": {
+      "insights_count": 5,
+      "output_length": 942,
+      "depth_ratio": 0.005307855626326964
+    },
+    "section_6": {
+      "insights_count": 4,
+      "output_length": 580,
+      "depth_ratio": 0.006896551724137931
+    },
+    "section_5": {
+      "insights_count": 0,
+      "output_length": 843,
+      "depth_ratio": 0.0
+    },
+    "section_7": {
+      "insights_count": 2,
+      "output_length": 1455,
+      "depth_ratio": 0.0013745704467353953
+    },
+    "section_9": {
+      "insights_count": 2,
+      "output_length": 1053,
+      "depth_ratio": 0.001899335232668566
+    },
+    "section_8": {
+      "insights_count": 2,
+      "output_length": 877,
+      "depth_ratio": 0.002280501710376283
+    },
+    "section_10": {
+      "insights_count": 2,
+      "output_length": 682,
+      "depth_ratio": 0.002932551319648094
+    },
+    "section_11": {
+      "insights_count": 0,
+      "output_length": 1308,
+      "depth_ratio": 0.0
+    },
+    "section_13": {
+      "insights_count": 0,
+      "output_length": 953,
+      "depth_ratio": 0.0
+    },
+    "section_14": {
+      "insights_count": 0,
+      "output_length": 775,
+      "depth_ratio": 0.0
+    },
+    "section_12": {
+      "insights_count": 0,
+      "output_length": 913,
+      "depth_ratio": 0.0
+    },
+    "section_17": {
+      "insights_count": 0,
+      "output_length": 1061,
+      "depth_ratio": 0.0
+    },
+    "section_16": {
+      "insights_count": 2,
+      "output_length": 785,
+      "depth_ratio": 0.0025477707006369425
+    },
+    "section_15": {
+      "insights_count": 3,
+      "output_length": 1426,
+      "depth_ratio": 0.0021037868162692847
+    },
+    "section_18": {
+      "insights_count": 0,
+      "output_length": 685,
+      "depth_ratio": 0.0
+    },
+    "section_19": {
+      "insights_count": 2,
+      "output_length": 609,
+      "depth_ratio": 0.003284072249589491
+    },
+    "section_22": {
+      "insights_count": 5,
+      "output_length": 647,
+      "depth_ratio": 0.0077279752704791345
+    },
+    "section_20": {
+      "insights_count": 0,
+      "output_length": 567,
+      "depth_ratio": 0.0
+    },
+    "section_21": {
+      "insights_count": 0,
+      "output_length": 411,
+      "depth_ratio": 0.0
+    },
+    "section_23": {
+      "insights_count": 3,
+      "output_length": 1092,
+      "depth_ratio": 0.0027472527472527475
+    },
+    "section_25": {
+      "insights_count": 0,
+      "output_length": 1043,
+      "depth_ratio": 0.0
+    },
+    "section_26": {
+      "insights_count": 2,
+      "output_length": 656,
+      "depth_ratio": 0.003048780487804878
+    },
+    "section_24": {
+      "insights_count": 0,
+      "output_length": 678,
+      "depth_ratio": 0.0
+    },
+    "section_28": {
+      "insights_count": 0,
+      "output_length": 563,
+      "depth_ratio": 0.0
+    },
+    "section_27": {
+      "insights_count": 9,
+      "output_length": 2150,
+      "depth_ratio": 0.004186046511627907
+    },
+    "section_29": {
+      "insights_count": 4,
+      "output_length": 706,
+      "depth_ratio": 0.0056657223796034
+    },
+    "section_30": {
+      "insights_count": 2,
+      "output_length": 749,
+      "depth_ratio": 0.0026702269692923898
+    },
+    "section_31": {
+      "insights_count": 2,
+      "output_length": 753,
+      "depth_ratio": 0.0026560424966799467
+    },
+    "section_32": {
+      "insights_count": 10,
+      "output_length": 17074,
+      "depth_ratio": 0.0005856858381164344
+    },
+    "average_depth_ratio": 0.0019509800013329047
   }
 }

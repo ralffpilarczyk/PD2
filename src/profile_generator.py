@@ -91,6 +91,9 @@ class ProfileGenerator:
                 # Track processed sections for TOC
                 processed_sections.append((section_num, section_title))
         
+        # Apply footnote management to ensure sequential numbering
+        combined_markdown = self._manage_footnotes(combined_markdown)
+        
         return combined_markdown, processed_sections
     
     def _clean_markdown_content(self, content):
@@ -110,8 +113,89 @@ class ProfileGenerator:
                 content = content[:-3]  # Remove ``` at end
             content = content.strip()
             print("  → Cleaned problematic markdown code block wrapper")
+        
+        # Remove duplicate section titles that LLM sometimes generates
+        # Look for patterns like "## SECTION 1: Title" or "# SECTION 1: Title" at the start
+        lines = content.split('\n')
+        if lines and (lines[0].startswith('## SECTION ') or lines[0].startswith('# SECTION ') or lines[0].startswith('SECTION ')):
+            lines = lines[1:]  # Remove the first line
+            content = '\n'.join(lines).strip()
+            print("  → Removed duplicate section title")
             
         return content
+    
+    def _manage_footnotes(self, markdown_content):
+        """Manage footnotes to ensure sequential numbering and reasonable limits"""
+        import re
+        
+        # Track footnote counter across all sections
+        footnote_counter = 1
+        footnote_map = {}
+        
+        # Split content by sections to process each section separately
+        sections = re.split(r'(<a id="section_\d+"></a>)', markdown_content)
+        
+        processed_sections = []
+        
+        for i, section in enumerate(sections):
+            if not section.strip():
+                continue
+                
+            # Check if this is a section marker
+            if section.startswith('<a id="section_'):
+                processed_sections.append(section)
+                continue
+            
+            # Process section content
+            section_footnote_count = 0
+            section_footnotes = []
+            
+            # Find all footnote references in this section
+            footnote_refs = re.findall(r'<sup>\((\d+)\)</sup>', section)
+            
+            # Create mapping for this section's footnotes
+            section_footnote_map = {}
+            for old_num in set(footnote_refs):
+                if section_footnote_count < 8:  # Limit to 8 footnotes per section
+                    section_footnote_map[old_num] = str(footnote_counter)
+                    footnote_counter += 1
+                    section_footnote_count += 1
+                else:
+                    # Remove excess footnotes
+                    section_footnote_map[old_num] = None
+            
+            # Replace footnote references
+            for old_num, new_num in section_footnote_map.items():
+                if new_num is not None:
+                    section = re.sub(f'<sup>\\({old_num}\\)</sup>', f'<sup>({new_num})</sup>', section)
+                else:
+                    # Remove excess footnotes
+                    section = re.sub(f'<sup>\\({old_num}\\)</sup>', '', section)
+            
+            # Update footnote definitions at the end of the section
+            # Find footnote definitions (they appear after "Footnotes:" or similar)
+            footnote_section_match = re.search(r'(Footnotes?:.*?)(?=\n\n---|$)', section, re.DOTALL)
+            if footnote_section_match:
+                footnote_section = footnote_section_match.group(1)
+                
+                # Replace footnote numbers in definitions
+                for old_num, new_num in section_footnote_map.items():
+                    if new_num is not None:
+                        footnote_section = re.sub(f'<sup>\\({old_num}\\)</sup>', f'<sup>({new_num})</sup>', footnote_section)
+                    else:
+                        # Remove excess footnote definitions
+                        footnote_section = re.sub(f'<sup>\\({old_num}\\)</sup>[^<]*?<br />', '', footnote_section)
+                
+                # Replace the footnote section in the main content
+                section = re.sub(r'Footnotes?:.*?(?=\n\n---|$)', footnote_section, section, flags=re.DOTALL)
+            
+            processed_sections.append(section)
+            
+            # Print footnote management info
+            if section_footnote_count > 0:
+                print(f"  → Managed {section_footnote_count} footnotes (max 8 per section)")
+        
+        return ''.join(processed_sections)
     
     def _get_section_title(self, section_num):
         """Get the proper section title from section definitions"""
@@ -390,6 +474,8 @@ Examples:
             font-size: 1em;
             line-height: 1.6;
         }
+        
+
         
         h1 {
             color: #1a365d;

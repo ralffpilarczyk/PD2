@@ -9,8 +9,8 @@ class CoreAnalyzer:
     
     # Progressive word limit configuration
     INITIAL_WORDS = 1000      # Initial draft + completeness critique target
-    INSIGHT_WORDS = 700       # Insight critique target - distill key patterns
-    POLISH_WORDS = 500        # Polish critique target - final concise output
+    INSIGHT_WORDS = 500       # Insight critique target - distill key patterns
+    POLISH_WORDS = 300        # Polish critique target - final concise output
     SECTION_32_EXEMPT = 32    # Section number that is exempt from word limits
     
     # Temperature configuration for different cognitive phases
@@ -95,6 +95,15 @@ Include at least a small, well-formatted table that presents the most relevant n
 - Include proper headers and source references
 - Be formatted clearly in Markdown table syntax
 - Focus on the most important numerical data that supports your analysis
+- Avoid redundant columns (e.g., don't include "Most Recent Date" if dates are clear from column headers)
+- Be efficient - only include rows and columns that add meaningful information
+
+FOOTNOTE RULES:
+- Maximum 5-8 footnotes per section
+- Only footnote: specific numbers from sources, direct quotes, non-obvious claims
+- DO NOT footnote: general observations, industry facts, your own analysis
+- Format: <sup>(1)</sup> inline, list footnotes at section end
+- No square bracket citations
 
 CONSTRAINT: Target {self.INITIAL_WORDS} words (except Section {self.SECTION_32_EXEMPT} which organizes data without word limit).
 Be comprehensive in this initial phase - capture all relevant facts and insights.
@@ -408,7 +417,13 @@ Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words whil
                 phase_guidance = "FINAL PHASE: Concise and impactful."
             
             word_constraint = f"\nCONSTRAINT: Target {target_words} words - {phase_guidance}"
-            word_constraint += "\nTABLE REQUIREMENT: Ensure at least a small, well-formatted table with key numbers is included."
+            word_constraint += "\nTABLE REQUIREMENT: Ensure at least a small, well-formatted table with key numbers is included. Avoid redundant columns."
+            word_constraint += "\nFOOTNOTE RULES: Maximum 5-8 footnotes per section. Only footnote:"
+            word_constraint += "\n- Specific numbers from source documents"
+            word_constraint += "\n- Direct quotes from sources"
+            word_constraint += "\n- Non-obvious claims requiring verification"
+            word_constraint += "\nDO NOT footnote general observations, industry facts, or your own analysis."
+            word_constraint += "\nFORMAT: Use <sup>(1)</sup> inline, list footnotes at section end. No square brackets."
         
         prompt = f"""REVISE (do not rewrite) this analysis by applying the {critique_type} critique feedback.
 

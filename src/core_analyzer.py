@@ -116,187 +116,121 @@ Output in clean Markdown format with proper headers, tables, and bullet points.
         )
     
     def completeness_critique(self, section: Dict, draft: str) -> str:
-        """Step 2: Critique completeness against requirements"""
+        """Step 2: Critique for completeness against section specifications with materiality assessment"""
         
-        # Count words in current draft
         word_count = len(draft.split())
         
-        # Check if this is Section 32 (Appendix) - different requirements
+        # Check if this section is exempt from word limits
         if section['number'] == self.SECTION_32_EXEMPT:
-            prompt = f"""Critique this appendix for DATA COMPLETENESS against the specific requirements.
+            prompt = f"""Critique this appendix for COMPLETENESS of essential data.
 
-APPENDIX REQUIREMENTS:
-{section['specs']}
-
-DRAFT APPENDIX:
+APPENDIX ANALYSIS:
 {draft}
 
 CURRENT WORD COUNT: {word_count} words
 NOTE: This is Section {self.SECTION_32_EXEMPT} (Appendix) - NO WORD LIMIT applies.
 
-APPENDIX-SPECIFIC EVALUATION:
-1. DATA COMPLETENESS: Are all tables and data from the source documents included?
-2. ORGANIZATION: Are tables logically grouped (financials, operational, governance, etc.)?
-3. FORMAT: Are tables properly formatted in Markdown?
-4. SOURCES: Are table sources clearly noted?
-5. UNWANTED CONTENT: Are there analytical narratives that should be removed?
-
-For each gap identified, be specific about:
-- What tables or data are missing
-- How to improve the organization structure
-- Any analytical content that should be removed
-
-Focus on making this a comprehensive data reference appendix."""
+Focus on ensuring all critical data tables and reference information are included."""
         else:
-            prompt = f"""Critique this analysis for COMPLETENESS against the specific requirements.
+            prompt = f"""Critique this analysis for COMPLETENESS against the section specifications.
 
 ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
 {section['specs']}
 
-CRITICAL: Your critique must only suggest improvements that ALIGN with the section specifications above. 
-DO NOT suggest adding content that contradicts or goes beyond the specified scope.
-
-DRAFT ANALYSIS:
-{draft}
-
-CURRENT WORD COUNT: {word_count} words
-TARGET: {self.INITIAL_WORDS} words (COMPLETENESS PHASE - capture everything important)
-
-COMPLETENESS FOCUS - This is the comprehensive phase:
-- Prioritize capturing ALL required elements from the section specifications
-- Better to be slightly over word count than miss critical requirements
-- Next phases will distill and refine the content
-- STAY WITHIN the section specifications - do not suggest out-of-scope content
-
-Evaluate systematically:
-1. SECTION SCOPE COMPLIANCE: Does the analysis stay strictly within the section specifications?
-2. REQUIRED DATA POINTS: Are all specified metrics, time periods, and data elements included?
-3. COVERAGE GAPS: What specific requirements from the section specs are missing or inadequately addressed?
-4. SOURCE CITATIONS: Are all claims properly sourced with document references?
-5. TIME PERIODS: Are the proposed historical data requirements met?
-6. FORMAT REQUIREMENTS: Are tables, bullet points, etc. used as specified?
-7. TABLE REQUIREMENT: Is there at least one small, well-formatted table with the most relevant numbers for this section?
-8. OUT-OF-SCOPE CHECK: Are there any suggestions that would add content beyond the section specifications?
-
-For each gap identified, be specific about:
-- What exactly is missing from the section specifications
-- Where it should be found in the source documents  
-- How critical this gap is to meeting the specified requirements
-- What additional relevant insights could be captured WITHIN the section scope
-
-SCOPE BOUNDARY ENFORCEMENT:
-- Only suggest additions that directly fulfill the section specifications
-- Do not suggest content that belongs in other sections
-- Focus on what the section specifications explicitly require
-
-TABLE FOCUS: Include at least one small table with the most relevant numbers for this section. Keep it concise but focused on the key metrics that matter most for this specific section.
-
-COMPREHENSIVE GOAL: This completeness phase should capture all material facts and requirements WITHIN the section specifications. 
-Subsequent phases will handle distillation and refinement. Focus on thoroughness within scope."""
-        
-        # Use low temperature for completeness critique - systematic, methodical analysis
-        return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text
-        )
-    
-    def insight_critique(self, section: Dict, draft: str) -> str:
-        """Step 3: Deep insight critique using What-Why-So What framework"""
-        
-        # Count words in current draft
-        word_count = len(draft.split())
-        
-        # Check if this is Section 32 (Appendix) - no analytical insights needed
-        if section['number'] == self.SECTION_32_EXEMPT:
-            prompt = f"""Critique this appendix for DATA ORGANIZATION and PRESENTATION.
-
-APPENDIX TO CRITIQUE:
-{draft}
-
-CURRENT WORD COUNT: {word_count} words
-NOTE: This is Section {self.SECTION_32_EXEMPT} (Appendix) - NO ANALYTICAL INSIGHTS needed.
-
-APPENDIX-SPECIFIC FOCUS:
-This should be a clean data reference tool, not an analytical document.
-
-Evaluate:
-1. PURE DATA FOCUS: Remove any analytical narratives, insights, or "What-Why-So What" content
-2. TABLE ORGANIZATION: Are tables logically sequenced (operational → financial → governance)?
-3. DATA INTEGRITY: Are all important tables from source documents included?
-4. CLEAN FORMAT: Are tables properly formatted in Markdown with clear headers?
-5. REFERENCE UTILITY: Is this easy to use as a data lookup tool?
-
-Focus on:
-- Removing all analytical content and keeping only raw data tables
-- Improving table formatting and organization
-- Making this a comprehensive data reference appendix
-- Ensuring tables are complete and well-sourced
-
-The goal is a clean, organized collection of data tables - not analysis."""
-        else:
-            prompt = f"""Conduct a deep analytical critique of this business analysis using investigative thinking.
-
-ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
-{section['specs']}
-
-CRITICAL SCOPE BOUNDARY: Your critique must only suggest analytical approaches that ALIGN with the section specifications above.
-DO NOT suggest insights or analysis that contradicts or goes beyond the specified section scope.
+CRITICAL SCOPE BOUNDARY: Your critique must only suggest completeness improvements that ALIGN with the section specifications above.
 
 ANALYSIS TO CRITIQUE:
 {draft}
 
 CURRENT WORD COUNT: {word_count} words
-TARGET: {self.INSIGHT_WORDS} words (INSIGHT PHASE - distill to key analytical patterns)
+TARGET: {self.INITIAL_WORDS} words (INITIAL PHASE - comprehensive capture)
 
-DISTILLATION FOCUS - This is the analytical thinking phase:
-- Move from comprehensive capture to focused insight extraction WITHIN the section scope
-- Identify the most important analytical patterns and relationships specified in the section requirements
-- Cut lower-value content to make room for deeper insights WITHIN the section specifications
-- Next phase will further distill to final concise output
+COMPLETENESS ASSESSMENT:
+Identify specific elements required by the section specifications that are missing or incomplete.
 
-CRITICAL PERSPECTIVE - Remember management documents are biased:
-- What positive claims lack supporting evidence?
-- What negative information might be minimized or omitted?
-- Where do the numbers contradict the narrative?
-- What context is missing that could change the interpretation?
+MATERIALITY ASSESSMENT:
+Review each fact/claim in the draft. Consider marking items where ANY of these apply:
+- Different outcome would be material to company's prospects → [MARK: MATERIAL_IMPACT]
+- Trend reversal would trigger strategic shift → [MARK: TREND_REVERSAL]
+- Root cause unknown but outcome material → [MARK: ROOT_CAUSE_MISSING]
 
-Apply the What-Why-So What framework systematically WITHIN the section specifications:
+For each mark, provide brief explanation in format:
+[MARK: MATERIAL_IMPACT] "Debt restructuring - could affect access to growth capital"
 
-1. WHAT (Pattern Detection WITHIN SECTION SCOPE):
-   - Scan for mathematical/logical anomalies relevant to this section's focus
-   - Identify temporal inconsistencies that relate to the section specifications
-   - Spot cross-metric relationships that the section specifications require
-   - Find strategic disconnects relevant to this section's purpose
-   - Look for numbers that contradict management narrative WITHIN this section's domain
+CRITICAL EVALUATION AREAS:
+1. REQUIRED ELEMENTS: What specific elements from the section specifications are missing?
+2. DATA GAPS: What critical data points or metrics are absent?
+3. SOURCE VERIFICATION: Are claims properly supported and sourced?
+4. MATERIALITY: Which facts have material impact on company prospects?
+5. ANALYTICAL DEPTH: Where does analysis need deeper exploration within section scope?
 
-2. WHY (Investigation WITHIN SECTION SCOPE):
-   - For each unusual pattern: WHY did this happen? What's the business logic?
-   - Are there hidden relationships that the section specifications call for?
-   - What explanations are missing that relate to the section requirements?
-   - What cross-document inconsistencies need reconciliation WITHIN this section's focus?
-   - What insights align with the section's analytical purpose?
+Focus exclusively on:
+- Missing elements specifically required by the section specifications
+- Inadequate coverage of specified analytical requirements
+- Gaps in required data, metrics, or evidence
+- Materiality assessment to focus on what truly matters
+- Areas needing more analytical depth within the defined scope
 
-3. SO WHAT (Implication WITHIN SECTION SCOPE):
-   - For each unexplained pattern: What business risk or opportunity does this create within this section's domain?
-   - What are the investment/strategic implications relevant to this section?
-   - What material insights are missing that the section specifications require?
-   - What red flags should buyers investigate that relate to this section's focus?
+DO NOT suggest:
+- Adding content that belongs in other sections
+- Removing content that the section specifications require
+- Analysis beyond the scope defined in the section specifications
 
-SCOPE COMPLIANCE CHECK:
-- Does each suggested insight align with the section specifications?
-- Are you suggesting analysis that belongs in other sections?
-- Does the analytical approach match what the section specifications require?
+Provide specific, actionable guidance for achieving completeness within the section scope while identifying material facts that warrant focus."""
 
-Focus on logical gaps that would make an experienced business analyst say "wait, that doesn't make sense" or "you need to explain why..." BUT only within this section's specified scope.
+        # Use low temperature for systematic completeness evaluation
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(prompt).text
+        )
+    
+    def insight_critique(self, section: Dict, draft: str) -> str:
+        """Step 3: Critique for analytical depth and breakthrough insight"""
+        
+        word_count = len(draft.split())
+        
+        # Check if this is the exempt section
+        if section['number'] == self.SECTION_32_EXEMPT:
+            prompt = f"""This is Section {self.SECTION_32_EXEMPT} (Appendix) - focus on data organization rather than insights.
 
-INSIGHT DISTILLATION APPROACH:
-- Focus on the 2-3 most material analytical insights that truly matter FOR THIS SECTION
-- Cut routine observations to make room for breakthrough findings WITHIN the section scope
-- Prioritize insights that change how you view the business aspect covered by this section
-- Eliminate repetitive or less impactful content to reach target words
+APPENDIX:
+{draft}
 
-TABLE EVALUATION: Does the analysis include at least one small, focused table with the MOST RELEVANT numbers for this section? Evaluate:
-- What specific metrics should be tabulated for maximum clarity and relevance TO THIS SECTION
-- How time periods should be organized (columns for years/quarters)
+Evaluate organization and completeness of data tables only."""
+        else:
+            prompt = f"""Critique this analysis for STRATEGIC INSIGHT and breakthrough thinking.
+
+ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
+{section['specs']}
+
+CRITICAL SCOPE BOUNDARY: Your critique must only suggest analytical approaches that ALIGN with the section specifications above.
+DO NOT suggest insights or analysis that belongs in other sections.
+
+ANALYSIS TO CRITIQUE:
+{draft}
+
+CURRENT WORD COUNT: {word_count} words
+TARGET: {self.INSIGHT_WORDS} words (INSIGHT PHASE - distill key patterns)
+
+INSIGHT DEPTH ASSESSMENT - This is the analytical breakthrough phase:
+Look for opportunities to transform facts into strategic insights WITHIN the section scope.
+Focus on non-obvious patterns, relationships, and implications that reveal competitive dynamics or material risks.
+
+Critical evaluation areas:
+1. ANALYTICAL DEPTH: Does the analysis explain WHY things are happening, not just WHAT?
+2. NON-OBVIOUS CONNECTIONS: Are there hidden relationships between data points within this section?
+3. COMPETITIVE IMPLICATIONS: What does this data reveal about competitive positioning or dynamics?
+4. STRATEGIC RISKS/OPPORTUNITIES: What are the forward-looking implications within this section's domain?
+5. MANAGEMENT VS REALITY: Are there disconnects between management claims and actual data?
+
+SOURCE ANALYSIS DEPTH:
+{self.full_context}
+
+INSIGHT FOCUS AREAS (within section scope):
+- What patterns emerge when connecting different data points in this section?
+- What competitive dynamics or market forces are revealed by the data?
+- What strategic vulnerabilities or advantages become apparent?
+- Where do the numbers tell a different story than management's narrative?
+- What are the second-order effects or implications of the trends shown?
 - What comparisons would be most valuable in table format FOR THIS SECTION'S PURPOSE
 - If multiple tables exist, which one is most essential for this section's purpose
 
@@ -305,6 +239,110 @@ Identify specific analytical improvements needed while targeting {self.INSIGHT_W
         # Use high temperature for insight critique - creative breakthrough thinking
         return retry_with_backoff(
             lambda: self.model_high_temp.generate_content(prompt).text
+        )
+
+    def insight_testing(self, section: Dict, draft: str) -> str:
+        """Step 4A: Systematic testing of insights using the 3-question framework"""
+        
+        # Check if this is the exempt section
+        if section['number'] == self.SECTION_32_EXEMPT:
+            return "Insight testing not applicable for appendix section."
+        
+        prompt = f"""Test each strategic insight in this analysis using systematic boundary examination.
+
+ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
+{section['specs']}
+
+ANALYSIS TO TEST:
+{draft}
+
+INSIGHT TESTING FRAMEWORK:
+For each statement that reveals hidden relationships or strategic implications within this section:
+
+Answer these three questions explicitly:
+1. "What breaks this?" (identify the boundary condition where this insight fails)
+2. "What must stay true for this to continue?" (identify critical dependencies)
+3. "Who loses if this succeeds?" (identify second-order effects and competitive impacts)
+
+OUTPUT FORMAT REQUIRED:
+For each testable insight, use this exact structure:
+
+[INSIGHT]: [State the specific insight being tested]
+- Breaks when: [Specific condition (ideally underpinned by numbers) that would invalidate this insight]
+- Depends on: [Critical factors that must remain true]
+- Losers: [Who gets negatively impacted if this insight plays out]
+
+TESTING CRITERIA:
+- Focus only on insights with strategic or competitive implications within this section's scope
+- Skip obvious facts or standard industry observations
+- Examine insights that could materially impact company prospects
+- Look for insights about competitive positioning, market dynamics, or operational leverage
+
+EXAMPLE FORMAT:
+[INSIGHT]: Subscription model drives predictable revenue growth
+- Breaks when: Market penetration reaches 40% of addressable market due to saturation
+- Depends on: Customer acquisition cost staying below £50 and monthly churn under 5%
+- Losers: Traditional retail channels seeing 20% volume decline
+
+Test only insights that reveal important non-obvious relationships or competitive dynamics within this section's scope."""
+
+        # Use medium temperature for systematic testing
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text
+        )
+
+    def insight_marking(self, section: Dict, draft: str, insight_testing_results: str) -> str:
+        """Step 4B: Evaluate and mark insights based on testing results"""
+        
+        # Check if this is the exempt section
+        if section['number'] == self.SECTION_32_EXEMPT:
+            return "Insight marking not applicable for appendix section."
+        
+        prompt = f"""Evaluate the insight testing results to identify which insights merit expansion.
+
+ORIGINAL SECTION SPECIFICATIONS (MUST STAY WITHIN SCOPE):
+{section['specs']}
+
+CURRENT ANALYSIS:
+{draft}
+
+INSIGHT TESTING RESULTS:
+{insight_testing_results}
+
+INSIGHT EVALUATION:
+Based on the test answers from the insight testing, mark each insight:
+
+- If testing reveals non-obvious vulnerabilities, dependencies, or impacts → [MARK: KEEP_EXPAND]
+- If testing shows obvious, generic, or well-known patterns → [MARK: REMOVE_WEAK]
+
+MARKING CRITERIA:
+[MARK: KEEP_EXPAND] for insights where testing reveals:
+- Non-obvious boundary conditions or failure points
+- Specific dependencies that aren't immediately apparent
+- Unexpected competitive or market impacts
+- Material risks or opportunities not obvious from surface data
+
+[MARK: REMOVE_WEAK] for insights where testing shows:
+- Obvious or predictable patterns
+- Generic industry trends without company-specific implications
+- Dependencies that are self-evident
+- Impacts that are standard competitive effects
+
+OUTPUT FORMAT:
+For each tested insight, provide:
+[MARK: KEEP_EXPAND] - [Brief reasoning why this insight has non-obvious value]
+OR
+[MARK: REMOVE_WEAK] - [Brief reasoning why this insight is too obvious]
+
+EXAMPLE:
+[MARK: KEEP_EXPAND] - Market ceiling at 40% not obvious from current 15% penetration, specific cost thresholds reveal scalability limits
+[MARK: REMOVE_WEAK] - Standard retail displacement pattern, no unique competitive insight
+
+Focus on preserving insights that reveal hidden competitive dynamics or material risks within this section's scope."""
+
+        # Use medium temperature for balanced evaluation
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text
         )
     
     def polish_critique(self, section: Dict, draft: str) -> str:
@@ -409,6 +447,12 @@ Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words whil
             elif critique_type == "insight":
                 target_words = self.INSIGHT_WORDS
                 phase_guidance = "INSIGHT PHASE: Distill to key analytical patterns and relationships."
+            elif critique_type == "insight_testing":
+                target_words = self.INSIGHT_WORDS
+                phase_guidance = "INSIGHT TESTING PHASE: Apply systematic testing framework to validate insights."
+            elif critique_type == "insight_marking":
+                target_words = self.INSIGHT_WORDS
+                phase_guidance = "INSIGHT MARKING PHASE: Expand strong insights, remove weak ones based on testing."
             elif critique_type == "polish":
                 target_words = self.POLISH_WORDS
                 phase_guidance = "POLISH PHASE: Final distillation - maximum impact per word."
@@ -423,9 +467,83 @@ Provide specific guidance on cuts needed to reach {self.POLISH_WORDS} words whil
             word_constraint += "\n- Direct quotes from sources"
             word_constraint += "\n- Non-obvious claims requiring verification"
             word_constraint += "\nDO NOT footnote general observations, industry facts, or your own analysis."
-            word_constraint += "\nFORMAT: Use <sup>(1)</sup> inline, list footnotes at section end. No square brackets."
+            word_constraint += "\nFORMAT: Use <sup>(1)</sup> inline, list footnotes at section end. No brackets."
+            
+            # Add systematic word reduction strategy
+            word_constraint += "\nWORD REDUCTION STRATEGY:"
+            word_constraint += "\nTo fit within target word count:"
+            word_constraint += "\n1. FIRST eliminate redundant information (repetitive statements, overlapping explanations)"
+            word_constraint += "\n2. THEN remove least value-add content (preserve core insights required by section specifications)"
+            
+            # Add marking system guidance for relevant critique types
+            if critique_type in ["completeness", "insight_marking"]:
+                word_constraint += "\nMARKING SYSTEM GUIDANCE:"
+                word_constraint += "\n- Use [MARK: TYPE] tags to identify facts based on materiality assessment"
+                word_constraint += "\n- For [MARK: MATERIAL_IMPACT] items: Add scenarios and implications"
+                word_constraint += "\n- For [MARK: TREND_REVERSAL] items: Add inflection triggers and impact"
+                word_constraint += "\n- For [MARK: ROOT_CAUSE_MISSING] items: Investigate underlying drivers"
+                word_constraint += "\n- For [MARK: KEEP_EXPAND] items: Develop insight further with testing results"
+                word_constraint += "\n- For [MARK: REMOVE_WEAK] items: Remove or significantly reduce emphasis"
         
-        prompt = f"""REVISE (do not rewrite) this analysis by applying the {critique_type} critique feedback.
+        # Special handling for insight testing and marking
+        if critique_type == "insight_testing":
+            prompt = f"""APPLY the insight testing framework to this analysis.
+
+ORIGINAL SECTION SPECIFICATIONS (CRITICAL - MUST COMPLY):
+{section['specs']}
+
+CURRENT ANALYSIS TO ENHANCE:
+{current_draft}
+
+INSIGHT TESTING FRAMEWORK:
+{critique}
+
+ENHANCEMENT APPROACH:
+- KEEP all existing structure and content from the current analysis
+- ENHANCE insights by adding boundary testing (what breaks, what depends, who loses)
+- FOCUS on importantinsights that reveal non-obvious competitive dynamics or material risks
+- REMOVE or de-emphasize insights that tested as obvious or weak
+- MAINTAIN word count target while improving analytical depth{word_constraint}
+- MEASURE the importance of each insight on the company's prospects and the impact of the insight on the company's prospects
+
+CRITICAL INSTRUCTIONS:
+1. Apply the 3-question framework to each strategic insight
+2. Expand insights that passed testing with boundary conditions, dependencies, and impacts
+3. Reduce emphasis on insights that failed testing
+4. Ensure all enhancements align with section specifications
+5. Maintain the existing analysis structure as foundation
+
+Output the ENHANCED analysis with insight testing applied."""
+        
+        elif critique_type == "insight_marking":
+            prompt = f"""APPLY the insight marking evaluation to this analysis.
+
+ORIGINAL SECTION SPECIFICATIONS (CRITICAL - MUST COMPLY):
+{section['specs']}
+
+CURRENT ANALYSIS TO REFINE:
+{current_draft}
+
+INSIGHT MARKING EVALUATION:
+{critique}
+
+REFINEMENT APPROACH:
+- EXPAND insights marked as [MARK: KEEP_EXPAND] with additional analysis
+- REDUCE or REMOVE insights marked as [MARK: REMOVE_WEAK] 
+- MAINTAIN section compliance and word count target
+- FOCUS on insights that create competitive advantage or reveal hidden risks{word_constraint}
+
+CRITICAL INSTRUCTIONS:
+1. Significantly expand [MARK: KEEP_EXPAND] insights with deeper analysis
+2. Remove or significantly reduce [MARK: REMOVE_WEAK] insights
+3. Ensure all changes align with section specifications
+4. Maintain the existing analysis structure as foundation
+
+Output the REFINED analysis with insight marking applied."""
+        
+        else:
+            # Standard critique application
+            prompt = f"""REVISE (do not rewrite) this analysis by applying the {critique_type} critique feedback.
 
 ORIGINAL SECTION SPECIFICATIONS (CRITICAL - MUST COMPLY):
 {section['specs']}
@@ -482,7 +600,7 @@ Output the REVISED analysis in clean Markdown format."""
         if critique_type == "completeness":
             # Low temperature for systematic implementation of completeness feedback
             model = self.model_low_temp
-        elif critique_type == "insight":
+        elif critique_type in ["insight", "insight_testing", "insight_marking"]:
             # High temperature for creative implementation of insight feedback
             model = self.model_high_temp
         elif critique_type == "polish":

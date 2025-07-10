@@ -158,7 +158,7 @@ class IntelligentAnalyst:
         return converted_files
     
     def analyze_section(self, section_num: int) -> str:
-        """Main analysis pipeline for a section"""
+        """Main analysis pipeline for a section - 7-step enhanced process"""
         section = next(s for s in sections if s['number'] == section_num)
         
         thread_safe_print(f"\n{'='*50}")
@@ -175,50 +175,82 @@ class IntelligentAnalyst:
             self.file_manager.save_step_output(section_num, "step_1_initial_draft.md", initial_draft)
             current_best = initial_draft
             
-            # Step 2: Completeness Critique
-            thread_safe_print(f"Section {section_num} - Step 2: Completeness critique...")
+            # Step 2: Completeness Critique + Materiality Assessment
+            thread_safe_print(f"Section {section_num} - Step 2: Completeness critique with materiality assessment...")
             try:
                 completeness_critique = self.core_analyzer.completeness_critique(section, current_best)
                 self.file_manager.save_step_output(section_num, "step_2_completeness_critique.txt", completeness_critique)
-                
-                # Apply completeness critique immediately
-                thread_safe_print(f"Section {section_num} - Step 2b: Applying completeness critique...")
-                current_best = self.core_analyzer.apply_critique(section, current_best, completeness_critique, "completeness")
-                self.file_manager.save_step_output(section_num, "step_2_after_completeness.md", current_best)
             except Exception as e:
                 thread_safe_print(f"Section {section_num} - Warning: Completeness critique failed: {e}")
+                completeness_critique = "Completeness critique failed"
             
-            # Step 3: Insight Critique (Critical step)
-            thread_safe_print(f"Section {section_num} - Step 3: Insight critique...")
+            # Step 3: First Revision (apply completeness critique)
+            thread_safe_print(f"Section {section_num} - Step 3: First revision (applying completeness critique)...")
+            try:
+                current_best = self.core_analyzer.apply_critique(section, current_best, completeness_critique, "completeness")
+                self.file_manager.save_step_output(section_num, "step_3_after_completeness.md", current_best)
+            except Exception as e:
+                thread_safe_print(f"Section {section_num} - Warning: First revision failed: {e}")
+            
+            # Step 4: Insight Critique
+            thread_safe_print(f"Section {section_num} - Step 4: Insight critique...")
             try:
                 insight_critique = self.core_analyzer.insight_critique(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_3_insight_critique.txt", insight_critique)
+                self.file_manager.save_step_output(section_num, "step_4_insight_critique.txt", insight_critique)
                 
                 # Apply insight critique immediately  
-                thread_safe_print(f"Section {section_num} - Step 3b: Applying insight critique...")
+                thread_safe_print(f"Section {section_num} - Step 4b: Applying insight critique...")
                 current_best = self.core_analyzer.apply_critique(section, current_best, insight_critique, "insight")
-                self.file_manager.save_step_output(section_num, "step_3_after_insights.md", current_best)
+                self.file_manager.save_step_output(section_num, "step_4_after_insights.md", current_best)
             except Exception as e:
                 thread_safe_print(f"Section {section_num} - Warning: Insight critique failed: {e}")
+                insight_critique = "Insight critique failed"
             
-            # Step 4: Polish Critique
-            thread_safe_print(f"Section {section_num} - Step 4: Polish critique...")
+            # Step 5: Insight Testing
+            thread_safe_print(f"Section {section_num} - Step 5: Insight testing (3-question framework)...")
+            try:
+                insight_testing = self.core_analyzer.insight_testing(section, current_best)
+                self.file_manager.save_step_output(section_num, "step_5_insight_testing.txt", insight_testing)
+                
+                # Apply insight testing immediately
+                thread_safe_print(f"Section {section_num} - Step 5b: Applying insight testing...")
+                current_best = self.core_analyzer.apply_critique(section, current_best, insight_testing, "insight_testing")
+                self.file_manager.save_step_output(section_num, "step_5_after_testing.md", current_best)
+            except Exception as e:
+                thread_safe_print(f"Section {section_num} - Warning: Insight testing failed: {e}")
+                insight_testing = "Insight testing failed"
+            
+            # Step 6: Insight Marking
+            thread_safe_print(f"Section {section_num} - Step 6: Insight marking and evaluation...")
+            try:
+                insight_marking = self.core_analyzer.insight_marking(section, current_best, insight_testing)
+                self.file_manager.save_step_output(section_num, "step_6_insight_marking.txt", insight_marking)
+                
+                # Apply insight marking immediately
+                thread_safe_print(f"Section {section_num} - Step 6b: Applying insight marking...")
+                current_best = self.core_analyzer.apply_critique(section, current_best, insight_marking, "insight_marking")
+                self.file_manager.save_step_output(section_num, "step_6_after_marking.md", current_best)
+            except Exception as e:
+                thread_safe_print(f"Section {section_num} - Warning: Insight marking failed: {e}")
+            
+            # Step 7: Second Revision + Polish (Final Profile)
+            thread_safe_print(f"Section {section_num} - Step 7: Final polish and profile generation...")
             try:
                 polish_critique = self.core_analyzer.polish_critique(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_4_polish_critique.txt", polish_critique)
+                self.file_manager.save_step_output(section_num, "step_7_polish_critique.txt", polish_critique)
                 
-                # Apply polish critique immediately  
-                thread_safe_print(f"Section {section_num} - Step 4b: Applying polish critique (final output)...")
+                # Apply polish critique to create final profile
+                thread_safe_print(f"Section {section_num} - Step 7b: Applying polish critique (final profile)...")
                 current_best = self.core_analyzer.apply_critique(section, current_best, polish_critique, "polish")
-                self.file_manager.save_step_output(section_num, "step_4_final_output.md", current_best)
+                self.file_manager.save_step_output(section_num, "step_7_final_profile.md", current_best)
             except Exception as e:
                 thread_safe_print(f"Section {section_num} - Warning: Polish critique failed: {e}")
             
-            # Step 5: Learning Extraction
-            thread_safe_print(f"Section {section_num} - Step 5: Learning extraction...")
+            # Step 8: Learning Extraction (separate from the 7 analytical steps)
+            thread_safe_print(f"Section {section_num} - Step 8: Learning extraction...")
             try:
                 learning_insights = self.core_analyzer.extract_learning(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_5_learning_extraction.txt", learning_insights)
+                self.file_manager.save_step_output(section_num, "step_8_learning_extraction.txt", learning_insights)
             except Exception as e:
                 thread_safe_print(f"Section {section_num} - Warning: Learning extraction failed: {e}")
                 learning_insights = "Learning extraction failed"
@@ -226,7 +258,7 @@ class IntelligentAnalyst:
             # Calculate quality metrics for this section
             self.quality_tracker.calculate_section_metrics(section_num, current_best)
             
-            thread_safe_print(f"Section {section_num} - Completed successfully")
+            thread_safe_print(f"Section {section_num} - Completed successfully (7-step process)")
             return current_best
             
         except Exception as e:
@@ -325,7 +357,7 @@ class IntelligentAnalyst:
         # Collect all learning extractions
         learning_files = []
         for section in sections:
-            learning_file = f"runs/run_{self.run_timestamp}/section_{section['number']}/step_5_learning_extraction.txt"
+            learning_file = f"runs/run_{self.run_timestamp}/section_{section['number']}/step_8_learning_extraction.txt"
             if os.path.exists(learning_file):
                 with open(learning_file, 'r', encoding='utf-8') as f:
                     learning_files.append(f.read())

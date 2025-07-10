@@ -920,5 +920,168 @@
       "depth_ratio": 0.0005856858381164344
     },
     "average_depth_ratio": 0.0019509800013329047
+  },
+  "run_10": {
+    "section_2": {
+      "insights_count": 1,
+      "output_length": 549,
+      "depth_ratio": 0.0018214936247723133
+    },
+    "section_1": {
+      "insights_count": 0,
+      "output_length": 596,
+      "depth_ratio": 0.0
+    },
+    "section_5": {
+      "insights_count": 2,
+      "output_length": 514,
+      "depth_ratio": 0.0038910505836575876
+    },
+    "section_3": {
+      "insights_count": 1,
+      "output_length": 514,
+      "depth_ratio": 0.0019455252918287938
+    },
+    "section_4": {
+      "insights_count": 2,
+      "output_length": 538,
+      "depth_ratio": 0.0037174721189591076
+    },
+    "section_6": {
+      "insights_count": 2,
+      "output_length": 833,
+      "depth_ratio": 0.0024009603841536613
+    },
+    "section_7": {
+      "insights_count": 2,
+      "output_length": 561,
+      "depth_ratio": 0.0035650623885918
+    },
+    "section_8": {
+      "insights_count": 2,
+      "output_length": 808,
+      "depth_ratio": 0.0024752475247524753
+    },
+    "section_9": {
+      "insights_count": 2,
+      "output_length": 492,
+      "depth_ratio": 0.0040650406504065045
+    },
+    "section_11": {
+      "insights_count": 0,
+      "output_length": 611,
+      "depth_ratio": 0.0
+    },
+    "section_10": {
+      "insights_count": 1,
+      "output_length": 672,
+      "depth_ratio": 0.001488095238095238
+    },
+    "section_13": {
+      "insights_count": 0,
+      "output_length": 620,
+      "depth_ratio": 0.0
+    },
+    "section_12": {
+      "insights_count": 1,
+      "output_length": 599,
+      "depth_ratio": 0.001669449081803005
+    },
+    "section_14": {
+      "insights_count": 1,
+      "output_length": 628,
+      "depth_ratio": 0.0015923566878980893
+    },
+    "section_15": {
+      "insights_count": 0,
+      "output_length": 463,
+      "depth_ratio": 0.0
+    },
+    "section_17": {
+      "insights_count": 0,
+      "output_length": 434,
+      "depth_ratio": 0.0
+    },
+    "section_16": {
+      "insights_count": 0,
+      "output_length": 625,
+      "depth_ratio": 0.0
+    },
+    "section_18": {
+      "insights_count": 1,
+      "output_length": 909,
+      "depth_ratio": 0.0011001100110011
+    },
+    "section_20": {
+      "insights_count": 2,
+      "output_length": 544,
+      "depth_ratio": 0.003676470588235294
+    },
+    "section_19": {
+      "insights_count": 1,
+      "output_length": 264,
+      "depth_ratio": 0.003787878787878788
+    },
+    "section_21": {
+      "insights_count": 2,
+      "output_length": 574,
+      "depth_ratio": 0.003484320557491289
+    },
+    "section_22": {
+      "insights_count": 0,
+      "output_length": 575,
+      "depth_ratio": 0.0
+    },
+    "section_23": {
+      "insights_count": 2,
+      "output_length": 542,
+      "depth_ratio": 0.0036900369003690036
+    },
+    "section_24": {
+      "insights_count": 1,
+      "output_length": 1025,
+      "depth_ratio": 0.000975609756097561
+    },
+    "section_25": {
+      "insights_count": 2,
+      "output_length": 562,
+      "depth_ratio": 0.0035587188612099642
+    },
+    "section_26": {
+      "insights_count": 4,
+      "output_length": 1378,
+      "depth_ratio": 0.002902757619738752
+    },
+    "section_27": {
+      "insights_count": 4,
+      "output_length": 1121,
+      "depth_ratio": 0.003568242640499554
+    },
+    "section_29": {
+      "insights_count": 1,
+      "output_length": 560,
+      "depth_ratio": 0.0017857142857142857
+    },
+    "section_30": {
+      "insights_count": 3,
+      "output_length": 723,
+      "depth_ratio": 0.004149377593360996
+    },
+    "section_28": {
+      "insights_count": 6,
+      "output_length": 1001,
+      "depth_ratio": 0.005994005994005994
+    },
+    "section_31": {
+      "insights_count": 2,
+      "output_length": 1186,
+      "depth_ratio": 0.0016863406408094434
+    },
+    "section_32": {
+      "insights_count": 18,
+      "output_length": 19643,
+      "depth_ratio": 0.0009163569719492949
+    },
+    "average_depth_ratio": 0.0021846154619774966
   }
 }

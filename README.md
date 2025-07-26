@@ -4,11 +4,11 @@ An intelligent document analysis system for financial analysis that processes PD
 
 ## Features
 
-- 🔍 **Intelligent Analysis**: 4-step refinement pipeline for each section
-- 🧠 **Learning System**: Section-based memory that improves over time
-- ⚡ **Parallel Processing**: Concurrent analysis of multiple sections
-- 📊 **Comprehensive Output**: 32 specialized sections covering all aspects of company analysis
-- 🎯 **Smart Prompting**: Temperature-tuned prompts for different cognitive phases
+- **Intelligent Analysis**: 4-step refinement pipeline for each section
+- **Learning System**: Section-based memory that improves over time
+- **Parallel Processing**: Concurrent analysis of multiple sections
+- **Comprehensive Output**: 32 specialized sections covering all aspects of company analysis
+- **Smart Prompting**: Temperature-tuned prompts for different cognitive phases
 
 ## Quick Start
 

@@ -312,10 +312,10 @@ Output ONLY the REMOVE list. No preamble or explanation."""
             lambda: self.model_low_temp.generate_content(prompt).text
         )
     
-    def apply_completeness_and_scope(self, section: Dict, current_draft: str, add_list: str, remove_list: str) -> str:
-        """Apply the ADD and REMOVE lists to create an improved draft."""
+    def apply_completeness_only(self, section: Dict, current_draft: str, add_list: str) -> str:
+        """Apply only the ADD list to create an improved draft."""
         
-        prompt = f"""You are a precise editor. Apply the following changes to create an improved draft.
+        prompt = f"""You are a precise editor. Add missing content to create a more complete draft.
 
 CURRENT DRAFT:
 ---
@@ -327,23 +327,18 @@ ADD THESE ITEMS:
 {add_list}
 ---
 
-REMOVE THESE ITEMS:
----
-{remove_list}
----
-
 SOURCE DOCUMENTS (for looking up ADD items):
 {self.full_context}
 
 INSTRUCTIONS:
 1. Add ALL items from the ADD list using the exact data from source documents
-2. Remove ALL items from the REMOVE list
-3. When adding items, cite the source (e.g., [1], [2])
-4. Maintain narrative flow - integrate additions smoothly
-5. Preserve all existing content not marked for removal
-6. Keep the same professional tone and formatting
+2. When adding items, cite the source (e.g., [1], [2])
+3. Maintain narrative flow - integrate additions smoothly into appropriate sections
+4. Preserve all existing content - do not remove anything
+5. Keep the same professional tone and formatting
+6. If an ADD item duplicates existing content, enhance rather than duplicate
 
-Generate the complete revised draft with all changes applied."""
+Generate the complete enhanced draft with all additions applied."""
         
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text

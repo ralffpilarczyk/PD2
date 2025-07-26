@@ -275,15 +275,20 @@ class IntelligentAnalyst:
                     thread_safe_print(f"Section {section_num} - Failed to process: {e}")
                     results[section_num] = f"Processing failed: {e}"
         
-        # Post-run memory review and update
-        thread_safe_print(f"\n{'='*50}")
-        thread_safe_print("CONDUCTING POST-RUN MEMORY REVIEW")
-        thread_safe_print(f"{'='*50}")
-        
-        try:
-            self._conduct_memory_review()
-        except Exception as e:
-            thread_safe_print(f"Warning: Memory review failed: {e}")
+        # Post-run memory review and update (skip in test mode)
+        if len(section_numbers) > 1:  # Skip memory review if only testing one section
+            thread_safe_print(f"\n{'='*50}")
+            thread_safe_print("CONDUCTING POST-RUN MEMORY REVIEW")
+            thread_safe_print(f"{'='*50}")
+            
+            try:
+                self._conduct_memory_review()
+            except Exception as e:
+                thread_safe_print(f"Warning: Memory review failed: {e}")
+        else:
+            thread_safe_print(f"\n{'='*50}")
+            thread_safe_print("SKIPPING MEMORY REVIEW (Test Mode)")
+            thread_safe_print(f"{'='*50}")
         
         # Save quality metrics
         quality_scores = self.quality_tracker.get_quality_scores()

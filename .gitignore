@@ -47,5 +47,6 @@ Thumbs.db
 old/
 
 .cursorignore
+CLAUDE.md
 
 runs/

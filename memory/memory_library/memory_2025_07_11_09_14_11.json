@@ -11,14 +11,14 @@
         "original_score": 10
       },
       {
-        "instruction": "When reported revenue declines despite management claims, analyze changes in revenue recognition policies or the reclassification of non-recurring revenue sources - to isolate organic growth trends.",
+        "instruction": "When evaluating strategic actions, consider the counterfactual: what would be the impact if no action was taken or an alternative path was chosen? - to assess the real value added.",
         "section_number": 13,
         "quality_score": 10,
-        "word_count": 26,
-        "added_date": "2025-07-11",
-        "run_number": 10,
+        "word_count": 30,
+        "added_date": "2025-06-30",
+        "run_number": 6,
         "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 10
       }
     ],
     "section_29": [
@@ -75,14 +75,14 @@
         "original_score": 10
       },
       {
-        "instruction": "When a financial metric is presented without underlying data transparency, identify the assumptions and inputs required for its calculation - to highlight potential manipulation or estimation bias.",
+        "instruction": "When management emphasizes a new, seemingly positive metric, scrutinize its definition and potential for manipulation, or its actual representativeness of core performance.",
         "section_number": 7,
         "quality_score": 10,
-        "word_count": 27,
-        "added_date": "2025-07-11",
-        "run_number": 10,
+        "word_count": 22,
+        "added_date": "2025-07-07",
+        "run_number": 8,
         "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 10
       }
     ],
     "section_21": [
@@ -105,6 +105,16 @@
         "run_number": 3,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When claimed synergies from M&A are material, track specific cost savings or revenue enhancements post-acquisition against pre-deal estimates - this verifies M&A value creation.",
+        "section_number": 21,
+        "quality_score": 10,
+        "word_count": 24,
+        "added_date": "2025-07-09",
+        "run_number": 9,
+        "harsh_reeval": true,
+        "original_score": 8
       }
     ],
     "section_1": [
@@ -129,14 +139,14 @@
         "original_score": 10
       },
       {
-        "instruction": "When evaluating hybrid asset ownership, analyze the extent of operational control and risk transfer versus traditional ownership models - to understand true strategic flexibility.",
+        "instruction": "When customer-to-employee ratio is stable but average revenue per customer declines, investigate if efficiency gains are offset by a shift to lower-value customers.",
         "section_number": 1,
         "quality_score": 10,
-        "word_count": 24,
-        "added_date": "2025-07-11",
-        "run_number": 10,
+        "word_count": 23,
+        "added_date": "2025-07-07",
+        "run_number": 8,
         "harsh_reeval": true,
-        "original_score": 8
+        "original_score": 10
       }
     ],
     "section_2": [
@@ -159,9 +169,29 @@
         "run_number": 7,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When the company operates in a fast-evolving industry, assess the 'shelf life' or obsolescence risk of its core technologies or product portfolio - this identifies long-term competitive vulnerability.",
+        "section_number": 2,
+        "quality_score": 10,
+        "word_count": 28,
+        "added_date": "2025-07-09",
+        "run_number": 9,
+        "harsh_reeval": true,
+        "original_score": 9
       }
     ],
     "section_3": [
+      {
+        "instruction": "When segment revenue growth is high, disaggregate organic growth from growth due to acquisitions to assess true underlying performance.",
+        "section_number": 3,
+        "quality_score": 10,
+        "word_count": 19,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
       {
         "instruction": "When product line profitability is reported, investigate cross-subsidization where one product supports another, masking underperformance.",
         "section_number": 3,
@@ -173,14 +203,14 @@
         "original_score": 10
       },
       {
-        "instruction": "When a key performance metric declines as a strategic trade-off, quantify the incremental gain in the targeted business area and analyze the net strategic benefit - to validate management's rationale.",
+        "instruction": "When average revenue per user (ARPU) is rising, cross-reference with customer acquisition costs and churn rates to ensure profitable growth, not just price increases on a shrinking base.",
         "section_number": 3,
         "quality_score": 10,
-        "word_count": 30,
-        "added_date": "2025-07-11",
-        "run_number": 10,
+        "word_count": 28,
+        "added_date": "2025-07-07",
+        "run_number": 8,
         "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 10
       }
     ],
     "section_4": [
@@ -202,7 +232,17 @@
         "added_date": "2025-07-09",
         "run_number": 9,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
+      },
+      {
+        "instruction": "When a significant vendor concentration exists, quantify the maximum potential disruption (e.g., production halt, cost surge) if that vendor fails - this assesses supply chain resilience.",
+        "section_number": 4,
+        "quality_score": 10,
+        "word_count": 26,
+        "added_date": "2025-07-09",
+        "run_number": 9,
+        "harsh_reeval": true,
+        "original_score": 8
       }
     ],
     "section_5": [
@@ -224,7 +264,7 @@
         "added_date": "2025-07-09",
         "run_number": 9,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_6": [
@@ -249,14 +289,14 @@
         "original_score": 10
       },
       {
-        "instruction": "When volume growth masks declining revenue per unit, analyze the customer acquisition cost and lifetime value for different customer segments - to determine profitability of new sales.",
+        "instruction": "When cost savings are claimed, link them to specific process improvements, technology adoptions, or changes in input costs - this verifies the sustainability and source of savings.",
         "section_number": 6,
         "quality_score": 10,
         "word_count": 27,
-        "added_date": "2025-07-11",
-        "run_number": 10,
+        "added_date": "2025-07-09",
+        "run_number": 9,
         "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 7
       }
     ],
     "section_8": [
@@ -281,14 +321,14 @@
         "original_score": 10
       },
       {
-        "instruction": "To verify management claims about operational improvements, assess non-financial indicators such as employee productivity, process cycle times, or inventory turnover rates - to identify tangible operational shifts.",
+        "instruction": "When new customer acquisition cost (CAC) is presented, compare it to the estimated customer lifetime value (LTV) - this assesses the long-term profitability of growth strategies.",
         "section_number": 8,
         "quality_score": 10,
-        "word_count": 27,
-        "added_date": "2025-07-11",
-        "run_number": 10,
+        "word_count": 26,
+        "added_date": "2025-07-09",
+        "run_number": 9,
         "harsh_reeval": true,
-        "original_score": 9
+        "original_score": 8
       }
     ],
     "section_9": [
@@ -303,6 +343,16 @@
         "original_score": 10
       },
       {
+        "instruction": "When management repeatedly provides qualitative explanations for quantitative discrepancies without bridging the gap, flag this as a potential governance or transparency concern.",
+        "section_number": 9,
+        "quality_score": 10,
+        "word_count": 22,
+        "added_date": "2025-07-07",
+        "run_number": 8,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
         "instruction": "When management's strategic narrative is inconsistent with observed capital allocation patterns, identify specific areas of under/over-investment relative to stated priorities.",
         "section_number": 9,
         "quality_score": 10,
@@ -311,16 +361,6 @@
         "run_number": 8,
         "harsh_reeval": true,
         "original_score": 10
-      },
-      {
-        "instruction": "When management claims contradict balance sheet trends, quantify the specific magnitude of the discrepancy and its potential impact on solvency or liquidity - to highlight material misrepresentations or omissions.",
-        "section_number": 9,
-        "quality_score": 10,
-        "word_count": 29,
-        "added_date": "2025-07-11",
-        "run_number": 10,
-        "harsh_reeval": true,
-        "original_score": 9
       }
     ],
     "section_10": [
@@ -411,12 +451,12 @@
         "original_score": 10
       },
       {
-        "instruction": "When revenue is impacted by supply chain or operational constraints, quantify the lost revenue potential and additional costs incurred due to these constraints - to assess the true financial impact.",
+        "instruction": "When market share is gained, disaggregate the drivers: is it from overall market growth, taking share from competitors, or via acquisitions? - this reveals the quality of growth.",
         "section_number": 14,
         "quality_score": 10,
-        "word_count": 30,
-        "added_date": "2025-07-11",
-        "run_number": 10,
+        "word_count": 28,
+        "added_date": "2025-07-09",
+        "run_number": 9,
         "harsh_reeval": true,
         "original_score": 8
       }
@@ -441,6 +481,16 @@
         "run_number": 6,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When a 'strong brand' or 'customer loyalty' is claimed, quantify its impact on pricing power (e.g., premium pricing), customer retention, or repeat purchase rates - this validates intangible assets.",
+        "section_number": 15,
+        "quality_score": 10,
+        "word_count": 29,
+        "added_date": "2025-07-09",
+        "run_number": 9,
+        "harsh_reeval": true,
+        "original_score": 9
       }
     ],
     "section_16": [
@@ -467,6 +517,16 @@
     ],
     "section_17": [
       {
+        "instruction": "When management makes assertions contradicted by financial statements, investigate if discrepancies arise from differing accounting policies, reporting standards, or deliberate misrepresentation.",
+        "section_number": 17,
+        "quality_score": 10,
+        "word_count": 21,
+        "added_date": "2025-06-30",
+        "run_number": 5,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
         "instruction": "When an opportunity is touted for its 'synergies', quantify specific, measurable cost savings or revenue enhancements that are genuinely additive - scrutinizing generic claims.",
         "section_number": 17,
         "quality_score": 10,
@@ -484,7 +544,7 @@
         "added_date": "2025-07-09",
         "run_number": 9,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_18": [
@@ -507,6 +567,16 @@
         "run_number": 5,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When high customer satisfaction metrics coexist with high churn rates, investigate the specific reasons for churn among departed customers - this identifies disconnects in customer experience.",
+        "section_number": 18,
+        "quality_score": 10,
+        "word_count": 26,
+        "added_date": "2025-07-09",
+        "run_number": 9,
+        "harsh_reeval": true,
+        "original_score": 8
       }
     ],
     "section_19": [
@@ -529,6 +599,16 @@
         "run_number": 6,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When geographical expansion is a strategy, analyze the macro-economic and political stability of target regions - this identifies external risks to international growth.",
+        "section_number": 19,
+        "quality_score": 10,
+        "word_count": 23,
+        "added_date": "2025-07-09",
+        "run_number": 9,
+        "harsh_reeval": true,
+        "original_score": 7
       }
     ],
     "section_20": [
@@ -697,6 +777,16 @@
     ],
     "section_28": [
       {
+        "instruction": "When a company maintains high margins in a commoditized industry, identify its sustainable competitive advantages (e.g., cost leadership, superior distribution) that enable this.",
+        "section_number": 28,
+        "quality_score": 10,
+        "word_count": 23,
+        "added_date": "2025-06-29",
+        "run_number": 4,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
         "instruction": "When customer base stagnation is observed, segment existing customers by value and churn risk to identify the erosion of the most profitable customer cohorts.",
         "section_number": 28,
         "quality_score": 10,
@@ -714,7 +804,7 @@
         "added_date": "2025-07-09",
         "run_number": 9,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_30": [
@@ -746,7 +836,7 @@
         "added_date": "2025-07-09",
         "run_number": 9,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_31": [
@@ -774,8 +864,8 @@
   },
   "meta": {
     "version": "3.0",
-    "total_runs": 10,
-    "last_updated": "2025_07_11_08_12_17",
+    "total_runs": 9,
+    "last_updated": "2025_07_09_10_22_36",
     "active_sections": [
       13,
       29,

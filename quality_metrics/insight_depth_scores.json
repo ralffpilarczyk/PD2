@@ -1083,5 +1083,83 @@
       "depth_ratio": 0.0009163569719492949
     },
     "average_depth_ratio": 0.0021846154619774966
+  },
+  "run_11": {
+    "section_3": {
+      "insights_count": 1,
+      "output_length": 595,
+      "depth_ratio": 0.0016806722689075631
+    },
+    "section_1": {
+      "insights_count": 1,
+      "output_length": 645,
+      "depth_ratio": 0.0015503875968992248
+    },
+    "section_2": {
+      "insights_count": 1,
+      "output_length": 343,
+      "depth_ratio": 0.0029154518950437317
+    },
+    "section_4": {
+      "insights_count": 3,
+      "output_length": 771,
+      "depth_ratio": 0.0038910505836575876
+    },
+    "section_5": {
+      "insights_count": 0,
+      "output_length": 523,
+      "depth_ratio": 0.0
+    },
+    "section_6": {
+      "insights_count": 1,
+      "output_length": 639,
+      "depth_ratio": 0.001564945226917058
+    },
+    "section_7": {
+      "insights_count": 2,
+      "output_length": 770,
+      "depth_ratio": 0.0025974025974025974
+    },
+    "section_8": {
+      "insights_count": 2,
+      "output_length": 384,
+      "depth_ratio": 0.005208333333333333
+    },
+    "section_9": {
+      "insights_count": 2,
+      "output_length": 550,
+      "depth_ratio": 0.0036363636363636364
+    },
+    "section_10": {
+      "insights_count": 2,
+      "output_length": 592,
+      "depth_ratio": 0.0033783783783783786
+    },
+    "section_12": {
+      "insights_count": 2,
+      "output_length": 537,
+      "depth_ratio": 0.0037243947858473
+    },
+    "section_11": {
+      "insights_count": 1,
+      "output_length": 746,
+      "depth_ratio": 0.0013404825737265416
+    },
+    "section_13": {
+      "insights_count": 1,
+      "output_length": 566,
+      "depth_ratio": 0.0017667844522968198
+    },
+    "section_14": {
+      "insights_count": 1,
+      "output_length": 731,
+      "depth_ratio": 0.0013679890560875513
+    },
+    "section_32": {
+      "insights_count": 4,
+      "output_length": 8479,
+      "depth_ratio": 0.00047175374454534735
+    },
+    "average_depth_ratio": 0.002339626008627111
   }
 }

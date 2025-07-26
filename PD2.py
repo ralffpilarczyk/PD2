@@ -158,7 +158,7 @@ class IntelligentAnalyst:
         return converted_files
     
     def analyze_section(self, section_num: int) -> str:
-        """Main analysis pipeline for a section - 7-step enhanced process"""
+        """Simplified 2-step analysis pipeline for a section."""
         section = next(s for s in sections if s['number'] == section_num)
         
         thread_safe_print(f"\n{'='*50}")
@@ -173,99 +173,42 @@ class IntelligentAnalyst:
             thread_safe_print(f"Section {section_num} - Step 1: Creating initial draft...")
             initial_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
             self.file_manager.save_step_output(section_num, "step_1_initial_draft.md", initial_draft)
-            current_best = initial_draft
             
-            # Step 2: Completeness Critique + Materiality Assessment
-            thread_safe_print(f"Section {section_num} - Step 2: Completeness critique with materiality assessment...")
-            try:
-                completeness_critique = self.core_analyzer.completeness_critique(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_2_completeness_critique.txt", completeness_critique)
-            except Exception as e:
-                thread_safe_print(f"Section {section_num} - Warning: Completeness critique failed: {e}")
-                completeness_critique = "Completeness critique failed"
-            
-            # Step 3: First Revision (apply completeness critique)
-            thread_safe_print(f"Section {section_num} - Step 3: First revision (applying completeness critique)...")
-            try:
-                current_best = self.core_analyzer.apply_critique(section, current_best, completeness_critique, "completeness")
-                self.file_manager.save_step_output(section_num, "step_3_after_completeness.md", current_best)
-            except Exception as e:
-                thread_safe_print(f"Section {section_num} - Warning: First revision failed: {e}")
-            
-            # Step 4: Insight Critique
-            thread_safe_print(f"Section {section_num} - Step 4: Insight critique...")
-            try:
-                insight_critique = self.core_analyzer.insight_critique(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_4_insight_critique.txt", insight_critique)
+            # For Section 32, the initial draft is the final output. No critiques needed.
+            if section['number'] == self.core_analyzer.SECTION_32_EXEMPT:
+                thread_safe_print(f"Section {section_num} is a data appendix. Skipping analytical and polish steps.")
+                final_output = initial_draft
+                self.file_manager.save_step_output(section_num, "step_2_final_section.md", final_output)
+            else:
+                # Step 2: Single, Aggressive Polish & Cut
+                thread_safe_print(f"Section {section_num} - Step 2: Applying aggressive polish and cut...")
+                # We reuse the "polish_critique" method, but frame it as a direct instruction to fix the draft.
+                polish_instructions = self.core_analyzer.polish_critique(section, initial_draft)
+                self.file_manager.save_step_output(section_num, "step_2_polish_instructions.txt", polish_instructions)
                 
-                # Apply insight critique immediately  
-                thread_safe_print(f"Section {section_num} - Step 4b: Applying insight critique...")
-                current_best = self.core_analyzer.apply_critique(section, current_best, insight_critique, "insight")
-                self.file_manager.save_step_output(section_num, "step_4_after_insights.md", current_best)
-            except Exception as e:
-                thread_safe_print(f"Section {section_num} - Warning: Insight critique failed: {e}")
-                insight_critique = "Insight critique failed"
+                # Apply the polish instructions to create the final, polished section
+                final_output = self.core_analyzer.apply_critique(section, initial_draft, polish_instructions, "polish")
+                self.file_manager.save_step_output(section_num, "step_2_final_section.md", final_output)
             
-            # Step 5: Insight Testing
-            thread_safe_print(f"Section {section_num} - Step 5: Insight testing (3-question framework)...")
-            try:
-                insight_testing = self.core_analyzer.insight_testing(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_5_insight_testing.txt", insight_testing)
-                
-                # Apply insight testing immediately
-                thread_safe_print(f"Section {section_num} - Step 5b: Applying insight testing...")
-                current_best = self.core_analyzer.apply_critique(section, current_best, insight_testing, "insight_testing")
-                self.file_manager.save_step_output(section_num, "step_5_after_testing.md", current_best)
-            except Exception as e:
-                thread_safe_print(f"Section {section_num} - Warning: Insight testing failed: {e}")
-                insight_testing = "Insight testing failed"
+            # Step 3: Learning Extraction (Applied to the final, polished output)
+            thread_safe_print(f"Section {section_num} - Step 3: Learning extraction...")
+            # Run learning extraction only on analytical sections
+            if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
+                learning = self.core_analyzer.extract_learning(section, final_output)
+                # Convert learning (which can be a dict or string) to a formatted JSON string
+                learning_str = json.dumps(learning, indent=4)
+                self.file_manager.save_step_output(section_num, "step_3_learning.json", learning_str)
+                self.insight_memory.add_learning(section_num, json.loads(learning_str)) # Add to memory
             
-            # Step 6: Insight Marking
-            thread_safe_print(f"Section {section_num} - Step 6: Insight marking and evaluation...")
-            try:
-                insight_marking = self.core_analyzer.insight_marking(section, current_best, insight_testing)
-                self.file_manager.save_step_output(section_num, "step_6_insight_marking.txt", insight_marking)
-                
-                # Apply insight marking immediately
-                thread_safe_print(f"Section {section_num} - Step 6b: Applying insight marking...")
-                current_best = self.core_analyzer.apply_critique(section, current_best, insight_marking, "insight_marking")
-                self.file_manager.save_step_output(section_num, "step_6_after_marking.md", current_best)
-            except Exception as e:
-                thread_safe_print(f"Section {section_num} - Warning: Insight marking failed: {e}")
-            
-            # Step 7: Second Revision + Polish (Final Profile)
-            thread_safe_print(f"Section {section_num} - Step 7: Final polish and profile generation...")
-            try:
-                polish_critique = self.core_analyzer.polish_critique(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_7_polish_critique.txt", polish_critique)
-                
-                # Apply polish critique to create final profile
-                thread_safe_print(f"Section {section_num} - Step 7b: Applying polish critique (final profile)...")
-                current_best = self.core_analyzer.apply_critique(section, current_best, polish_critique, "polish")
-                self.file_manager.save_step_output(section_num, "step_7_final_profile.md", current_best)
-            except Exception as e:
-                thread_safe_print(f"Section {section_num} - Warning: Polish critique failed: {e}")
-            
-            # Step 8: Learning Extraction (separate from the 7 analytical steps)
-            thread_safe_print(f"Section {section_num} - Step 8: Learning extraction...")
-            try:
-                learning_insights = self.core_analyzer.extract_learning(section, current_best)
-                self.file_manager.save_step_output(section_num, "step_8_learning_extraction.txt", learning_insights)
-            except Exception as e:
-                thread_safe_print(f"Section {section_num} - Warning: Learning extraction failed: {e}")
-                learning_insights = "Learning extraction failed"
-            
-            # Calculate quality metrics for this section
-            self.quality_tracker.calculate_section_metrics(section_num, current_best)
-            
-            thread_safe_print(f"Section {section_num} - Completed successfully (7-step process)")
-            return current_best
-            
+            self.quality_tracker.log_final_word_count(section_num, final_output)
+            thread_safe_print(f"Section {section_num} completed successfully.")
+            return f"Section {section_num} completed."
+
         except Exception as e:
-            thread_safe_print(f"Section {section_num} - Critical error: {e}")
-            # Return minimal fallback
-            return f"# Section {section_num}: {section['title']}\n\nAnalysis failed due to system error."
-    
+            thread_safe_print(f"An error occurred in section {section_num}: {e}")
+            # Optionally re-raise or handle as per overall error strategy
+            return f"Section {section_num} failed."
+
     def process_all_sections(self, section_numbers: List[int] = None, max_workers: int = 3):
         """Process multiple sections in parallel and handle memory updates"""
         if section_numbers is None:
@@ -333,7 +276,7 @@ class IntelligentAnalyst:
         run_number = self.insight_memory.learning_memory["meta"]["total_runs"] + 1
         self.file_manager.save_quality_metrics(quality_scores, run_number)
         
-        # Generate run summary
+        # Final step: generate the consolidated HTML profile
         self._generate_run_summary(results)
         
         # Generate final HTML profile
@@ -450,45 +393,94 @@ Generate comprehensive candidates - subsequent harsh filtering will select only 
             thread_safe_print(f"Warning: Memory update failed: {e}")
     
     def _generate_run_summary(self, results: Dict):
-        """Generate summary of the run"""
-        memory_stats = self.insight_memory.get_memory_stats()
-        quality_scores = self.quality_tracker.get_quality_scores()
+        """Generates a final summary and consolidated HTML profile from the run."""
+        thread_safe_print("\n" + "="*20 + " Generating Final Run Summary " + "="*20)
         
-        summary = f"""RUN SUMMARY - {self.run_timestamp}
-{'='*60}
+        run_dir = Path(f"runs/run_{self.run_timestamp}")
+        summary_path = run_dir / "run_summary.md"
+        profile_path = run_dir / "Maxis_profile.html" # Example filename
+        
+        # Sort sections by number for ordered report
+        sorted_section_numbers = sorted([s['number'] for s in sections])
 
-SECTIONS PROCESSED: {list(results.keys())}
+        # Start of HTML content with CSS for styling
+        html_content = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Profile</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; margin: 20px; }
+        h1, h2, h3 { color: #333; }
+        h1 { text-align: center; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .section-title { font-size: 1.5em; color: #555; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .footnote { font-size: 0.9em; color: #777; }
+    </style>
+</head>
+<body>
+    <h1>Company Profile</h1>
+"""
+        summary_content = "# Run Summary\n\n"
+        
+        total_sections = len(sorted_section_numbers)
+        completed_sections = 0
+        failed_sections = []
 
-QUALITY METRICS:
-{json.dumps(quality_scores, indent=2)}
+        for section_num in sorted_section_numbers:
+            section_dir = run_dir / f"section_{section_num}"
+            final_profile_path = section_dir / "step_2_final_section.md"
+            
+            section_title = next((s['title'] for s in sections if s['number'] == section_num), "Unknown Section")
+            
+            if final_profile_path.exists():
+                try:
+                    with open(final_profile_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Basic markdown to HTML conversion
+                    import markdown
+                    html_from_markdown = markdown.markdown(content, extensions=['tables'])
+                    
+                    # Add section to HTML content
+                    html_content += f'<div class="section" id="section_{section_num}">\n'
+                    html_content += f'  <h2 class="section-title">Section {section_num}: {section_title}</h2>\n'
+                    html_content += f'  {html_from_markdown}\n'
+                    html_content += '</div>\n'
+                    
+                    summary_content += f"- **Section {section_num}: {section_title}** - COMPLETED\n"
+                    completed_sections += 1
+                except Exception as e:
+                    summary_content += f"- **Section {section_num}: {section_title}** - FAILED (Error reading final file: {e})\n"
+                    failed_sections.append(section_num)
+            else:
+                summary_content += f"- **Section {section_num}: {section_title}** - SKIPPED (Final file not found)\n"
 
-INSIGHT MEMORY STATE (Instruction-based):
-- Active sections: {memory_stats['active_sections']}
-- Insights by section: {memory_stats['insights_by_section']}
-- Total insights: {memory_stats['total_insights']}/{memory_stats['max_possible']} ({memory_stats['utilization_percent']}% utilized)
-- Quality threshold: {memory_stats['quality_threshold']}+/10 for instruction value
-- Max per section: {memory_stats['max_per_section']} analytical instructions
-- Display limit: Top {self.insight_memory.MAX_DISPLAY_INSIGHTS} instructions shown per section
-
-INSIGHT OPTIMIZATION:
-- Section-based storage (no cross-section pollution)
-- Instruction format for analytical enhancement
-- Two-stage process: Permissive collection + Harsh re-evaluation
-- Independent quality re-assessment ignoring original scores
-- Only 2-3 breakthrough insights (9-10/10) kept per section
-- Expect 60-80% rejection rate during harsh filtering
-
-OUTPUTS SAVED:
-- Individual section analyses: runs/run_{self.run_timestamp}/section_X/
-- Step-by-step process: Each step saved for review
-- Memory review: runs/run_{self.run_timestamp}/memory_review/
-- Quality metrics: quality_metrics/insight_depth_scores.json
-
-STATUS: Run completed successfully
+        # End of HTML content
+        html_content += """
+</body>
+</html>
 """
         
-        self.file_manager.save_run_summary(summary)
-        thread_safe_print(summary)
+        # Overall summary statistics
+        summary_content += f"\n---\n"
+        summary_content += f"**Overall Status:** {completed_sections}/{total_sections} sections completed.\n"
+        if failed_sections:
+            summary_content += f"**Failed Sections:** {', '.join(map(str, failed_sections))}\n"
+
+        with open(summary_path, 'w', encoding='utf-8') as f:
+            f.write(summary_content)
+            
+        with open(profile_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        thread_safe_print(f"Run summary saved to: {summary_path}")
+        thread_safe_print(f"Final HTML profile saved to: {profile_path}")
 
 
 # Section Groups Configuration
@@ -517,7 +509,7 @@ SECTION_GROUPS = {
 
 # PDF Selection Functions
 def select_source_files():
-    """Select PDF and/or Markdown files with retry on failure"""
+    """Interactively select source files"""
     from tkinter import filedialog, messagebox
     import tkinter as tk
     

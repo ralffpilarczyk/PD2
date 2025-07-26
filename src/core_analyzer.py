@@ -115,18 +115,24 @@ SECTION REQUIREMENTS:
 CURRENT WORD COUNT: {word_count} words
 FINAL TARGET: **Maximum 500 words - absolutely no exceptions.**
 
-DEEP ANALYSIS FRAMEWORK:
-Apply multi-layer analytical thinking to extract maximum insights:
+CRITICAL SCOPE CONSTRAINT: 
+**ONLY analyze data that belongs in this specific section according to the requirements above.**
+- Do NOT include financial metrics (revenue, EBITDA, margins, ARPU) - these belong in financial sections
+- Do NOT include broad operational KPIs unless directly related to physical/human footprint
+- FOCUS STRICTLY on: physical assets, human resources, geographic presence, operational structure
 
-1. **Surface vs. Reality**: Identify contradictions between management claims and actual data
-2. **Calculate Hidden Metrics**: Derive ratios and relationships not explicitly provided  
-3. **Pattern Recognition**: Find correlations across time periods and different data sets
-4. **Relevance Filter**: Every insight must pass "Does this matter to company prospects?"
+DEEP ANALYSIS FRAMEWORK:
+Apply multi-layer analytical thinking WITHIN SECTION SCOPE ONLY:
+
+1. **Surface vs. Reality**: Identify contradictions between management claims and actual data (within section scope)
+2. **Calculate Hidden Metrics**: Derive ratios and relationships from section-appropriate data only
+3. **Pattern Recognition**: Find correlations across time periods using section-relevant metrics only
+4. **Relevance Filter**: Every insight must pass "Does this matter to company prospects?" AND "Does this belong in this section?"
 5. **Logic Test**: Every insight must pass "Does this make business sense?"
 6. **Data Density**: Maximum insights per word - eliminate all fluff and corporate language
-7. **Contradiction Highlighting**: Flag where management narrative diverges from data reality
+7. **Contradiction Highlighting**: Flag where management narrative diverges from data reality (section scope only)
 
-QUALITY STANDARD: Would this insight change an investor's view of the company's prospects? If no, remove it.
+QUALITY STANDARD: Would this insight change an investor's view of the company's prospects AND does it belong in this specific section? If either answer is no, remove it.
 
 OUTPUT STRUCTURE:
 - **Key Facts**: Most material current-state data points with supporting numbers
@@ -267,7 +273,7 @@ Output ONLY the ADD list. No preamble or explanation."""
         if section['number'] == self.SECTION_32_EXEMPT:
             return "No removals needed - data appendix section."
         
-        prompt = f"""You are a strict scope enforcer. Your job is to identify content that does NOT belong in this section.
+        prompt = f"""You are a conservative scope enforcer. Your job is to identify content that CLEARLY does NOT belong in this section.
 
 SECTION {section['number']}: {section['title']}
 
@@ -282,19 +288,23 @@ CURRENT DRAFT:
 {draft}
 ---
 
-Analyze the draft and create a specific REMOVE list:
+Analyze the draft and create a CONSERVATIVE REMOVE list:
 
 REMOVE LIST FORMAT:
 - Paragraph [X]: "[First 10 words...]" - Belongs in Section [Y] (reason)
 - Lines [X-Y]: "[First 10 words...]" - Out of scope (reason)
 - Table about [topic]: Belongs in Section [Z]
 
-RULES:
-1. Identify content that belongs in OTHER sections
-2. Identify content that is out of scope entirely
-3. Be specific about location (paragraph number or line range)
-4. Include the first few words to ensure correct identification
-5. Explain WHERE it belongs or WHY it's out of scope
+CONSERVATIVE RULES:
+1. ONLY flag content that is CLEARLY out of scope for this section
+2. When in doubt, KEEP the content in this section
+3. Employee data, network assets, facilities ARE core to Operating Footprint - do not remove
+4. Only remove obvious financial metrics (revenue, EBITDA, margins) or clearly unrelated content
+5. Be specific about location (paragraph number or line range)
+6. Include the first few words to ensure correct identification
+7. Explain WHERE it belongs or WHY it's clearly out of scope
+
+BIAS: If content could reasonably belong in this section, do NOT remove it.
 
 Output ONLY the REMOVE list. No preamble or explanation."""
         

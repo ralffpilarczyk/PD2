@@ -2,6 +2,7 @@ import google.generativeai as genai
 from typing import Dict
 import re
 from .utils import retry_with_backoff
+from .profile_sections import sections
 
 
 class CoreAnalyzer:
@@ -193,4 +194,136 @@ This output will be used to inform future analysis, so be concise and specific.
         # Low temperature for structured, precise data extraction.
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text
-        ) 
+        )
+    
+    def completeness_check(self, section: Dict, draft: str) -> str:
+        """Step 2: Check what's missing from the draft by comparing against source documents."""
+        
+        word_count = len(draft.split())
+        
+        # Skip for Section 32
+        if section['number'] == self.SECTION_32_EXEMPT:
+            return "No additions needed - data appendix section."
+        
+        prompt = f"""You are a meticulous completeness auditor. Your job is to identify EXACTLY what is missing from this draft by comparing it against the source documents.
+
+SECTION {section['number']}: {section['title']}
+
+REQUIREMENTS:
+{section['specs']}
+
+SOURCE DOCUMENTS:
+{self.full_context}
+
+CURRENT DRAFT:
+---
+{draft}
+---
+
+WORD COUNT: {word_count} words
+
+Compare the draft against both the requirements AND the source documents. Create a specific ADD list of data that exists in the sources but is missing from the draft:
+
+ADD LIST FORMAT:
+- [CRITICAL] Specific item missing (e.g., "Employee count by region table for 2023-2024 from Annual Report p.47")
+- [IMPORTANT] Specific item missing (e.g., "Capacity utilization 72% Q3 2024 from Earnings Call p.12")  
+- [USEFUL] Specific item missing (e.g., "Breakdown of leased vs owned facilities from 10-K p.89")
+
+RULES:
+1. Be EXTREMELY specific - include the exact data point and source location
+2. Only list items that actually exist in the source documents
+3. Prioritize items that would most improve the analysis quality
+4. Each item should be implementable in 1-3 sentences or a small table
+5. Focus on factual data, not interpretations
+
+Output ONLY the ADD list. No preamble or explanation."""
+        
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(prompt).text
+        )
+    
+    def scope_check(self, section: Dict, draft: str) -> str:
+        """Step 3: Check what should be removed from the draft (out of scope)."""
+        
+        # Skip for Section 32
+        if section['number'] == self.SECTION_32_EXEMPT:
+            return "No removals needed - data appendix section."
+        
+        prompt = f"""You are a strict scope enforcer. Your job is to identify content that does NOT belong in this section.
+
+SECTION {section['number']}: {section['title']}
+
+REQUIREMENTS:
+{section['specs']}
+
+OTHER SECTIONS AVAILABLE:
+{self._get_other_sections_summary()}
+
+CURRENT DRAFT:
+---
+{draft}
+---
+
+Analyze the draft and create a specific REMOVE list:
+
+REMOVE LIST FORMAT:
+- Paragraph [X]: "[First 10 words...]" - Belongs in Section [Y] (reason)
+- Lines [X-Y]: "[First 10 words...]" - Out of scope (reason)
+- Table about [topic]: Belongs in Section [Z]
+
+RULES:
+1. Identify content that belongs in OTHER sections
+2. Identify content that is out of scope entirely
+3. Be specific about location (paragraph number or line range)
+4. Include the first few words to ensure correct identification
+5. Explain WHERE it belongs or WHY it's out of scope
+
+Output ONLY the REMOVE list. No preamble or explanation."""
+        
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(prompt).text
+        )
+    
+    def apply_completeness_and_scope(self, section: Dict, current_draft: str, add_list: str, remove_list: str) -> str:
+        """Apply the ADD and REMOVE lists to create an improved draft."""
+        
+        prompt = f"""You are a precise editor. Apply the following changes to create an improved draft.
+
+CURRENT DRAFT:
+---
+{current_draft}
+---
+
+ADD THESE ITEMS:
+---
+{add_list}
+---
+
+REMOVE THESE ITEMS:
+---
+{remove_list}
+---
+
+SOURCE DOCUMENTS (for looking up ADD items):
+{self.full_context}
+
+INSTRUCTIONS:
+1. Add ALL items from the ADD list using the exact data from source documents
+2. Remove ALL items from the REMOVE list
+3. When adding items, cite the source (e.g., [1], [2])
+4. Maintain narrative flow - integrate additions smoothly
+5. Preserve all existing content not marked for removal
+6. Keep the same professional tone and formatting
+
+Generate the complete revised draft with all changes applied."""
+        
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text
+        )
+    
+    def _get_other_sections_summary(self) -> str:
+        """Get a summary of all other sections for scope checking."""
+        summary_lines = []
+        for s in sections:
+            summary_lines.append(f"Section {s['number']}: {s['title']}")
+        return "\n".join(summary_lines) 

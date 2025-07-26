@@ -158,7 +158,7 @@ class IntelligentAnalyst:
         return converted_files
     
     def analyze_section(self, section_num: int) -> str:
-        """Simplified 2-step analysis pipeline for a section."""
+        """Enhanced 6-step analysis pipeline for a section."""
         section = next(s for s in sections if s['number'] == section_num)
         
         thread_safe_print(f"\n{'='*50}")
@@ -178,26 +178,40 @@ class IntelligentAnalyst:
             if section['number'] == self.core_analyzer.SECTION_32_EXEMPT:
                 thread_safe_print(f"Section {section_num} is a data appendix. Skipping analytical and polish steps.")
                 final_output = initial_draft
-                self.file_manager.save_step_output(section_num, "step_2_final_section.md", final_output)
+                self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
             else:
-                # Step 2: Single, Aggressive Polish & Cut
-                thread_safe_print(f"Section {section_num} - Step 2: Applying aggressive polish and cut...")
-                # We reuse the "polish_critique" method, but frame it as a direct instruction to fix the draft.
-                polish_instructions = self.core_analyzer.polish_critique(section, initial_draft)
-                self.file_manager.save_step_output(section_num, "step_2_polish_instructions.txt", polish_instructions)
+                # Step 2: Completeness Check
+                thread_safe_print(f"Section {section_num} - Step 2: Checking for missing content...")
+                add_list = self.core_analyzer.completeness_check(section, initial_draft)
+                self.file_manager.save_step_output(section_num, "step_2_add_list.txt", add_list)
                 
-                # Apply the polish instructions to create the final, polished section
-                final_output = self.core_analyzer.apply_critique(section, initial_draft, polish_instructions, "polish")
-                self.file_manager.save_step_output(section_num, "step_2_final_section.md", final_output)
+                # Step 3: Scope Check
+                thread_safe_print(f"Section {section_num} - Step 3: Checking for out-of-scope content...")
+                remove_list = self.core_analyzer.scope_check(section, initial_draft)
+                self.file_manager.save_step_output(section_num, "step_3_remove_list.txt", remove_list)
+                
+                # Step 4: Apply Completeness and Scope Changes
+                thread_safe_print(f"Section {section_num} - Step 4: Applying completeness and scope changes...")
+                improved_draft = self.core_analyzer.apply_completeness_and_scope(section, initial_draft, add_list, remove_list)
+                self.file_manager.save_step_output(section_num, "step_4_improved_draft.md", improved_draft)
+                
+                # Step 5: Final Polish
+                thread_safe_print(f"Section {section_num} - Step 5: Applying final polish...")
+                polish_instructions = self.core_analyzer.polish_critique(section, improved_draft)
+                self.file_manager.save_step_output(section_num, "step_5_polish_instructions.txt", polish_instructions)
+                
+                # Apply the polish instructions to create the final section
+                final_output = self.core_analyzer.apply_critique(section, improved_draft, polish_instructions, "polish")
+                self.file_manager.save_step_output(section_num, "step_6_final_section.md", final_output)
             
-            # Step 3: Learning Extraction (Applied to the final, polished output)
-            thread_safe_print(f"Section {section_num} - Step 3: Learning extraction...")
+            # Step 6: Learning Extraction (Applied to the final, polished output)
+            thread_safe_print(f"Section {section_num} - Step 6: Learning extraction...")
             # Run learning extraction only on analytical sections
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
                 learning = self.core_analyzer.extract_learning(section, final_output)
                 # Convert learning (which can be a dict or string) to a formatted JSON string
                 learning_str = json.dumps(learning, indent=4)
-                self.file_manager.save_step_output(section_num, "step_3_learning.json", learning_str)
+                self.file_manager.save_step_output(section_num, "step_7_learning.json", learning_str)
                 self.insight_memory.add_learning(section_num, json.loads(learning_str)) # Add to memory
             
             self.quality_tracker.log_final_word_count(section_num, final_output)
@@ -300,7 +314,7 @@ class IntelligentAnalyst:
         # Collect all learning extractions
         learning_files = []
         for section in sections:
-            learning_file = f"runs/run_{self.run_timestamp}/section_{section['number']}/step_8_learning_extraction.txt"
+            learning_file = f"runs/run_{self.run_timestamp}/section_{section['number']}/step_7_learning.json"
             if os.path.exists(learning_file):
                 with open(learning_file, 'r', encoding='utf-8') as f:
                     learning_files.append(f.read())
@@ -434,7 +448,11 @@ Generate comprehensive candidates - subsequent harsh filtering will select only 
 
         for section_num in sorted_section_numbers:
             section_dir = run_dir / f"section_{section_num}"
-            final_profile_path = section_dir / "step_2_final_section.md"
+            # Try both possible final section filenames
+            final_profile_path = section_dir / "step_6_final_section.md"
+            if not final_profile_path.exists():
+                # For Section 32 (data appendix), it's saved as step_4
+                final_profile_path = section_dir / "step_4_final_section.md"
             
             section_title = next((s['title'] for s in sections if s['number'] == section_num), "Unknown Section")
             

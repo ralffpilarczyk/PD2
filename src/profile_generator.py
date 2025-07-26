@@ -72,12 +72,17 @@ class ProfileGenerator:
             md_files = glob.glob(f"{section_dir}/*.md")
             
             if md_files:
-                # Find the final section file specifically
+                # Find the final section file specifically - try step_5 first, then step_6, then any final
                 final_file = None
                 for md_file in md_files:
-                    if 'final_section.md' in md_file:
+                    if 'step_5_final_section.md' in md_file:
                         final_file = md_file
                         break
+                    elif 'step_6_final_section.md' in md_file:
+                        final_file = md_file
+                        break
+                    elif 'final_section.md' in md_file:
+                        final_file = md_file
                 
                 # If no final file found, use the first one
                 md_file = final_file if final_file else md_files[0]

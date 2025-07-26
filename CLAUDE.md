@@ -34,6 +34,19 @@ pip install -r requirements.txt
 2. **Professional Tone**: Maintain clear, concise technical communication
 3. **Comments**: Only add comments when explicitly requested
 
+## Deep Analysis Methodology
+When analyzing company data, always apply multi-layer analytical thinking:
+
+1. **Surface vs. Reality**: Identify contradictions between management claims and actual data
+2. **Calculate Hidden Metrics**: Derive ratios and relationships not explicitly provided
+3. **Pattern Recognition**: Find correlations across time periods and different data sets
+4. **Relevance Filter**: Every insight must pass "Does this matter to company prospects?"
+5. **Logic Test**: Every insight must pass "Does this make business sense?"
+6. **Data Density**: Maximum insights per word - eliminate all fluff and corporate language
+7. **Contradiction Highlighting**: Always flag where management narrative diverges from data reality
+
+**Quality Standard**: Would this insight change an investor's view of the company's prospects? If no, remove it.
+
 ## Analysis Pipeline
 Each section goes through 4 refinement steps with different word limits and temperatures:
 1. Initial Draft (1000 words, temp varies by section)

@@ -93,40 +93,58 @@ Your goal is to create a strong, fact-based draft that is well-structured and wi
             lambda: self.model_medium_temp.generate_content(prompt).text
         )
 
-    def polish_critique(self, section: Dict, draft: str) -> str:
-        """Step 2: Generate aggressive polish instructions to finalize the draft."""
+    def deep_analysis_and_polish(self, section: Dict, comprehensive_draft: str) -> str:
+        """Step 5: Apply deep analysis methodology and polish to final output."""
         
-        word_count = len(draft.split())
+        word_count = len(comprehensive_draft.split())
         
-        # This function should not be called for Section 32, but as a safeguard:
+        # Skip for Section 32
         if section['number'] == self.SECTION_32_EXEMPT:
-            return "This section is a data appendix. No polishing is required. Ensure it contains only tables, headers, and footnotes."
+            return comprehensive_draft
+        
+        prompt = f"""You are an expert analyst applying deep analytical methodology to create the final section.
 
-        prompt = f"""You are a ruthless editor. Your job is to make this draft final.
+COMPREHENSIVE DRAFT:
+---
+{comprehensive_draft}
+---
 
-ANALYSIS DRAFT TO BE POLISHED:
----
-{draft}
----
+SECTION REQUIREMENTS:
+{section['specs']}
 
 CURRENT WORD COUNT: {word_count} words
-FINAL TARGET WORD COUNT: **Strictly under {self.POLISH_WORDS} words.**
+FINAL TARGET: **Maximum 500 words - absolutely no exceptions.**
 
-MANDATORY INSTRUCTIONS FOR FINAL VERSION:
-1.  **CUT WORD COUNT:** Be aggressive. Remove redundant phrases, verbose sentences, and less critical points to get under the {self.POLISH_WORDS}-word target.
-2.  **ENFORCE SCOPE:** Delete ANY analysis that is not directly required by the section specs. For example, if you see an "Approach" or "Methodology" section, REMOVE it.
-3.  **FIX FOOTNOTES:**
-    - Ensure there are no more than 5 unique footnotes.
-    - Consolidate citations where possible.
-    - **Renumber all footnotes to be sequential, starting from [1].** For example, if the draft has `[1], [2], [5]`, the final version MUST be `[1], [2], [3]`.
-4.  **STANDARDIZE FORMATTING:** Ensure all tables are clean Markdown and all footnotes are in `[1]` format.
-5.  **IMPROVE CLARITY:** Rewrite any confusing sentences for clarity and impact.
+DEEP ANALYSIS FRAMEWORK:
+Apply multi-layer analytical thinking to extract maximum insights:
 
-Provide a set of clear, actionable instructions that the `apply_critique` function will use to generate the final, polished text. The goal is a concise, high-impact final section that meets all constraints.
-"""
-        # Use low temperature for systematic and strict editing instructions.
+1. **Surface vs. Reality**: Identify contradictions between management claims and actual data
+2. **Calculate Hidden Metrics**: Derive ratios and relationships not explicitly provided  
+3. **Pattern Recognition**: Find correlations across time periods and different data sets
+4. **Relevance Filter**: Every insight must pass "Does this matter to company prospects?"
+5. **Logic Test**: Every insight must pass "Does this make business sense?"
+6. **Data Density**: Maximum insights per word - eliminate all fluff and corporate language
+7. **Contradiction Highlighting**: Flag where management narrative diverges from data reality
+
+QUALITY STANDARD: Would this insight change an investor's view of the company's prospects? If no, remove it.
+
+OUTPUT STRUCTURE:
+- **Key Facts**: Most material current-state data points with supporting numbers
+- **Critical Trends**: Directional changes that matter to prospects with quantification
+- **Hidden Relationships**: Non-obvious ratios/correlations that pass relevance+logic tests  
+- **Red Flags**: Where management narrative diverges from data reality
+
+CONSTRAINTS:
+- Maximum 500 words total
+- Zero fluff words or corporate poetry
+- Every statement must be backed by specific data
+- Maximum 5 footnotes, sequential numbering [1], [2], [3]
+- Focus on insights that matter to company prospects
+
+Generate the final analytical section that combines maximum insight density with maximum conciseness."""
+
         return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text
         )
 
     def apply_critique(self, section: Dict, current_draft: str, critique: str, critique_type: str) -> str:

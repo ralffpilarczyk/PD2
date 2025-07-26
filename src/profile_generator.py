@@ -72,8 +72,15 @@ class ProfileGenerator:
             md_files = glob.glob(f"{section_dir}/*.md")
             
             if md_files:
-                # Use the first markdown file found
-                md_file = md_files[0]
+                # Find the final section file specifically
+                final_file = None
+                for md_file in md_files:
+                    if 'final_section.md' in md_file:
+                        final_file = md_file
+                        break
+                
+                # If no final file found, use the first one
+                md_file = final_file if final_file else md_files[0]
                 
                 print(f"Reading section {section_num}: {section_title} - {md_file}")
                 

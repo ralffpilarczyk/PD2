@@ -407,98 +407,43 @@ Generate comprehensive candidates - subsequent harsh filtering will select only 
             thread_safe_print(f"Warning: Memory update failed: {e}")
     
     def _generate_run_summary(self, results: Dict):
-        """Generates a final summary and consolidated HTML profile from the run."""
+        """Generates a final summary markdown file only (HTML handled by ProfileGenerator)."""
         thread_safe_print("\n" + "="*20 + " Generating Final Run Summary " + "="*20)
         
         run_dir = Path(f"runs/run_{self.run_timestamp}")
         summary_path = run_dir / "run_summary.md"
-        profile_path = run_dir / "Maxis_profile.html" # Example filename
         
-        # Sort sections by number for ordered report
-        sorted_section_numbers = sorted([s['number'] for s in sections])
-
-        # Start of HTML content with CSS for styling
-        html_content = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Company Profile</title>
-    <style>
-        body { font-family: sans-serif; line-height: 1.6; margin: 20px; }
-        h1, h2, h3 { color: #333; }
-        h1 { text-align: center; }
-        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        .section-title { font-size: 1.5em; color: #555; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .footnote { font-size: 0.9em; color: #777; }
-    </style>
-</head>
-<body>
-    <h1>Company Profile</h1>
-"""
-        summary_content = "# Run Summary\n\n"
+        # Create simple markdown summary
+        summary_content = f"# Run Summary\n\n"
+        summary_content += f"**Run ID:** {self.run_timestamp}\n"
+        summary_content += f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
         
-        total_sections = len(sorted_section_numbers)
-        completed_sections = 0
+        # Collect section results
+        completed_sections = []
         failed_sections = []
 
-        for section_num in sorted_section_numbers:
-            section_dir = run_dir / f"section_{section_num}"
-            # Try both possible final section filenames
-            final_profile_path = section_dir / "step_6_final_section.md"
-            if not final_profile_path.exists():
-                # For Section 32 (data appendix), it's saved as step_4
-                final_profile_path = section_dir / "step_4_final_section.md"
+        # Check which sections were actually analyzed in this run
+        from .profile_sections import sections as all_sections
+        for section_info in all_sections:
+            section_num = section_info['number']
+            section_title = section_info['title']
             
-            section_title = next((s['title'] for s in sections if s['number'] == section_num), "Unknown Section")
-            
-            if final_profile_path.exists():
-                try:
-                    with open(final_profile_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    
-                    # Basic markdown to HTML conversion
-                    import markdown
-                    html_from_markdown = markdown.markdown(content, extensions=['tables'])
-                    
-                    # Add section to HTML content
-                    html_content += f'<div class="section" id="section_{section_num}">\n'
-                    html_content += f'  <h2 class="section-title">Section {section_num}: {section_title}</h2>\n'
-                    html_content += f'  {html_from_markdown}\n'
-                    html_content += '</div>\n'
-                    
-                    summary_content += f"- **Section {section_num}: {section_title}** - COMPLETED\n"
-                    completed_sections += 1
-                except Exception as e:
-                    summary_content += f"- **Section {section_num}: {section_title}** - FAILED (Error reading final file: {e})\n"
-                    failed_sections.append(section_num)
+            if section_num in results:
+                summary_content += f"- **Section {section_num}: {section_title}** - COMPLETED\n"
+                completed_sections.append(section_num)
             else:
-                summary_content += f"- **Section {section_num}: {section_title}** - SKIPPED (Final file not found)\n"
-
-        # End of HTML content
-        html_content += """
-</body>
-</html>
-"""
+                summary_content += f"- **Section {section_num}: {section_title}** - SKIPPED\n"
         
         # Overall summary statistics
         summary_content += f"\n---\n"
-        summary_content += f"**Overall Status:** {completed_sections}/{total_sections} sections completed.\n"
-        if failed_sections:
-            summary_content += f"**Failed Sections:** {', '.join(map(str, failed_sections))}\n"
-
+        summary_content += f"**Sections Analyzed:** {len(completed_sections)}\n"
+        summary_content += f"**Sections Completed:** {completed_sections}\n"
+        
+        # Save summary
         with open(summary_path, 'w', encoding='utf-8') as f:
             f.write(summary_content)
-            
-        with open(profile_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
         
         thread_safe_print(f"Run summary saved to: {summary_path}")
-        thread_safe_print(f"Final HTML profile saved to: {profile_path}")
 
 
 # Section Groups Configuration

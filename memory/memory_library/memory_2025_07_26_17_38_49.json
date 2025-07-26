@@ -127,6 +127,16 @@
         "run_number": 5,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When evaluating hybrid asset ownership, analyze the extent of operational control and risk transfer versus traditional ownership models - to understand true strategic flexibility.",
+        "section_number": 1,
+        "quality_score": 10,
+        "word_count": 24,
+        "added_date": "2025-07-11",
+        "run_number": 10,
+        "harsh_reeval": true,
+        "original_score": 8
       }
     ],
     "section_2": [
@@ -237,6 +247,16 @@
         "run_number": 5,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When volume growth masks declining revenue per unit, analyze the customer acquisition cost and lifetime value for different customer segments - to determine profitability of new sales.",
+        "section_number": 6,
+        "quality_score": 10,
+        "word_count": 27,
+        "added_date": "2025-07-11",
+        "run_number": 10,
+        "harsh_reeval": true,
+        "original_score": 9
       }
     ],
     "section_8": [
@@ -259,6 +279,16 @@
         "run_number": 7,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "To verify management claims about operational improvements, assess non-financial indicators such as employee productivity, process cycle times, or inventory turnover rates - to identify tangible operational shifts.",
+        "section_number": 8,
+        "quality_score": 10,
+        "word_count": 27,
+        "added_date": "2025-07-11",
+        "run_number": 10,
+        "harsh_reeval": true,
+        "original_score": 9
       }
     ],
     "section_9": [
@@ -290,7 +320,7 @@
         "added_date": "2025-07-11",
         "run_number": 10,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 9
       }
     ],
     "section_10": [
@@ -361,6 +391,16 @@
     ],
     "section_14": [
       {
+        "instruction": "When mitigation efforts are presented, assess if the stated remedies address the root cause of the issue or merely treat symptoms, risking recurrence.",
+        "section_number": 14,
+        "quality_score": 10,
+        "word_count": 23,
+        "added_date": "2025-06-30",
+        "run_number": 5,
+        "harsh_reeval": true,
+        "original_score": 10
+      },
+      {
         "instruction": "When a qualified audit opinion persists, model the potential financial impact if the underlying issue were fully resolved or deteriorated further - to quantify tail risks.",
         "section_number": 14,
         "quality_score": 10,
@@ -378,7 +418,7 @@
         "added_date": "2025-07-11",
         "run_number": 10,
         "harsh_reeval": true,
-        "original_score": 10
+        "original_score": 8
       }
     ],
     "section_15": [
@@ -697,6 +737,16 @@
         "run_number": 8,
         "harsh_reeval": true,
         "original_score": 10
+      },
+      {
+        "instruction": "When goodwill is material, identify the specific acquired assets or businesses it relates to and track their post-acquisition performance against original forecasts - this assesses the quality of prior M&A.",
+        "section_number": 30,
+        "quality_score": 10,
+        "word_count": 30,
+        "added_date": "2025-07-09",
+        "run_number": 9,
+        "harsh_reeval": true,
+        "original_score": 10
       }
     ],
     "section_31": [
@@ -724,8 +774,8 @@
   },
   "meta": {
     "version": "3.0",
-    "total_runs": 11,
-    "last_updated": "2025_07_26_17_33_37",
+    "total_runs": 10,
+    "last_updated": "2025_07_11_08_12_17",
     "active_sections": [
       13,
       29,

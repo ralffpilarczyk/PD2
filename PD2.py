@@ -596,27 +596,38 @@ if __name__ == "__main__":
     available_sections = [s['number'] for s in sections]
     
     thread_safe_print("\nSelect analysis components:")
+    thread_safe_print("0. TEST MODE - Section 1 only (Operating Footprint)")
+    thread_safe_print("Or choose from the following groups:")
     thread_safe_print()
     
-    # Collect selected sections
+    # Check for test mode first
+    test_mode = input("Enter '0' for test mode, or press Enter to continue with full selection: ").strip()
+    
     selected_sections = []
     selected_groups = []
     
-    for group_name, group_info in SECTION_GROUPS.items():
-        while True:
-            response = input(group_info["prompt"]).strip().lower()
-            if response in ['y', 'yes', 'n', 'no']:
-                if response in ['y', 'yes']:
-                    # Validate that all sections in this group actually exist
-                    valid_group_sections = [s for s in group_info["sections"] if s in available_sections]
-                    if valid_group_sections:
-                        selected_sections.extend(valid_group_sections)
-                        selected_groups.append(group_name)
-                    else:
-                        thread_safe_print(f"Warning: No valid sections found for {group_name}")
-                break
-            else:
-                thread_safe_print("Please enter 'y' or 'n'")
+    if test_mode == '0':
+        # Test mode - only section 1
+        selected_sections = [1]
+        selected_groups = ["TEST MODE"]
+        thread_safe_print("\nTEST MODE: Only Section 1 (Operating Footprint) will be analyzed.")
+    else:
+        # Normal selection mode
+        for group_name, group_info in SECTION_GROUPS.items():
+            while True:
+                response = input(group_info["prompt"]).strip().lower()
+                if response in ['y', 'yes', 'n', 'no']:
+                    if response in ['y', 'yes']:
+                        # Validate that all sections in this group actually exist
+                        valid_group_sections = [s for s in group_info["sections"] if s in available_sections]
+                        if valid_group_sections:
+                            selected_sections.extend(valid_group_sections)
+                            selected_groups.append(group_name)
+                        else:
+                            thread_safe_print(f"Warning: No valid sections found for {group_name}")
+                    break
+                else:
+                    thread_safe_print("Please enter 'y' or 'n'")
     
     if not selected_sections:
         thread_safe_print("\nNo sections selected. Exiting.")

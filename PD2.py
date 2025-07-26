@@ -208,7 +208,7 @@ class IntelligentAnalyst:
                 # Convert learning (which can be a dict or string) to a formatted JSON string
                 learning_str = json.dumps(learning, indent=4)
                 self.file_manager.save_step_output(section_num, "step_6_learning.json", learning_str)
-                self.insight_memory.add_learning(section_num, json.loads(learning_str)) # Add to memory
+                # Note: Learning will be processed in post-run memory review
             
             self.quality_tracker.log_final_word_count(section_num, final_output)
             thread_safe_print(f"Section {section_num} completed successfully.")
@@ -424,7 +424,7 @@ Generate comprehensive candidates - subsequent harsh filtering will select only 
         failed_sections = []
 
         # Check which sections were actually analyzed in this run
-        from .profile_sections import sections as all_sections
+        from src.profile_sections import sections as all_sections
         for section_info in all_sections:
             section_num = section_info['number']
             section_title = section_info['title']

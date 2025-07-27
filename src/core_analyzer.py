@@ -259,47 +259,107 @@ Generate the condensed version that respects the section's specific focus."""
     
     def _intelligent_augmentation(self, base_output: str, discovery_insights: str, section: Dict) -> str:
         """Intelligently merge discovery insights into base output without removing content."""
-        prompt = f"""You are an expert editor tasked with augmenting an existing analysis with additional insights.
+        
+        # First, analyze what insights are worth adding
+        insight_analysis = self._analyze_insights_for_augmentation(base_output, discovery_insights, section)
+        
+        # Then perform targeted augmentation
+        prompt = f"""You are an expert editor performing SURGICAL insertion of critical business insights.
 
-BASE OUTPUT (Step 4 - DO NOT REMOVE ANY CONTENT):
+BASE OUTPUT (Step 4 - PRESERVE 100%):
 ---
 {base_output}
 ---
 
-DISCOVERY INSIGHTS (from advanced analysis):
+DISCOVERY INSIGHTS:
 ---
 {discovery_insights}
 ---
 
+INSIGHTS TO ADD (from analysis):
+---
+{insight_analysis}
+---
+
 SECTION: {section['title']}
 
-AUGMENTATION INSTRUCTIONS:
-1. **PRESERVE ALL CONTENT** from the base output - do not delete or rewrite anything
-2. **IDENTIFY UNIQUE INSIGHTS** from the discovery analysis that are NOT already in the base output
-3. **INSERT NEW INSIGHTS** at appropriate locations where they add value:
-   - Place insights near related content
-   - Maintain narrative flow
-   - Use smooth transitions
-4. **AVOID DUPLICATION** - only add insights that provide new information
-5. **MAINTAIN FORMATTING** - preserve tables, lists, and structure from base output
+CRITICAL INSERTION RULES:
 
-INSERTION GUIDELINES:
-- Add new insights as complete sentences or short paragraphs
-- Mark insertions subtly - they should blend naturally
-- If discovery found a valuable anomaly/pattern not in base, insert it
-- If discovery calculated a revealing ratio not in base, add it
-- Keep additions concise and value-focused
+1. **MATERIALITY TEST**: Only add insights that would change an investment decision
+   - Must reveal hidden value drivers or risks
+   - Must quantify impact on margins, returns, or growth
+   - Must expose contradictions with material implications
+
+2. **PLACEMENT PRECISION**:
+   - Insert IMMEDIATELY after the most related sentence in base output
+   - Example: If base mentions "headcount reduced 10%", insert efficiency insight right after
+   - Never append to end of paragraphs - find the exact contextual location
+   - Use transition phrases: "Notably," "However," "This coincides with," "Despite this,"
+
+3. **BUSINESS RELEVANCE FILTER**:
+   - No academic observations
+   - No obvious patterns
+   - Only counterintuitive findings with business impact
+   - Must answer: "So what? How does this affect cash generation or competitive position?"
+
+4. **INSERTION FORMAT**:
+   - One sentence maximum per insight
+   - Include the specific calculation or anomaly
+   - State the business implication clearly
+   - Example: "Notably, this 13.5% headcount reduction coincided with 18% revenue/employee growth, suggesting successful automation worth 200bps in margin expansion."
+
+5. **BRUTAL SELECTION**:
+   - Maximum 2-3 insertions total
+   - If discovery found 10 insights, pick only the 2-3 that most affect value
+   - Better to add nothing than to add marginal insights
 
 CONSTRAINTS:
-- Final output must contain 100% of the base output content
-- Only ADD content, never remove or replace
-- Maintain existing footnote references
-- Keep the same section structure
+- Base output must remain 100% intact
+- Insertions must be single sentences at precise locations
+- No new paragraphs or sections
+- Maintain existing footnotes
+- Total additions under 100 words
 
-Generate the augmented output with discovery insights intelligently integrated."""
+Generate the augmented output with ONLY critical insights surgically inserted at optimal locations."""
 
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section['number']
+        )
+    
+    def _analyze_insights_for_augmentation(self, base_output: str, discovery_insights: str, section: Dict) -> str:
+        """Pre-analyze discovery insights to identify which are worth adding."""
+        analysis_prompt = f"""Analyze which discovery insights are CRITICAL enough to add to the base output.
+
+BASE OUTPUT (current analysis):
+---
+{base_output}
+---
+
+DISCOVERY INSIGHTS (potential additions):
+---
+{discovery_insights}
+---
+
+SECTION CONTEXT: {section['title']}
+
+Identify ONLY insights that meet ALL these criteria:
+1. NOT already covered in the base output (even partially)
+2. Would materially affect investment decisions
+3. Reveals non-obvious value drivers or risks
+4. Can be stated in one impactful sentence
+
+For each qualifying insight:
+- State the insight concisely
+- Identify the EXACT sentence in base output after which it should be inserted
+- Explain why it's material enough to include
+
+If NO insights meet all criteria, state "No critical insights to add."
+
+Be extremely selective - only truly game-changing insights."""
+
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(analysis_prompt).text,
             context=section['number']
         )
     

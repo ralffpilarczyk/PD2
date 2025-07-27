@@ -196,7 +196,8 @@ class IntelligentAnalyst:
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", step4_output)
                 
                 # Step 5 (Optional): Discovery Pipeline Augmentation
-                if self.core_analyzer.use_discovery_pipeline:
+                # Double-check Section 32 is excluded (should never reach here for Section 32, but being safe)
+                if self.core_analyzer.use_discovery_pipeline and section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
                     thread_safe_print(f"Section {section_num} - Step 5: Running discovery pipeline augmentation...")
                     # Load Step 3 draft for discovery analysis
                     augmented_output = self.core_analyzer.augment_with_discovery(section, improved_draft, step4_output)

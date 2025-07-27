@@ -192,17 +192,27 @@ class IntelligentAnalyst:
                 
                 # Step 4: Deep Analysis and Polish
                 thread_safe_print(f"Section {section_num} - Step 4: Applying deep analysis and polish...")
-                final_output = self.core_analyzer.deep_analysis_and_polish(section, improved_draft)
-                self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
+                step4_output = self.core_analyzer.deep_analysis_and_polish(section, improved_draft)
+                self.file_manager.save_step_output(section_num, "step_4_final_section.md", step4_output)
+                
+                # Step 5 (Optional): Discovery Pipeline Augmentation
+                if self.core_analyzer.use_discovery_pipeline:
+                    thread_safe_print(f"Section {section_num} - Step 5: Running discovery pipeline augmentation...")
+                    # Load Step 3 draft for discovery analysis
+                    augmented_output = self.core_analyzer.augment_with_discovery(section, improved_draft, step4_output)
+                    self.file_manager.save_step_output(section_num, "step_5_discovery_augmented.md", augmented_output)
+                    final_output = augmented_output
+                else:
+                    final_output = step4_output
             
-            # Step 5: Learning Extraction (Applied to the final, polished output)
-            thread_safe_print(f"Section {section_num} - Step 5: Learning extraction...")
+            # Step 6: Learning Extraction (Applied to the final output)
+            thread_safe_print(f"Section {section_num} - Step 6: Learning extraction...")
             # Run learning extraction only on analytical sections
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
                 learning = self.core_analyzer.extract_learning(section, final_output)
                 # Convert learning (which can be a dict or string) to a formatted JSON string
                 learning_str = json.dumps(learning, indent=4)
-                self.file_manager.save_step_output(section_num, "step_5_learning.json", learning_str)
+                self.file_manager.save_step_output(section_num, "step_6_learning.json", learning_str)
                 # Note: Learning will be processed in post-run memory review
             
             # Calculate quality metrics for the section

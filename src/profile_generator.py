@@ -72,13 +72,16 @@ class ProfileGenerator:
             md_files = glob.glob(f"{section_dir}/*.md")
             
             if md_files:
-                # Find the final section file specifically - try step_4 first, then any final
+                # Find the final section file - prioritize discovery augmented, then step_4
                 final_file = None
                 for md_file in md_files:
-                    if 'step_4_final_section.md' in md_file:
+                    if 'step_5_discovery_augmented.md' in md_file:
                         final_file = md_file
                         break
-                    elif 'final_section.md' in md_file:
+                    elif 'step_4_final_section.md' in md_file:
+                        final_file = md_file
+                        # Don't break - keep looking for discovery augmented
+                    elif 'final_section.md' in md_file and not final_file:
                         final_file = md_file
                 
                 # If no final file found, use the first one
@@ -106,7 +109,7 @@ class ProfileGenerator:
         return combined_markdown, processed_sections
     
     def _clean_markdown_content(self, content):
-        """Clean up problematic markdown code block wrappers from section content"""
+        """Clean up problematic markdown code block wrappers and malformed tables from section content"""
         content = content.strip()
         
         # Check if content is wrapped in markdown code block
@@ -122,6 +125,17 @@ class ProfileGenerator:
                 content = content[:-3]  # Remove ``` at end
             content = content.strip()
             print("  → Cleaned problematic markdown code block wrapper")
+        
+        # Fix malformed markdown tables with excessive column separators
+        import re
+        # Look for table separator lines with excessive colons (more than 50 consecutive)
+        malformed_table_pattern = r'(\|[^|]*)(:-{50,})'
+        if re.search(malformed_table_pattern, content):
+            print("  → Detected and fixing malformed table with excessive column separators")
+            # Replace excessive colons with standard separator
+            content = re.sub(r'(:-{50,})', ':---', content)
+            # Also fix if it's just dashes
+            content = re.sub(r'(-{50,})', '---', content)
         
         # Remove duplicate section titles that LLM sometimes generates
         # Look for patterns like "## SECTION 1: Title" or "# SECTION 1: Title" at the start

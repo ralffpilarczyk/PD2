@@ -67,10 +67,16 @@ DOCUMENTS:
 {self.full_context}
 
 APPENDIX OUTPUT REQUIREMENTS:
-1. Extract ALL tables and structured data from the documents.
-2. Organize tables logically under clear Markdown headers.
-3. Format tables correctly in Markdown.
-4. Include clear source references for each table using [1], [2], [3] footnote format.
+1. Extract the MOST IMPORTANT tables and structured data from the documents.
+2. Prioritize: Financial statements, segment data, operational metrics, key ratios
+3. Organize tables logically under clear Markdown headers.
+4. Format tables correctly in Markdown.
+5. Include clear source references for each table using [1], [2], [3] footnote format.
+
+SIZE CONSTRAINTS:
+- Focus on the 15-20 most important tables
+- For very large tables, include key sections or summaries
+- Ensure output remains under 150KB total
 
 CRITICAL RESTRICTIONS:
 - DO NOT write any analysis, insights, commentary, or explanatory text.
@@ -106,11 +112,11 @@ Your goal is to create a strong, fact-based draft that applies proven analytical
         
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
 
     def deep_analysis_and_polish(self, section: Dict, comprehensive_draft: str) -> str:
-        """Step 5: Apply deep analysis methodology and polish to final output."""
+        """Step 4: Apply deep analysis methodology and polish to final output."""
         
         word_count = len(comprehensive_draft.split())
         
@@ -118,71 +124,76 @@ Your goal is to create a strong, fact-based draft that applies proven analytical
         if section['number'] == self.SECTION_32_EXEMPT:
             return comprehensive_draft
         
-        # Use discovery pipeline if enabled
-        if self.use_discovery_pipeline:
-            return self.discovery_pipeline_analysis(section, comprehensive_draft)
-        
-        # Otherwise use original approach
+        # Always use original approach for Step 4
+        # Discovery pipeline will be used as augmentation in PD2.py if enabled
         return self.original_deep_analysis(section, comprehensive_draft)
     
     def original_deep_analysis(self, section: Dict, comprehensive_draft: str) -> str:
-        """Original deep analysis approach using materiality filter."""
+        """Original deep analysis approach - condense while preserving section-relevant content."""
         word_count = len(comprehensive_draft.split())
         
-        prompt = f"""You are an expert analyst creating a final section focused on MATERIAL business insights only.
+        prompt = f"""You are an expert analyst condensing content to its most essential elements.
 
 COMPREHENSIVE DRAFT:
 ---
 {comprehensive_draft}
 ---
 
+SECTION {section['number']}: {section['title']}
 SECTION REQUIREMENTS:
 {section['specs']}
 
 CURRENT WORD COUNT: {word_count} words
 FINAL TARGET: **Maximum 500 words - absolutely no exceptions.**
 
-MATERIALITY FILTER:
-Every single insight must pass this test: "Would a fund manager change their investment thesis based on this data point?"
+CONDENSING INSTRUCTIONS:
 
-EXAMPLES OF MATERIAL vs IMMATERIAL:
-❌ IMMATERIAL: Individual hiring numbers, training hours, employee demographics, CSR metrics, minor process improvements
-✅ MATERIAL: Asset utilization gaps, cost structure changes, competitive positioning shifts, capacity constraints, operational bottlenecks
+1. **FOLLOW THE SECTION REQUIREMENTS EXACTLY** - The section specs above define what belongs in this section. Follow them precisely.
 
-ANALYSIS FRAMEWORK:
-Focus ONLY on business-critical patterns relevant to this section:
+2. **RELEVANCE FILTER** - Keep only content that meets BOTH criteria:
+   - Directly relevant to the section topic and requirements
+   - Affects company prospects or value creation
 
-1. **Competitive Position**: How does this company's position compare to peers? Where are the meaningful gaps?
-2. **Operating Leverage**: What efficiency trends or utilization patterns affect scalability?
-3. **Strategic Vulnerabilities**: What risks or structural issues could impact future performance?
-4. **Cost Structure**: How do operational choices affect unit economics and profitability?
-5. **Growth Capacity**: What limitations or advantages exist for expansion within this area?
+3. **TABLE PRESERVATION**:
+   - If the draft contains tables, KEEP at least one summary table
+   - For financial sections, tables are essential - preserve key metrics in table format
+   - If no tables exist but data would be clearer in a table, create one
 
-LANGUAGE REQUIREMENTS:
-- Cut ALL corporate jargon and meaningless phrases
-- Use direct, factual language only
-- Every sentence must contain specific, quantified data
-- If you can't measure it or it doesn't impact business outcomes, don't include it
+4. **DATA DENSITY**:
+   - Preserve specific numbers, percentages, and trends
+   - Keep year-over-year comparisons and growth rates
+   - Maintain factual density while cutting descriptive text
 
-OUTPUT STRUCTURE:
-Start with one crisp sentence stating the core facts.
-Then focus on 3-4 MATERIAL insights that could affect investment decisions:
-- Competitive advantages or disadvantages
-- Efficiency trends that impact profitability
-- Strategic risks or structural issues
-- Capacity for growth or constraint factors
+5. **SMART CONDENSING**:
+   - Remove generic statements and obvious observations
+   - Cut repetitive points - state each insight once
+   - Eliminate elaborate explanations - let the data speak
+   - Focus on what's surprising, notable, or value-affecting
+
+WHAT TO PRESERVE:
+- Tables (especially for financial data)
+- Specific metrics and quantified trends
+- Key comparisons and benchmarks
+- Unusual patterns or anomalies
+- Content that directly fulfills section requirements
+
+WHAT TO REMOVE:
+- Generic framework language (competitive moat, etc.) unless specifically relevant
+- Repetitive points
+- Obvious statements
+- Elaborate explanations of simple facts
 
 CONSTRAINTS:
 - Maximum 500 words total
-- No corporate poetry or fluff language
-- Every insight must move the investment needle
 - Maximum 5 footnotes [1], [2], [3], [4], [5]
+- At least one table where appropriate
+- Every sentence must add value
 
-Generate a section an investor would actually read and act on."""
+Generate the condensed version that respects the section's specific focus."""
 
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
     
     def discovery_pipeline_analysis(self, section: Dict, comprehensive_draft: str) -> str:
@@ -233,6 +244,64 @@ Generate a section an investor would actually read and act on."""
         
         print(f"Discovery pipeline complete for Section {section['number']}")
         return final_insight
+    
+    def augment_with_discovery(self, section: Dict, step3_draft: str, step4_output: str) -> str:
+        """Augment Step 4 output with insights from discovery pipeline."""
+        print(f"Running discovery pipeline augmentation for Section {section['number']}")
+        
+        # Run discovery pipeline on Step 3 draft to find insights
+        discovery_insights = self.discovery_pipeline_analysis(section, step3_draft)
+        
+        # Now augment Step 4 with any missing insights
+        augmented_output = self._intelligent_augmentation(step4_output, discovery_insights, section)
+        
+        return augmented_output
+    
+    def _intelligent_augmentation(self, base_output: str, discovery_insights: str, section: Dict) -> str:
+        """Intelligently merge discovery insights into base output without removing content."""
+        prompt = f"""You are an expert editor tasked with augmenting an existing analysis with additional insights.
+
+BASE OUTPUT (Step 4 - DO NOT REMOVE ANY CONTENT):
+---
+{base_output}
+---
+
+DISCOVERY INSIGHTS (from advanced analysis):
+---
+{discovery_insights}
+---
+
+SECTION: {section['title']}
+
+AUGMENTATION INSTRUCTIONS:
+1. **PRESERVE ALL CONTENT** from the base output - do not delete or rewrite anything
+2. **IDENTIFY UNIQUE INSIGHTS** from the discovery analysis that are NOT already in the base output
+3. **INSERT NEW INSIGHTS** at appropriate locations where they add value:
+   - Place insights near related content
+   - Maintain narrative flow
+   - Use smooth transitions
+4. **AVOID DUPLICATION** - only add insights that provide new information
+5. **MAINTAIN FORMATTING** - preserve tables, lists, and structure from base output
+
+INSERTION GUIDELINES:
+- Add new insights as complete sentences or short paragraphs
+- Mark insertions subtly - they should blend naturally
+- If discovery found a valuable anomaly/pattern not in base, insert it
+- If discovery calculated a revealing ratio not in base, add it
+- Keep additions concise and value-focused
+
+CONSTRAINTS:
+- Final output must contain 100% of the base output content
+- Only ADD content, never remove or replace
+- Maintain existing footnote references
+- Keep the same section structure
+
+Generate the augmented output with discovery insights intelligently integrated."""
+
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section['number']
+        )
     
     def _save_stage_output(self, directory: str, filename: str, content: str):
         """Save intermediate stage output for debugging."""
@@ -435,7 +504,7 @@ Focus on impacts that would influence investment decisions."""
         
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
     
     def _generate_insight_comprehensive(self, comprehensive_data: dict, section: Dict) -> str:
@@ -526,7 +595,7 @@ Generate the final fact-dense analytical output with proper footnote citations."
         
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
     
     def _generate_insight(self, impacts: str, section: Dict) -> str:
@@ -562,7 +631,7 @@ Generate the final analytical output."""
         
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
 
     def apply_critique(self, section: Dict, current_draft: str, critique: str, critique_type: str) -> str:
@@ -594,7 +663,7 @@ Produce only the final, revised Markdown text.
         # Medium temperature to apply edits intelligently without going off-track.
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
 
     def extract_learning(self, section: Dict, final_output: str) -> str:
@@ -642,7 +711,7 @@ Extract only the most transferable and valuable analytical approaches."""
         # Low temperature for structured, precise data extraction.
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
     
     def completeness_check(self, section: Dict, draft: str) -> str:
@@ -692,7 +761,7 @@ Output ONLY the ADD list. No preamble or explanation."""
         
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
     
     def scope_check(self, section: Dict, draft: str) -> str:
@@ -739,7 +808,7 @@ Output ONLY the REMOVE list. No preamble or explanation."""
         
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
     
     def apply_completeness_only(self, section: Dict, current_draft: str, add_list: str) -> str:
@@ -772,7 +841,7 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
         
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section_num
+            context=section['number']
         )
     
     def _get_other_sections_summary(self) -> str:

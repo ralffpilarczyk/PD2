@@ -266,10 +266,32 @@ class IntelligentAnalyst:
                     thread_safe_print(f"Section {section_num} - Failed to process: {e}")
                     results[section_num] = f"Processing failed: {e}"
         
-        # Post-run memory review and update (skip in test mode)
+        # Save quality metrics
+        quality_scores = self.quality_tracker.get_quality_scores()
+        run_number = self.insight_memory.learning_memory["meta"]["total_runs"] + 1
+        self.file_manager.save_quality_metrics(quality_scores, run_number)
+        
+        # Generate run summary
+        self._generate_run_summary(results)
+        
+        # Generate final HTML profile FIRST (so user gets results immediately)
+        thread_safe_print(f"\n{'='*50}")
+        thread_safe_print("GENERATING FINAL PROFILE")
+        thread_safe_print(f"{'='*50}")
+        
+        try:
+            # Initialize ProfileGenerator and generate HTML profile
+            profile_generator = ProfileGenerator(self.run_timestamp)
+            profile_generator.generate_html_profile(results, section_numbers, self.full_context, sections)
+            thread_safe_print("Profile generation complete!")
+        except Exception as e:
+            thread_safe_print(f"Warning: HTML profile generation failed: {e}")
+        
+        # Post-run memory review AFTER profile delivery (skip in test mode)
         if len(section_numbers) > 1:  # Skip memory review if only testing one section
             thread_safe_print(f"\n{'='*50}")
             thread_safe_print("CONDUCTING POST-RUN MEMORY REVIEW")
+            thread_safe_print("(Running in background - your profile is ready)")
             thread_safe_print(f"{'='*50}")
             
             try:
@@ -280,26 +302,6 @@ class IntelligentAnalyst:
             thread_safe_print(f"\n{'='*50}")
             thread_safe_print("SKIPPING MEMORY REVIEW (Test Mode)")
             thread_safe_print(f"{'='*50}")
-        
-        # Save quality metrics
-        quality_scores = self.quality_tracker.get_quality_scores()
-        run_number = self.insight_memory.learning_memory["meta"]["total_runs"] + 1
-        self.file_manager.save_quality_metrics(quality_scores, run_number)
-        
-        # Final step: generate the consolidated HTML profile
-        self._generate_run_summary(results)
-        
-        # Generate final HTML profile
-        thread_safe_print(f"\n{'='*50}")
-        thread_safe_print("GENERATING FINAL PROFILE")
-        thread_safe_print(f"{'='*50}")
-        
-        try:
-            # Initialize ProfileGenerator and generate HTML profile
-            profile_generator = ProfileGenerator(self.run_timestamp)
-            profile_generator.generate_html_profile(results, section_numbers, self.full_context, sections)
-        except Exception as e:
-            thread_safe_print(f"Warning: HTML profile generation failed: {e}")
         
         return results
     
@@ -446,23 +448,27 @@ Generate comprehensive methodology candidates - subsequent harsh filtering will 
 SECTION_GROUPS = {
     "Company Profile": {
         "sections": list(range(1, 15)),  # 1-14
-        "prompt": "Company profile (sections 1-14) (y/n): "
+        "prompt": "1. Company profile (sections 1-14) (y/n): "
     },
     "SWOT Analysis": {
         "sections": list(range(15, 19)),  # 15-18
-        "prompt": "SWOT Analysis (sections 15-18) (y/n): "
+        "prompt": "2. SWOT Analysis (sections 15-18) (y/n): "
     },
     "Sellside Positioning": {
         "sections": list(range(19, 26)),  # 19-25
-        "prompt": "Sellside Positioning (sections 19-25) (y/n): "
+        "prompt": "3. Sellside Positioning (sections 19-25) (y/n): "
     },
     "Buyside Due Diligence": {
         "sections": list(range(26, 32)),  # 26-31
-        "prompt": "Buyside Due Diligence (sections 26-31) (y/n): "
+        "prompt": "4. Buyside Due Diligence (sections 26-31) (y/n): "
     },
     "Data Book": {
         "sections": [32],
-        "prompt": "Data Book (section 32) (y/n): "
+        "prompt": "5. Data Book (section 32) (y/n): "
+    },
+    "Test Mode": {
+        "sections": [1],
+        "prompt": "6. Test Mode (section 1 only) (y/n): "
     }
 }
 
@@ -555,38 +561,35 @@ if __name__ == "__main__":
     available_sections = [s['number'] for s in sections]
     
     thread_safe_print("\nSelect analysis components:")
-    thread_safe_print("0. TEST MODE - Section 1 only (Operating Footprint)")
-    thread_safe_print("Or choose from the following groups:")
-    thread_safe_print()
-    
-    # Check for test mode first
-    test_mode = input("Enter '0' for test mode, or press Enter to continue with full selection: ").strip()
     
     selected_sections = []
     selected_groups = []
     
-    if test_mode == '0':
-        # Test mode - only section 1
-        selected_sections = [1]
-        selected_groups = ["TEST MODE"]
-        thread_safe_print("\nTEST MODE: Only Section 1 (Operating Footprint) will be analyzed.")
-    else:
-        # Normal selection mode
-        for group_name, group_info in SECTION_GROUPS.items():
-            while True:
-                response = input(group_info["prompt"]).strip().lower()
-                if response in ['y', 'yes', 'n', 'no']:
-                    if response in ['y', 'yes']:
-                        # Validate that all sections in this group actually exist
-                        valid_group_sections = [s for s in group_info["sections"] if s in available_sections]
-                        if valid_group_sections:
-                            selected_sections.extend(valid_group_sections)
-                            selected_groups.append(group_name)
-                        else:
-                            thread_safe_print(f"Warning: No valid sections found for {group_name}")
-                    break
-                else:
-                    thread_safe_print("Please enter 'y' or 'n'")
+    # Normal selection mode - go through all groups including test mode
+    for group_name, group_info in SECTION_GROUPS.items():
+        while True:
+            response = input(group_info["prompt"]).strip().lower()
+            if response in ['y', 'yes', 'n', 'no']:
+                if response in ['y', 'yes']:
+                    # Validate that all sections in this group actually exist
+                    valid_group_sections = [s for s in group_info["sections"] if s in available_sections]
+                    if valid_group_sections:
+                        selected_sections.extend(valid_group_sections)
+                        selected_groups.append(group_name)
+                        
+                        # If test mode selected, skip remaining prompts
+                        if group_name == "Test Mode":
+                            thread_safe_print("\nTEST MODE: Only Section 1 (Operating Footprint) will be analyzed.")
+                            break
+                    else:
+                        thread_safe_print(f"Warning: No valid sections found for {group_name}")
+                break
+            else:
+                thread_safe_print("Please enter 'y' or 'n'")
+        
+        # Break out of outer loop if test mode was selected
+        if "Test Mode" in selected_groups:
+            break
     
     if not selected_sections:
         thread_safe_print("\nNo sections selected. Exiting.")

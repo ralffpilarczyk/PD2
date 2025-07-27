@@ -223,7 +223,8 @@ Generate a section an investor would actually read and act on."""
             'relationships': relationships,
             'anomalies': anomalies,
             'investigations': investigations,
-            'impacts': impacts
+            'impacts': impacts,
+            'original_draft': comprehensive_draft  # Add original draft with footnotes
         }
         final_insight = self._generate_insight_comprehensive(comprehensive_data, section)
         self._save_stage_output(pipeline_dir, "stage_6_final_insight.md", final_insight)
@@ -241,6 +242,7 @@ Generate a section an investor would actually read and act on."""
         """Stage 1: Extract claims, statements, and quantifiable facts."""
         prompt = f"""Extract all quantifiable information from this document.
 Include claims, statements, and measurable facts.
+CRITICAL: When you see footnote references like [31], [32] in the source document, preserve them with the facts.
 
 DOCUMENT:
 ---
@@ -253,10 +255,15 @@ CLAIMS AND STATEMENTS:
 - [C2] "another claim"
 
 QUANTIFIABLE FACTS:
-- [F1] metric_name: value unit (time_period) [change if mentioned]
-- [F2] another_metric: value unit (time_period)
+- [F1] metric_name: value unit (time_period) [change if mentioned] [footnote# if present]
+- [F2] another_metric: value unit (time_period) [footnote# if present]
 
-Extract EVERYTHING quantifiable. Make no judgments about relevance."""
+Example with footnotes:
+- [F31] Total Mobile Subscriptions: 12,753,000 (2Q24) [31]
+- [F54] Blended Data Usage: 33.2 GB/month (1Q25) [32]
+
+Extract EVERYTHING quantifiable. Make no judgments about relevance.
+Preserve any footnote references that appear in the source document."""
         
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text
@@ -455,6 +462,11 @@ IMPACT ASSESSMENTS:
 {comprehensive_data['impacts']}
 ---
 
+ORIGINAL DRAFT WITH FOOTNOTES (for citation reference):
+---
+{comprehensive_data.get('original_draft', '')}
+---
+
 SECTION: {section['title']}
 REQUIREMENTS: {section['specs']}
 
@@ -496,7 +508,13 @@ STRUCTURE:
 EXAMPLE PATTERN:
 "Maxis operates X sites with Y employees generating Z output. [Anomaly 1 with calculations showing contradiction]. This reveals [specific business risk/advantage with quantified impact]. [Anomaly 2 with different calculations]. Together these patterns indicate [synthesized conclusion with numbers]."
 
-Generate the final fact-dense analytical output."""
+FOOTNOTE PRESERVATION:
+- When citing specific data points, include the footnote reference from the extracted facts or original draft
+- If a fact has a footnote like [31] in the extracted facts, preserve it in your output
+- Format: "Total Mobile Subscriptions grew to 13.2 million [31]"
+- Include a footnote section at the end with the full citations from the original draft
+
+Generate the final fact-dense analytical output with proper footnote citations."""
         
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text

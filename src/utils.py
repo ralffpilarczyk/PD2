@@ -3,8 +3,9 @@ import random
 import re
 
 
-def retry_with_backoff(func, max_retries=3, base_delay=1.0):
+def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
     """Retry function with exponential backoff for rate limits"""
+    context_str = f"Section {context} - " if context else ""
     for attempt in range(max_retries):
         try:
             return func()
@@ -22,11 +23,11 @@ def retry_with_backoff(func, max_retries=3, base_delay=1.0):
                         except:
                             pass
                     
-                    print(f"Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                    print(f"{context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
                     time.sleep(delay)
                     continue
                 else:
-                    print(f"Max retries exceeded for rate limit")
+                    print(f"{context_str}Max retries exceeded for rate limit")
                     raise
             else:
                 # Non-rate-limit error, don't retry

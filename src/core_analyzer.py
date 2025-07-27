@@ -98,14 +98,15 @@ DRAFTING INSTRUCTIONS:
 3.  **Analytical Methods:** If analytical methodology is provided above, apply those proven techniques to this analysis.
 4.  **Data First:** Extract all relevant data points first, with precise citations.
 5.  **Concise Analysis:** Provide brief analysis connecting the data points. Avoid long, speculative paragraphs.
-6.  **Footnote Discipline:** Use footnotes sparingly (max 5-8). Cite only specific numbers or direct quotes. Use [1], [2], [3] format.
+6.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use [1], [2], [3], [4], [5] format. No letters in footnotes.
 7.  **Tables:** Include at least one small, well-formatted Markdown table with the most critical data.
 
 Your goal is to create a strong, fact-based draft that applies proven analytical techniques and is well-structured within the target word count.
 """
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
 
     def deep_analysis_and_polish(self, section: Dict, comprehensive_draft: str) -> str:
@@ -180,7 +181,8 @@ CONSTRAINTS:
 Generate a section an investor would actually read and act on."""
 
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def discovery_pipeline_analysis(self, section: Dict, comprehensive_draft: str) -> str:
@@ -193,22 +195,22 @@ Generate a section an investor would actually read and act on."""
         
         # Stage 1: Extract all data
         print(f"  Stage 1: Extracting data...")
-        extracted_data = self._extract_all_data(comprehensive_draft)
+        extracted_data = self._extract_all_data(comprehensive_draft, section['number'])
         self._save_stage_output(pipeline_dir, "stage_1_extracted_data.txt", extracted_data)
         
         # Stage 2: Calculate material relationships
         print(f"  Stage 2: Calculating relationships...")
-        relationships = self._calculate_material_relationships(extracted_data)
+        relationships = self._calculate_material_relationships(extracted_data, section['number'])
         self._save_stage_output(pipeline_dir, "stage_2_relationships.txt", relationships)
         
         # Stage 3: Identify anomalies
         print(f"  Stage 3: Identifying anomalies...")
-        anomalies = self._identify_anomalies(relationships)
+        anomalies = self._identify_anomalies(relationships, section['number'])
         self._save_stage_output(pipeline_dir, "stage_3_anomalies.txt", anomalies)
         
         # Stage 4: Investigate top anomalies
         print(f"  Stage 4: Investigating anomalies...")
-        investigations = self._investigate_anomalies(anomalies, comprehensive_draft)
+        investigations = self._investigate_anomalies(anomalies, comprehensive_draft, section['number'])
         self._save_stage_output(pipeline_dir, "stage_4_investigations.txt", investigations)
         
         # Stage 5: Assess impact
@@ -238,11 +240,11 @@ Generate a section an investor would actually read and act on."""
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
     
-    def _extract_all_data(self, draft: str) -> str:
+    def _extract_all_data(self, draft: str, section_num: int = None) -> str:
         """Stage 1: Extract claims, statements, and quantifiable facts."""
         prompt = f"""Extract all quantifiable information from this document.
 Include claims, statements, and measurable facts.
-CRITICAL: When you see footnote references like [31], [32] in the source document, preserve them with the facts.
+Note: Source documents may have footnotes like [31], [32] but ignore the numbers - just extract the facts.
 
 DOCUMENT:
 ---
@@ -255,21 +257,22 @@ CLAIMS AND STATEMENTS:
 - [C2] "another claim"
 
 QUANTIFIABLE FACTS:
-- [F1] metric_name: value unit (time_period) [change if mentioned] [footnote# if present]
-- [F2] another_metric: value unit (time_period) [footnote# if present]
+- [F1] metric_name: value unit (time_period) [change if mentioned]
+- [F2] another_metric: value unit (time_period)
 
-Example with footnotes:
-- [F31] Total Mobile Subscriptions: 12,753,000 (2Q24) [31]
-- [F54] Blended Data Usage: 33.2 GB/month (1Q25) [32]
+Example:
+- [F1] Total Mobile Subscriptions: 12,753,000 (2Q24)
+- [F2] Blended Data Usage: 33.2 GB/month (1Q25)
 
 Extract EVERYTHING quantifiable. Make no judgments about relevance.
-Preserve any footnote references that appear in the source document."""
+Do NOT include footnote numbers from the source - just extract the facts themselves."""
         
         return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text
+            lambda: self.model_low_temp.generate_content(prompt).text,
+            context=section_num
         )
     
-    def _calculate_material_relationships(self, extracted_data: str) -> str:
+    def _calculate_material_relationships(self, extracted_data: str, section_num: int = None) -> str:
         """Stage 2: Calculate relationships that are likely to be meaningful."""
         prompt = f"""Calculate relationships using these criteria:
 
@@ -315,10 +318,11 @@ CLAIM-FACT MATCHES:
 Focus on relationships that could affect business prospects."""
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
     
-    def _identify_anomalies(self, relationships: str) -> str:
+    def _identify_anomalies(self, relationships: str, section_num: int = None) -> str:
         """Stage 3: Identify top 2-3 anomalous patterns with value creation focus."""
         prompt = f"""Given these relationships:
 ---
@@ -356,10 +360,11 @@ TOP ANOMALIES:
 Select ONLY anomalies that demonstrably affect value creation. Ignore patterns that don't impact cash flows, returns, or competitive advantage."""
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
     
-    def _investigate_anomalies(self, anomalies: str, original_draft: str) -> str:
+    def _investigate_anomalies(self, anomalies: str, original_draft: str, section_num: int = None) -> str:
         """Stage 4: Deep investigation of anomalies."""
         prompt = f"""Investigate these anomalies by searching the original document:
 
@@ -394,7 +399,8 @@ INVESTIGATION RESULTS:
 Goal: Understand the business implications of each anomaly."""
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def _assess_impact(self, investigations: str, section: Dict) -> str:
@@ -428,7 +434,8 @@ IMPACT ASSESSMENT:
 Focus on impacts that would influence investment decisions."""
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def _generate_insight_comprehensive(self, comprehensive_data: dict, section: Dict) -> str:
@@ -508,16 +515,18 @@ STRUCTURE:
 EXAMPLE PATTERN:
 "Maxis operates X sites with Y employees generating Z output. [Anomaly 1 with calculations showing contradiction]. This reveals [specific business risk/advantage with quantified impact]. [Anomaly 2 with different calculations]. Together these patterns indicate [synthesized conclusion with numbers]."
 
-FOOTNOTE PRESERVATION:
-- When citing specific data points, include the footnote reference from the extracted facts or original draft
-- If a fact has a footnote like [31] in the extracted facts, preserve it in your output
-- Format: "Total Mobile Subscriptions grew to 13.2 million [31]"
-- Include a footnote section at the end with the full citations from the original draft
+FOOTNOTE REQUIREMENTS:
+- Use exactly 5 footnotes maximum for the entire section
+- Select ONLY the 5 most important/material data points to cite
+- Use sequential numbering: [1], [2], [3], [4], [5]
+- No letters in footnotes (not [a], [b] or [1a], [1b])
+- Place footnote section at the end with source citations from the original draft
 
 Generate the final fact-dense analytical output with proper footnote citations."""
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def _generate_insight(self, impacts: str, section: Dict) -> str:
@@ -547,12 +556,13 @@ Structure the output naturally - don't use rigid headings, but ensure you cover:
 - Specific risks or advantages uncovered
 
 Every sentence must contain actionable intelligence.
-Maximum 5 footnotes in format [1], [2], etc.
+Use exactly 5 footnotes maximum. Sequential numbering only: [1], [2], [3], [4], [5]. No letters.
 
 Generate the final analytical output."""
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
 
     def apply_critique(self, section: Dict, current_draft: str, critique: str, critique_type: str) -> str:
@@ -576,14 +586,15 @@ Based on the instructions, generate the new, revised version of the text.
 
 CRITICAL FINAL CHECKS:
 - **Word Count:** The final output MUST be under {word_target} words.
-- **Footnote Renumbering:** Ensure all footnotes are sequential (e.g., [1], [2], [3]).
+- **Footnote Rules:** Maximum 5 footnotes. Sequential numbering only: [1], [2], [3], [4], [5]. No letters. If draft has more than 5, keep only the 5 most important.
 - **Scope:** All out-of-scope content mentioned in the instructions must be removed.
 
 Produce only the final, revised Markdown text.
 """
         # Medium temperature to apply edits intelligently without going off-track.
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
 
     def extract_learning(self, section: Dict, final_output: str) -> str:
@@ -630,7 +641,8 @@ RULES:
 Extract only the most transferable and valuable analytical approaches."""
         # Low temperature for structured, precise data extraction.
         return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text
+            lambda: self.model_low_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def completeness_check(self, section: Dict, draft: str) -> str:
@@ -679,7 +691,8 @@ STRICT RULES:
 Output ONLY the ADD list. No preamble or explanation."""
         
         return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text
+            lambda: self.model_low_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def scope_check(self, section: Dict, draft: str) -> str:
@@ -725,7 +738,8 @@ BIAS: If content could reasonably belong in this section, do NOT remove it.
 Output ONLY the REMOVE list. No preamble or explanation."""
         
         return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text
+            lambda: self.model_low_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def apply_completeness_only(self, section: Dict, current_draft: str, add_list: str) -> str:
@@ -748,16 +762,17 @@ SOURCE DOCUMENTS (for looking up ADD items):
 
 INSTRUCTIONS:
 1. Add ALL items from the ADD list using the exact data from source documents
-2. When adding items, cite the source (e.g., [1], [2])
-3. Maintain narrative flow - integrate additions smoothly into appropriate sections
-4. Preserve all existing content - do not remove anything
-5. Keep the same professional tone and formatting
-6. If an ADD item duplicates existing content, enhance rather than duplicate
+2. Maintain narrative flow - integrate additions smoothly into appropriate sections
+3. Preserve all existing content - do not remove anything
+4. Keep the same professional tone and formatting
+5. If an ADD item duplicates existing content, enhance rather than duplicate
+6. FOOTNOTE RULES: After adding content, ensure total footnotes do not exceed 5. Renumber sequentially [1] through [5]. No letters in footnotes.
 
 CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any explanations, commentary, or descriptions of what you are doing. No preamble, no postamble - just the final enhanced draft."""
         
         return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text
+            lambda: self.model_medium_temp.generate_content(prompt).text,
+            context=section_num
         )
     
     def _get_other_sections_summary(self) -> str:

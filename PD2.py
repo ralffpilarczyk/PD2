@@ -205,7 +205,8 @@ class IntelligentAnalyst:
                 self.file_manager.save_step_output(section_num, "step_5_learning.json", learning_str)
                 # Note: Learning will be processed in post-run memory review
             
-            self.quality_tracker.log_final_word_count(section_num, final_output)
+            # Calculate quality metrics for the section
+            self.quality_tracker.calculate_section_metrics(section_num, final_output)
             thread_safe_print(f"Section {section_num} completed successfully.")
             return f"Section {section_num} completed."
 
@@ -601,31 +602,22 @@ if __name__ == "__main__":
     thread_safe_print(f"\nSelected groups: {', '.join(selected_groups)}")
     thread_safe_print(f"Processing sections: {selected_sections}")
     
-    # Ask about parallel processing
-    while True:
-        parallel_choice = input(f"\nUse parallel processing? (recommended for {len(selected_sections)} sections) (y/n): ").strip().lower()
-        if parallel_choice in ['y', 'yes', 'n', 'no']:
-            break
-        thread_safe_print("Please enter 'y' or 'n'")
+    # Ask about number of workers for parallel processing
+    thread_safe_print("\nNote: Rate limiting protection enabled")
+    thread_safe_print("- Automatic retry with exponential backoff for rate limits")
+    thread_safe_print("- Extracts retry delays from API responses")
+    thread_safe_print("- Up to 3 retry attempts with intelligent delays")
     
-    if parallel_choice in ['y', 'yes']:
-        thread_safe_print("Note: Rate limiting protection enabled")
-        thread_safe_print("- Automatic retry with exponential backoff for rate limits")
-        thread_safe_print("- Extracts retry delays from API responses")
-        thread_safe_print("- Up to 3 retry attempts with intelligent delays")
-        
-        while True:
-            try:
-                worker_input = input("Number of parallel workers (1-3, recommended: 2): ").strip()
-                max_workers = int(worker_input)
-                if 1 <= max_workers <= 3:
-                    break
-                else:
-                    thread_safe_print("Please enter a number between 1 and 3")
-            except ValueError:
-                thread_safe_print("Please enter a valid number")
-    else:
-        max_workers = 1
+    while True:
+        try:
+            worker_input = input(f"\nNumber of parallel workers (1-3, recommended: 2 for {len(selected_sections)} sections): ").strip()
+            max_workers = int(worker_input)
+            if 1 <= max_workers <= 3:
+                break
+            else:
+                thread_safe_print("Please enter a number between 1 and 3")
+        except ValueError:
+            thread_safe_print("Please enter a valid number")
     
     # Ask about discovery pipeline
     while True:

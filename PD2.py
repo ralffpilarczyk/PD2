@@ -104,7 +104,7 @@ class IntelligentAnalyst:
         self.full_context = self.file_manager.load_markdown_files(all_markdown_files)
         
         # Initialize other components
-        self.core_analyzer = CoreAnalyzer(self.full_context)
+        self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp)
         self.insight_memory = InsightMemory(self.run_timestamp)
         self.quality_tracker = QualityTracker()
         
@@ -321,44 +321,44 @@ class IntelligentAnalyst:
         
         combined_learning = "\n\n".join(learning_files)
         
-        # Generate new insight candidates using instruction format
-        prompt = f"""Analyze these learning extractions to identify new analytical instruction patterns.
+        # Generate new analytical methodology candidates from learning extractions
+        prompt = f"""Analyze these methodology extractions to identify transferable analytical techniques for future analysis runs.
 
-LEARNING EXTRACTIONS:
+METHODOLOGY EXTRACTIONS:
 {combined_learning}
 
-CURRENT INSIGHT MEMORY STATS:
+CURRENT ANALYTICAL MEMORY STATS:
 {json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
 
-Generate analytical instruction candidates that could enhance future analysis runs. Be comprehensive in generating candidates - harsh quality filtering happens later.
+Extract transferable analytical methodologies that could enhance future analysis of ANY company. Focus on techniques, not company-specific findings.
 
-INSTRUCTION CRITERIA:
-1. Formulated as specific analytical techniques for future runs
-2. Focus on universal patterns about relationships and material impact  
-3. Additive to section requirements (don't repeat basic section specs)
-4. Range from solid practices (6/10) to breakthrough insights (9-10/10)
+METHODOLOGY CRITERIA:
+1. Formulated as specific analytical techniques that work across companies/industries
+2. Focus on calculation methods, ratio analysis, and pattern recognition
+3. Applicable to multiple contexts within the same section type
+4. Range from solid practices (6/10) to breakthrough methodologies (9-10/10)
 
-For each candidate, provide:
-- instruction: "When analyzing [specific context], [specific technique] - [why this reveals insights]"
-- section_number: [the specific section number this applies to]
+For each methodology, provide:
+- instruction: "When analyzing [context type], [specific analytical method] to [reveal insight type]"
+- section_number: [the section number this methodology applies to]
 - quality_score: [6-10, be realistic about distribution]
 
 QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Only 1-2 truly breakthrough analytical insights per section
-- 7-8/10: Solid techniques that meaningfully improve analysis quality  
+- 9-10/10: Only breakthrough analytical methodologies that consistently reveal material insights
+- 7-8/10: Solid analytical techniques that meaningfully improve analysis quality across companies
 - 6/10: Standard but useful analytical practices
 
 OUTPUT FORMAT:
 NEW_INSIGHTS:
-- instruction: "[analytical instruction for future runs]"
+- instruction: "[analytical methodology for future runs]"
   section_number: [section number]
   quality_score: [6-10, realistic distribution]
 
-- instruction: "[another analytical instruction]"
+- instruction: "[another analytical methodology]"
   section_number: [section number]  
   quality_score: [6-10, realistic distribution]
 
-Generate comprehensive candidates - subsequent harsh filtering will select only the best.
+Generate comprehensive methodology candidates - subsequent harsh filtering will select only the best transferable techniques.
 """
         
         model = genai.GenerativeModel('gemini-2.5-flash')
@@ -623,6 +623,19 @@ if __name__ == "__main__":
                 thread_safe_print("Please enter a valid number")
     else:
         max_workers = 1
+    
+    # Ask about discovery pipeline
+    while True:
+        discovery_choice = input("\nUse experimental discovery pipeline for deep insights? (y/n): ").strip().lower()
+        if discovery_choice in ['y', 'yes', 'n', 'no']:
+            break
+        thread_safe_print("Please enter 'y' or 'n'")
+    
+    use_discovery = discovery_choice in ['y', 'yes']
+    if use_discovery:
+        thread_safe_print("Discovery pipeline enabled - will use 6-stage analysis for deeper insights")
+        thread_safe_print("Note: This will make ~6 LLM calls per section instead of 1")
+        analyst.core_analyzer.use_discovery_pipeline = True
     
     thread_safe_print(f"Starting analysis with {'parallel' if max_workers > 1 else 'sequential'} processing...")
     

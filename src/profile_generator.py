@@ -359,7 +359,8 @@ Examples:
     
     def _markdown_to_html(self, markdown_content: str) -> str:
         """Convert markdown content to HTML using proper markdown parser"""
-        md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br'])
+        # Note: Removed 'nl2br' extension as it interferes with table rendering
+        md = markdown.Markdown(extensions=['tables', 'fenced_code', 'extra'])
         return md.convert(markdown_content)
     
     def _get_css_styles(self) -> str:

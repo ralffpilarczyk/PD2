@@ -49,3 +49,19 @@ old/
 .cursorignore
 
 runs/
+
+# Data and metrics
+quality_metrics/
+memory/
+
+# Documentation
+HANDOVER.md
+PLAN.md
+HANDOVER_SCRIPT.md
+
+# VS Code workspace
+*.code-workspace
+
+# Test and development files
+m_mid.py
+test_6agents.py

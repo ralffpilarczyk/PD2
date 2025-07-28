@@ -63,7 +63,7 @@ Each section goes through 4 refinement steps with different word limits and temp
 
 ## Testing & Quality
 No formal test suite exists. When making changes:
-- Test with sample PDFs in `SourceData/`
+- Test with sample PDFs
 - Monitor `runs/run_*/run_summary.txt` for errors
 - Check `quality_metrics/` for tracking data
 - Verify HTML output renders correctly

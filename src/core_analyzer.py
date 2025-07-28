@@ -103,7 +103,7 @@ DRAFTING INSTRUCTIONS:
 2.  **Scope Adherence:** Adhere STRICTLY to the section requirements. Do NOT include information that belongs in other sections.
 3.  **Analytical Methods:** If analytical methodology is provided above, apply those proven techniques to this analysis.
 4.  **Data First:** Extract all relevant data points first, with precise citations.
-5.  **Concise Analysis:** Provide brief analysis connecting the data points. Avoid long, speculative paragraphs.
+5.  **Insightful Analysis:** Provide brief but insightful analysis connecting the data points. Look for non-obvious patterns and implications. Avoid long, speculative paragraphs.
 6.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use [1], [2], [3], [4], [5] format. No letters in footnotes.
 7.  **Tables:** Include at least one small, well-formatted Markdown table with the most critical data.
 

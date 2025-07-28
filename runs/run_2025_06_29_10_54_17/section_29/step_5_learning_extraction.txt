@@ -1,9 +1,0 @@
-ANALYTICAL_INSTRUCTIONS:
-- instruction: "When revenue growth is presented, disaggregate into volume and pricing components; lack of this obscures true growth drivers and sustainability."
-  section_number: 29
-  quality_score: 8
-  word_count: 23
-- instruction: "When ESG or efficiency initiatives are claimed, quantify their direct financial impact on P&L relative to associated capital expenditure and other operational levers."
-  section_number: 29
-  quality_score: 9
-  word_count: 26

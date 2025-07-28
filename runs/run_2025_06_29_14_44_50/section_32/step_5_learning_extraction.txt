@@ -1,9 +1,0 @@
-ANALYTICAL_INSTRUCTIONS:
-- instruction: "When key financial ratios are presented, cross-verify their calculation methods if multiple definitions or presentations exist in source documents."
-  section_number: 32
-  quality_score: 8
-  word_count: 24
-- instruction: "When financial line items are presented, identify any noted exclusions or inclusions to precisely understand the scope of reported values."
-  section_number: 32
-  quality_score: 7
-  word_count: 23

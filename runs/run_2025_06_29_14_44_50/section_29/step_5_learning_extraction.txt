@@ -1,9 +1,0 @@
-ANALYTICAL_INSTRUCTIONS:
-- instruction: "When different company reports present conflicting figures for the same metric, prioritize reconciliation to identify data integrity issues."
-  section_number: 29
-  quality_score: 9
-  word_count: 22
-- instruction: "When management claims counter-intuitive cost or operational efficiencies, demand granular breakdown by segment or operational unit to validate underlying drivers."
-  section_number: 29
-  quality_score: 9
-  word_count: 26

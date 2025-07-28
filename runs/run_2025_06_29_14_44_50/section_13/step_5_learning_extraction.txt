@@ -1,9 +1,0 @@
-ANALYTICAL_INSTRUCTIONS:
-- instruction: "When management presents strategic narratives, cross-reference with audit opinions and legal filings to uncover governance-related disconnects and their financial impact."
-  section_number: 13
-  quality_score: 9
-  word_count: 25
-- instruction: "Assess human capital investment trends against capability-intensive strategic objectives; decreasing investment signals critical feasibility bottlenecks."
-  section_number: 13
-  quality_score: 8
-  word_count: 18

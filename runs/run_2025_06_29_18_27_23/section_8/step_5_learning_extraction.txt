@@ -1,9 +1,0 @@
-ANALYTICAL_INSTRUCTIONS:
-- instruction: "When customer volume grows but revenue per customer declines, question growth quality; investigate value shifts or competition."
-  section_number: 8
-  quality_score: 9
-  word_count: 19
-- instruction: "When management emphasizes 'reach' or 'access,' calculate actual penetration rate to expose conversion challenges or downplayed hurdles."
-  section_number: 8
-  quality_score: 9
-  word_count: 20

@@ -4,7 +4,7 @@ from typing import Dict, List
 from datetime import datetime
 from pathlib import Path
 import google.generativeai as genai
-from .utils import retry_with_backoff
+from .utils import retry_with_backoff, thread_safe_print
 from .profile_sections import sections
 import markdown
 from markdown.extensions import tables
@@ -27,13 +27,13 @@ class ProfileGenerator:
         
         # Extract company name
         company_name = self._extract_company_name(full_context)
-        print(f"Generating combined profile for: {company_name}")
+        thread_safe_print(f"Generating combined profile for: {company_name}")
         
         # Collect markdown from existing section files
         combined_markdown, processed_sections = self._collect_section_markdown()
         
         if not combined_markdown:
-            print("No section markdown files found!")
+            thread_safe_print("No section markdown files found!")
             return None
         
         # Clean company name for filename
@@ -45,7 +45,7 @@ class ProfileGenerator:
         
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(combined_markdown)
-        print(f"Combined markdown saved: {md_path}")
+        thread_safe_print(f"Combined markdown saved: {md_path}")
         
         # Generate HTML from combined markdown
         html_path = self._generate_html_from_markdown(combined_markdown, processed_sections, company_name, clean_company_name)
@@ -87,7 +87,7 @@ class ProfileGenerator:
                 # If no final file found, use the first one
                 md_file = final_file if final_file else md_files[0]
                 
-                print(f"Reading section {section_num}: {section_title} - {md_file}")
+                thread_safe_print(f"Reading section {section_num}: {section_title} - {md_file}")
                 
                 with open(md_file, 'r', encoding='utf-8') as f:
                     content = f.read()
@@ -117,21 +117,21 @@ class ProfileGenerator:
             # Remove the wrapper
             content = content[12:-4]  # Remove ```markdown\n at start and \n``` at end
             content = content.strip()
-            print("  → Cleaned problematic markdown code block wrapper")
+            thread_safe_print("  → Cleaned problematic markdown code block wrapper")
         elif content.startswith('```markdown'):
             # Handle case without newline after ```markdown
             content = content[11:]  # Remove ```markdown at start
             if content.endswith('```'):
                 content = content[:-3]  # Remove ``` at end
             content = content.strip()
-            print("  → Cleaned problematic markdown code block wrapper")
+            thread_safe_print("  → Cleaned problematic markdown code block wrapper")
         
         # Fix malformed markdown tables with excessive column separators
         import re
         # Look for table separator lines with excessive colons (more than 50 consecutive)
         malformed_table_pattern = r'(\|[^|]*)(:-{50,})'
         if re.search(malformed_table_pattern, content):
-            print("  → Detected and fixing malformed table with excessive column separators")
+            thread_safe_print("  → Detected and fixing malformed table with excessive column separators")
             # Replace excessive colons with standard separator
             content = re.sub(r'(:-{50,})', ':---', content)
             # Also fix if it's just dashes
@@ -143,7 +143,7 @@ class ProfileGenerator:
         if lines and (lines[0].startswith('## SECTION ') or lines[0].startswith('# SECTION ') or lines[0].startswith('SECTION ')):
             lines = lines[1:]  # Remove the first line
             content = '\n'.join(lines).strip()
-            print("  → Removed duplicate section title")
+            thread_safe_print("  → Removed duplicate section title")
             
         return content
     
@@ -216,7 +216,7 @@ class ProfileGenerator:
             
             # Print footnote management info
             if section_footnote_count > 0:
-                print(f"  → Managed {section_footnote_count} footnotes (max 8 per section)")
+                thread_safe_print(f"  → Managed {section_footnote_count} footnotes (max 8 per section)")
         
         return ''.join(processed_sections)
     
@@ -270,8 +270,8 @@ class ProfileGenerator:
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(full_html)
         
-        print(f"Combined HTML profile saved: {html_path}")
-        print(f"Processed {len(processed_sections)} sections")
+        thread_safe_print(f"Combined HTML profile saved: {html_path}")
+        thread_safe_print(f"Processed {len(processed_sections)} sections")
         
         return html_path
     
@@ -354,7 +354,7 @@ Examples:
             return company_name
             
         except Exception as e:
-            print(f"Company name extraction failed: {e}")
+            thread_safe_print(f"Company name extraction failed: {e}")
             return "Company Profile"
     
     def _markdown_to_html(self, markdown_content: str) -> str:

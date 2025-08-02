@@ -6,9 +6,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 import time
-import random
 
 # Load environment variables
 load_dotenv()
@@ -19,44 +17,8 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 # Import modular components
 from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections
 
-# Thread-safe print lock
-print_lock = threading.Lock()
-
-def thread_safe_print(*args, **kwargs):
-    """Thread-safe print function"""
-    with print_lock:
-        print(*args, **kwargs)
-
-def retry_with_backoff(func, max_retries=3, base_delay=1.0):
-    """Retry function with exponential backoff for rate limits"""
-    for attempt in range(max_retries):
-        try:
-            return func()
-        except Exception as e:
-            error_str = str(e)
-            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
-                if attempt < max_retries - 1:
-                    # Extract retry delay from error if available
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                    if "retry_delay" in error_str:
-                        try:
-                            import re
-                            delay_match = re.search(r'seconds:\s*(\d+)', error_str)
-                            if delay_match:
-                                delay = max(delay, int(delay_match.group(1)))
-                        except:
-                            pass
-                    
-                    thread_safe_print(f"Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(delay)
-                    continue
-                else:
-                    thread_safe_print(f"Max retries exceeded for rate limit")
-                    raise
-            else:
-                # Non-rate-limit error, don't retry
-                raise
-    return None
+# Import thread_safe_print and retry_with_backoff from utils
+from src.utils import thread_safe_print, retry_with_backoff
 
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
@@ -324,7 +286,7 @@ class IntelligentAnalyst:
         # Collect all learning extractions
         learning_files = []
         for section in sections:
-            learning_file = f"runs/run_{self.run_timestamp}/section_{section['number']}/step_5_learning.json"
+            learning_file = f"runs/run_{self.run_timestamp}/section_{section['number']}/step_6_learning.json"
             if os.path.exists(learning_file):
                 with open(learning_file, 'r', encoding='utf-8') as f:
                     learning_files.append(f.read())
@@ -554,6 +516,35 @@ def select_pdf_files():
 if __name__ == "__main__":
     thread_safe_print("PROFILEDASH 2.0 - with Learning Memory")
     thread_safe_print("="*60)
+    
+    # Pre-flight checks
+    thread_safe_print("\nRunning pre-flight checks...")
+    
+    # Check 1: Verify API key is set
+    if not os.environ.get("GEMINI_API_KEY"):
+        thread_safe_print("ERROR: GEMINI_API_KEY environment variable not set")
+        thread_safe_print("Please set your Gemini API key in a .env file:")
+        thread_safe_print("  echo 'GEMINI_API_KEY=your-key-here' > .env")
+        exit(1)
+    thread_safe_print("✓ Gemini API key configured")
+    
+    # Check 2: Verify required dependencies
+    try:
+        # Check for Marker (PDF conversion)
+        from marker.converters.pdf import PdfConverter
+        thread_safe_print("✓ Marker library available for PDF conversion")
+    except ImportError as e:
+        thread_safe_print("WARNING: Marker library not available - PDF files cannot be processed")
+        thread_safe_print("To enable PDF support, install with: pip install marker-pdf")
+        # Don't exit - user might only want to use MD files
+    
+    # Check 3: Create base directories
+    base_dirs = ["runs", "memory", "quality_metrics"]
+    for dir_path in base_dirs:
+        os.makedirs(dir_path, exist_ok=True)
+    thread_safe_print("✓ Directory structure verified")
+    
+    thread_safe_print("Pre-flight checks completed\n")
     
     # Select source files (PDF and/or MD) with retry capability
     source_file_selection = select_source_files()

@@ -3,6 +3,7 @@ import json
 from typing import List, Dict
 from datetime import datetime
 from pathlib import Path
+from .utils import thread_safe_print
 
 class FileManager:
     """Handles all file I/O operations and directory management"""
@@ -32,21 +33,33 @@ class FileManager:
         """Load and concatenate markdown files"""
         contents = []
         for path in file_paths:
-            with open(path, 'r', encoding='utf-8') as f:
-                contents.append(f"--- Document: {os.path.basename(path)} ---\n{f.read()}\n")
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    contents.append(f"--- Document: {os.path.basename(path)} ---\n{f.read()}\n")
+            except Exception as e:
+                thread_safe_print(f"Warning: Failed to load {path}: {e}")
+                continue
         return "\n\n".join(contents)
     
     def save_step_output(self, section_num: int, step: str, content: str):
         """Save output from each step for transparency"""
         filename = f"{self.run_dir}/section_{section_num}/{step}"
-        with open(filename, 'w', encoding='utf-8') as f:
-            f.write(content)
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(content)
+        except Exception as e:
+            thread_safe_print(f"Error: Failed to save {filename}: {e}")
+            raise
     
     def save_memory_state(self, memory_data: Dict, filename: str):
         """Save memory state to specified file"""
         filepath = f"{self.run_dir}/memory_review/{filename}"
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(memory_data, f, indent=2)
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(memory_data, f, indent=2)
+        except Exception as e:
+            thread_safe_print(f"Error: Failed to save memory state to {filepath}: {e}")
+            raise
     
     def ensure_memory_file_exists(self, memory_data: Dict):
         """Ensure the main learning memory file exists"""
@@ -55,10 +68,6 @@ class FileManager:
             with open(memory_path, 'w', encoding='utf-8') as f:
                 json.dump(memory_data, f, indent=2)
     
-    def save_memory_to_main_file(self, memory_data: Dict):
-        """Save updated memory to main file"""
-        with open("memory/learning_memory.json", 'w', encoding='utf-8') as f:
-            json.dump(memory_data, f, indent=2)
     
     def archive_memory(self, memory_data: Dict, archive_name: str = None) -> str:
         """Archive current memory and return archive path"""
@@ -77,27 +86,34 @@ class FileManager:
         """Save quality metrics for tracking improvement"""
         metrics_file = "quality_metrics/insight_depth_scores.json"
         
-        # Load existing metrics
-        if os.path.exists(metrics_file):
-            with open(metrics_file, 'r', encoding='utf-8') as f:
-                all_metrics = json.load(f)
-        else:
-            all_metrics = {}
-        
-        # Add current run metrics
-        run_key = f"run_{run_number}"
-        all_metrics[run_key] = quality_scores
-        
-        # Calculate average
-        if quality_scores:
-            avg_depth = sum(s["depth_ratio"] for s in quality_scores.values()) / len(quality_scores)
-            all_metrics[run_key]["average_depth_ratio"] = avg_depth
-        
-        # Save updated metrics
-        with open(metrics_file, 'w', encoding='utf-8') as f:
-            json.dump(all_metrics, f, indent=2)
+        try:
+            # Load existing metrics
+            if os.path.exists(metrics_file):
+                with open(metrics_file, 'r', encoding='utf-8') as f:
+                    all_metrics = json.load(f)
+            else:
+                all_metrics = {}
+            
+            # Add current run metrics
+            run_key = f"run_{run_number}"
+            all_metrics[run_key] = quality_scores
+            
+            # Calculate average
+            if quality_scores:
+                avg_depth = sum(s["depth_ratio"] for s in quality_scores.values()) / len(quality_scores)
+                all_metrics[run_key]["average_depth_ratio"] = avg_depth
+            
+            # Save updated metrics
+            with open(metrics_file, 'w', encoding='utf-8') as f:
+                json.dump(all_metrics, f, indent=2)
+        except json.JSONDecodeError as e:
+            thread_safe_print(f"Error: Corrupted quality metrics file: {e}")
+            # Start fresh if corrupted
+            all_metrics = {f"run_{run_number}": quality_scores}
+            with open(metrics_file, 'w', encoding='utf-8') as f:
+                json.dump(all_metrics, f, indent=2)
+        except Exception as e:
+            thread_safe_print(f"Error: Failed to save quality metrics: {e}")
+            raise
     
-    def save_run_summary(self, summary_text: str):
-        """Save run summary"""
-        with open(f"{self.run_dir}/run_summary.txt", 'w', encoding='utf-8') as f:
-            f.write(summary_text) 
+ 

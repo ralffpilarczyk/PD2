@@ -4,7 +4,7 @@ import re
 from typing import Dict, List
 from datetime import datetime
 import google.generativeai as genai
-from .utils import retry_with_backoff
+from .utils import retry_with_backoff, thread_safe_print
 
 class InsightMemory:
     """Clean, flexible insight memory system for section-based analytical instructions"""
@@ -28,7 +28,7 @@ class InsightMemory:
                 
             # Ensure proper structure (migrate if needed)
             if not self._is_valid_structure(memory):
-                print("Migrating to new insight memory structure...")
+                thread_safe_print("Migrating to new insight memory structure...")
                 return self._create_fresh_memory()
             
             return memory
@@ -127,7 +127,7 @@ class InsightMemory:
                     
                     # Skip if instruction exceeds 30 words
                     if actual_word_count > 30:
-                        print(f"Skipping instruction (too long): {instruction[:50]}... ({actual_word_count} words)")
+                        thread_safe_print(f"Skipping instruction (too long): {instruction[:50]}... ({actual_word_count} words)")
                         continue
                     
                     insight = {
@@ -166,7 +166,7 @@ class InsightMemory:
         
         if not is_duplicate:
             self.learning_memory["insights"][section_key].append(insight)
-            print(f"Added instruction for Section {section_num}: {insight['instruction'][:60]}...")
+            thread_safe_print(f"Added instruction for Section {section_num}: {insight['instruction'][:60]}...")
             
             # Keep only top insights per section
             if len(self.learning_memory["insights"][section_key]) > self.MAX_INSIGHTS_PER_SECTION:
@@ -273,14 +273,14 @@ Be ruthless - most instructions should NOT make the cut. Only keep true analytic
                     self.learning_memory["insights"][section_key] = filtered_insights
                     kept_count = len(filtered_insights)
                     
-                    print(f"Harsh filter - {section_key}: {original_count} → {kept_count} instructions (kept {kept_count/original_count*100:.1f}%)")
+                    thread_safe_print(f"Harsh filter - {section_key}: {original_count} → {kept_count} instructions (kept {kept_count/original_count*100:.1f}%)")
                 else:
                     # No instructions passed harsh filter - keep empty
-                    print(f"Harsh filter - {section_key}: All instructions rejected (0/10 quality)")
+                    thread_safe_print(f"Harsh filter - {section_key}: All instructions rejected (0/10 quality)")
                     self.learning_memory["insights"][section_key] = []
                 
             except Exception as e:
-                print(f"Warning: Could not apply harsh filter to {section_key}: {e}")
+                thread_safe_print(f"Warning: Could not apply harsh filter to {section_key}: {e}")
                 # Keep original insights as fallback
                 continue
     

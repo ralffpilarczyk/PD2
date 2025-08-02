@@ -65,3 +65,9 @@ HANDOVER_SCRIPT.md
 # Test and development files
 m_mid.py
 test_6agents.py
+
+# Claude Code
+.claude/
+
+# Source files
+SourceFiles/

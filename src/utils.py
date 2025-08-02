@@ -1,6 +1,15 @@
 import time
 import random
 import re
+import threading
+
+# Thread-safe print lock
+print_lock = threading.Lock()
+
+def thread_safe_print(*args, **kwargs):
+    """Thread-safe print function"""
+    with print_lock:
+        print(*args, **kwargs)
 
 
 def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
@@ -23,11 +32,11 @@ def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
                         except:
                             pass
                     
-                    print(f"{context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                    thread_safe_print(f"{context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
                     time.sleep(delay)
                     continue
                 else:
-                    print(f"{context_str}Max retries exceeded for rate limit")
+                    thread_safe_print(f"{context_str}Max retries exceeded for rate limit")
                     raise
             else:
                 # Non-rate-limit error, don't retry

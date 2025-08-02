@@ -3,7 +3,7 @@ from typing import Dict
 import re
 import os
 from datetime import datetime
-from .utils import retry_with_backoff
+from .utils import retry_with_backoff, thread_safe_print
 from .profile_sections import sections
 
 
@@ -110,10 +110,24 @@ DRAFTING INSTRUCTIONS:
 Your goal is to create a strong, fact-based draft that applies proven analytical techniques and is well-structured within the target word count.
 """
         
-        return retry_with_backoff(
+        result = retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
             context=section['number']
         )
+        
+        # Safety check: If the initial draft is too large, truncate
+        max_chars = 500000 if section['number'] == self.SECTION_32_EXEMPT else 50000
+        if len(result) > max_chars:
+            thread_safe_print(f"WARNING: Section {section['number']} initial draft exceeded {max_chars} chars ({len(result)} chars). Truncating...")
+            # Find a natural break point
+            truncate_point = int(max_chars * 0.9)
+            last_paragraph = result.rfind('\n\n', truncate_point - 2000, truncate_point)
+            if last_paragraph > 0:
+                result = result[:last_paragraph] + "\n\n[Content truncated due to excessive length]"
+            else:
+                result = result[:truncate_point] + "\n\n[Content truncated due to excessive length]"
+        
+        return result
 
     def deep_analysis_and_polish(self, section: Dict, comprehensive_draft: str) -> str:
         """Step 4: Apply deep analysis methodology and polish to final output."""
@@ -191,46 +205,60 @@ CONSTRAINTS:
 
 Generate the condensed version that respects the section's specific focus."""
 
-        return retry_with_backoff(
+        result = retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
             context=section['number']
         )
+        
+        # Safety check: If the final output is too large, truncate
+        max_chars = 10000  # ~500 words * 6 chars/word * 3.3 safety factor
+        if len(result) > max_chars:
+            thread_safe_print(f"WARNING: Section {section['number']} final output exceeded {max_chars} chars ({len(result)} chars). Truncating...")
+            # Find a natural break point
+            truncate_point = int(max_chars * 0.9)
+            last_paragraph = result.rfind('\n\n', truncate_point - 1000, truncate_point)
+            if last_paragraph > 0:
+                result = result[:last_paragraph] + "\n\n[Content truncated due to excessive length]"
+            else:
+                result = result[:truncate_point] + "\n\n[Content truncated due to excessive length]"
+        
+        return result
     
     def discovery_pipeline_analysis(self, section: Dict, comprehensive_draft: str) -> str:
         """6-stage discovery pipeline for deep insight generation."""
-        print(f"Starting discovery pipeline for Section {section['number']}")
+        thread_safe_print(f"Starting discovery pipeline for Section {section['number']}")
         
         # Create directory for pipeline outputs
         pipeline_dir = f"runs/run_{self.run_timestamp}/section_{section['number']}/discovery_pipeline"
         os.makedirs(pipeline_dir, exist_ok=True)
         
         # Stage 1: Extract all data
-        print(f"  Stage 1: Extracting data...")
+        thread_safe_print(f"  Stage 1: Extracting data...")
         extracted_data = self._extract_all_data(comprehensive_draft, section['number'])
         self._save_stage_output(pipeline_dir, "stage_1_extracted_data.txt", extracted_data)
         
         # Stage 2: Calculate material relationships
-        print(f"  Stage 2: Calculating relationships...")
+        thread_safe_print(f"  Stage 2: Calculating relationships...")
         relationships = self._calculate_material_relationships(extracted_data, section['number'])
         self._save_stage_output(pipeline_dir, "stage_2_relationships.txt", relationships)
         
         # Stage 3: Identify anomalies
-        print(f"  Stage 3: Identifying anomalies...")
+        thread_safe_print(f"  Stage 3: Identifying anomalies...")
         anomalies = self._identify_anomalies(relationships, section['number'])
         self._save_stage_output(pipeline_dir, "stage_3_anomalies.txt", anomalies)
         
         # Stage 4: Investigate top anomalies
-        print(f"  Stage 4: Investigating anomalies...")
+        thread_safe_print(f"  Stage 4: Investigating anomalies...")
         investigations = self._investigate_anomalies(anomalies, comprehensive_draft, section['number'])
         self._save_stage_output(pipeline_dir, "stage_4_investigations.txt", investigations)
         
         # Stage 5: Assess impact
-        print(f"  Stage 5: Assessing impact...")
+        thread_safe_print(f"  Stage 5: Assessing impact...")
         impacts = self._assess_impact(investigations, section)
         self._save_stage_output(pipeline_dir, "stage_5_impacts.txt", impacts)
         
         # Stage 6: Generate final insight with comprehensive data
-        print(f"  Stage 6: Generating final insight with full fact register...")
+        thread_safe_print(f"  Stage 6: Generating final insight with full fact register...")
         comprehensive_data = {
             'extracted_facts': extracted_data,
             'relationships': relationships,
@@ -242,12 +270,12 @@ Generate the condensed version that respects the section's specific focus."""
         final_insight = self._generate_insight_comprehensive(comprehensive_data, section)
         self._save_stage_output(pipeline_dir, "stage_6_final_insight.md", final_insight)
         
-        print(f"Discovery pipeline complete for Section {section['number']}")
+        thread_safe_print(f"Discovery pipeline complete for Section {section['number']}")
         return final_insight
     
     def augment_with_discovery(self, section: Dict, step3_draft: str, step4_output: str) -> str:
         """Augment Step 4 output with insights from discovery pipeline."""
-        print(f"Running discovery pipeline augmentation for Section {section['number']}")
+        thread_safe_print(f"Running discovery pipeline augmentation for Section {section['number']}")
         
         # Run discovery pipeline on Step 3 draft to find insights
         discovery_insights = self.discovery_pipeline_analysis(section, step3_draft)
@@ -658,73 +686,7 @@ Generate the final fact-dense analytical output with proper footnote citations."
             context=section['number']
         )
     
-    def _generate_insight(self, impacts: str, section: Dict) -> str:
-        """Stage 6: Generate final insight synthesis (legacy version)."""
-        prompt = f"""Convert these analyzed findings into a concise investment-grade insight:
 
-IMPACT ASSESSMENTS:
----
-{impacts}
----
-
-SECTION: {section['title']}
-REQUIREMENTS: {section['specs']}
-
-Create a final analysis that:
-1. Starts with one sentence stating what the company does/has in this area
-2. Presents 2-3 discovered insights based on the anomaly analysis
-3. Quantifies all statements with specific numbers
-4. Explains business implications clearly
-5. Uses zero corporate jargon
-6. Stays under 500 words total
-
-Structure the output naturally - don't use rigid headings, but ensure you cover:
-- The surprising relationships discovered
-- What these reveal about the business
-- Why they matter to investors
-- Specific risks or advantages uncovered
-
-Every sentence must contain actionable intelligence.
-Use exactly 5 footnotes maximum. Sequential numbering only: [1], [2], [3], [4], [5]. No letters.
-
-Generate the final analytical output."""
-        
-        return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section['number']
-        )
-
-    def apply_critique(self, section: Dict, current_draft: str, critique: str, critique_type: str) -> str:
-        """Applies a critique to a draft to generate a revised version."""
-        
-        word_target = self.POLISH_WORDS
-        
-        prompt = f"""You are an intelligent editor that flawlessly applies instructions to a text.
-
-ORIGINAL DRAFT:
----
-{current_draft}
----
-
-INSTRUCTIONS TO APPLY:
----
-{critique}
----
-
-Based on the instructions, generate the new, revised version of the text.
-
-CRITICAL FINAL CHECKS:
-- **Word Count:** The final output MUST be under {word_target} words.
-- **Footnote Rules:** Maximum 5 footnotes. Sequential numbering only: [1], [2], [3], [4], [5]. No letters. If draft has more than 5, keep only the 5 most important.
-- **Scope:** All out-of-scope content mentioned in the instructions must be removed.
-
-Produce only the final, revised Markdown text.
-"""
-        # Medium temperature to apply edits intelligently without going off-track.
-        return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section['number']
-        )
 
     def extract_learning(self, section: Dict, final_output: str) -> str:
         """Extract analytical methodologies and frameworks that can improve future analysis."""
@@ -824,52 +786,6 @@ Output ONLY the ADD list. No preamble or explanation."""
             context=section['number']
         )
     
-    def scope_check(self, section: Dict, draft: str) -> str:
-        """Step 3: Check what should be removed from the draft (out of scope)."""
-        
-        # Skip for Section 32
-        if section['number'] == self.SECTION_32_EXEMPT:
-            return "No removals needed - data appendix section."
-        
-        prompt = f"""You are a conservative scope enforcer. Your job is to identify content that CLEARLY does NOT belong in this section.
-
-SECTION {section['number']}: {section['title']}
-
-REQUIREMENTS:
-{section['specs']}
-
-OTHER SECTIONS AVAILABLE:
-{self._get_other_sections_summary()}
-
-CURRENT DRAFT:
----
-{draft}
----
-
-Analyze the draft and create a CONSERVATIVE REMOVE list:
-
-REMOVE LIST FORMAT:
-- Paragraph [X]: "[First 10 words...]" - Belongs in Section [Y] (reason)
-- Lines [X-Y]: "[First 10 words...]" - Out of scope (reason)
-- Table about [topic]: Belongs in Section [Z]
-
-CONSERVATIVE RULES:
-1. ONLY flag content that is CLEARLY out of scope for this section
-2. When in doubt, KEEP the content in this section
-3. Employee data, network assets, facilities ARE core to Operating Footprint - do not remove
-4. Only remove obvious financial metrics (revenue, EBITDA, margins) or clearly unrelated content
-5. Be specific about location (paragraph number or line range)
-6. Include the first few words to ensure correct identification
-7. Explain WHERE it belongs or WHY it's clearly out of scope
-
-BIAS: If content could reasonably belong in this section, do NOT remove it.
-
-Output ONLY the REMOVE list. No preamble or explanation."""
-        
-        return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text,
-            context=section['number']
-        )
     
     def apply_completeness_only(self, section: Dict, current_draft: str, add_list: str) -> str:
         """Apply only the ADD list to create an improved draft."""
@@ -899,14 +815,22 @@ INSTRUCTIONS:
 
 CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any explanations, commentary, or descriptions of what you are doing. No preamble, no postamble - just the final enhanced draft."""
         
-        return retry_with_backoff(
+        result = retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
             context=section['number']
         )
+        
+        # Safety check: If the improved draft is too large, truncate
+        max_chars = 30000
+        if len(result) > max_chars:
+            thread_safe_print(f"WARNING: Section {section['number']} Step 3 output exceeded {max_chars} chars ({len(result)} chars). Truncating...")
+            truncate_point = int(max_chars * 0.9)
+            last_paragraph = result.rfind('\n\n', truncate_point - 2000, truncate_point)
+            if last_paragraph > 0:
+                result = result[:last_paragraph] + "\n\n[Content truncated due to excessive length]"
+            else:
+                result = result[:truncate_point] + "\n\n[Content truncated due to excessive length]"
+        
+        return result
     
-    def _get_other_sections_summary(self) -> str:
-        """Get a summary of all other sections for scope checking."""
-        summary_lines = []
-        for s in sections:
-            summary_lines.append(f"Section {s['number']}: {s['title']}")
-        return "\n".join(summary_lines) 
+ 

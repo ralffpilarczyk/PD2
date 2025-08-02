@@ -56,10 +56,11 @@ Each section goes through 4 refinement steps with different word limits and temp
 
 ## Important Patterns
 - Section definitions in `profile_sections.py` organized into 5 groups
-- Thread-safe operations for parallel processing
+- Thread-safe operations for parallel processing (using thread_safe_print from utils.py)
 - Two-stage quality filtering for learning insights
 - Exponential backoff for API rate limits (up to 3 retries)
 - Professional HTML output with markdown-to-HTML conversion
+- All print statements should use thread_safe_print to avoid garbled output in parallel mode
 
 ## Testing & Quality
 No formal test suite exists. When making changes:
@@ -67,6 +68,17 @@ No formal test suite exists. When making changes:
 - Monitor `runs/run_*/run_summary.txt` for errors
 - Check `quality_metrics/` for tracking data
 - Verify HTML output renders correctly
+
+## Safety Features
+- **Output Size Limits**: Prevents excessive LLM outputs from breaking the pipeline
+  - Initial draft: 50KB limit (500KB for Section 32)
+  - Step 3 improved draft: 30KB limit
+  - Step 4 final output: 10KB limit (~500 words)
+- **Thread-Safe Operations**: All print statements use thread_safe_print for parallel processing
+- **Pre-flight Checks**: Validates environment before starting
+  - Verifies GEMINI_API_KEY is set
+  - Checks for Marker library availability
+  - Creates required directory structure
 
 ## Known Limitations
 - Depends on Marker library for PDF conversion

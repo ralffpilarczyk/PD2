@@ -41,10 +41,4 @@ class QualityTracker:
         """Get current quality scores"""
         return self.quality_scores.copy()
     
-    def calculate_run_average(self) -> float:
-        """Calculate average depth ratio for the run"""
-        if not self.quality_scores:
-            return 0.0
-        
-        depth_ratios = [score["depth_ratio"] for score in self.quality_scores.values()]
-        return sum(depth_ratios) / len(depth_ratios) 
+ 

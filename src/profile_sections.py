@@ -317,7 +317,7 @@ sections = [
     },
     {
         "number": 11,
-        "title": "Material Corporate Activity",
+        "title": "Material Corporate Activity and M&A Agenda",
         "specs": "Extract and analyze significant corporate events and transactions over the last 2 years.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -330,7 +330,16 @@ sections = [
                 "For each material corporate activity, include the strategic rationale, commercial terms, and deal structure.\\n"
                 "Present all materials corporate activity in chronological order.\\n"
                 "All events must reference the specific point in time or time period they relate to.\\n"
-                "For each material corporate activity, note any anomalies, any disconnects between the data point and management's commentary, and any industry benchmarks mentioned."
+                "For each material corporate activity, note any anomalies, any disconnects between the data point and management's commentary, and any industry benchmarks mentioned.\\n"
+                "\\n"
+                "In addition, summarise the company's M&A agenda as follows:\\n"
+                "1. M&A objectives and strategy - including strategic rationale, target criteria (size, geography, capabilities), and how M&A fits into overall growth plans\\n"
+                "2. Statements towards acquisitions, divestitures, monetisations or restructurings - including management commentary on appetite and priorities\\n"
+                "3. Specific deals and transaction status - active discussions, LOIs, due diligence, regulatory approvals, or recently completed/failed deals\\n"
+                "4. M&A capacity and constraints - financial capacity, leverage limits, regulatory considerations\\n"
+                "5. Track record - historical M&A performance and integration outcomes where disclosed\\n"
+                "\\n"
+                "Present information in a clear, coherent narrative format with specific quotes and data points where available.\\n"
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point."
     },
     {

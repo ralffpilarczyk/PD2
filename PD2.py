@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import threading
 
 # Load environment variables
 load_dotenv()
@@ -23,11 +24,12 @@ from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tabl
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
     
-    def __init__(self, source_files: dict):
+    def __init__(self, source_files: dict, max_pdf_workers: int = 3):
         """Initialize ProfileDash with modular components
         
         Args:
             source_files: Dict with 'pdf_files' and 'md_files' lists
+            max_pdf_workers: Number of parallel workers for PDF conversion (1-5)
         """
         # Generate run timestamp
         self.run_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
@@ -49,7 +51,7 @@ class IntelligentAnalyst:
         # Convert PDFs to markdown if any exist
         if pdf_files:
             thread_safe_print(f"Converting {len(pdf_files)} PDF file(s) to markdown...")
-            converted_files = self._convert_pdfs_to_markdown(pdf_files)
+            converted_files = self._convert_pdfs_to_markdown(pdf_files, max_pdf_workers)
             all_markdown_files.extend(converted_files)
         
         # Add markdown files directly (no conversion needed)
@@ -79,47 +81,87 @@ class IntelligentAnalyst:
             "pre_run_memory.json"
         )
     
-    def _convert_pdfs_to_markdown(self, pdf_files: List[str]) -> List[str]:
-        """Convert PDF files to markdown using Marker and save to run folder"""
+    def _convert_single_pdf(self, pdf_path: str, run_dir: Path, progress_tracker: dict) -> str:
+        """Convert a single PDF file to markdown"""
+        try:
+            thread_safe_print(f"Converting: {Path(pdf_path).name}")
+            
+            # Import Marker components
+            from marker.converters.pdf import PdfConverter
+            from marker.models import create_model_dict
+            from marker.output import text_from_rendered
+            
+            # Create converter
+            converter = PdfConverter(
+                artifact_dict=create_model_dict(),
+            )
+            
+            # Convert PDF
+            rendered = converter(pdf_path)
+            full_text, _, images = text_from_rendered(rendered)
+            
+            # Create output filename with _m.md suffix
+            pdf_name = Path(pdf_path).stem
+            output_path = run_dir / f"{pdf_name}_m.md"
+            
+            # Clean markdown before saving
+            thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
+            cleaned_text = clean_markdown_tables(full_text)
+            
+            # Save cleaned markdown
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(cleaned_text)
+            
+            # Update progress
+            with progress_tracker['lock']:
+                progress_tracker['completed'] += 1
+                thread_safe_print(f"Successfully converted: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
+            
+            return str(output_path)
+            
+        except Exception as e:
+            thread_safe_print(f"Failed to convert {Path(pdf_path).name}: {e}")
+            with progress_tracker['lock']:
+                progress_tracker['failed'] += 1
+            return None
+
+    def _convert_pdfs_to_markdown(self, pdf_files: List[str], max_pdf_workers: int = 3) -> List[str]:
+        """Convert PDF files to markdown using Marker with parallel processing"""
         converted_files = []
         run_dir = Path(f"runs/run_{self.run_timestamp}")
         
-        for pdf_path in pdf_files:
-            try:
-                thread_safe_print(f"Converting: {Path(pdf_path).name}")
-                
-                # Import Marker components
-                from marker.converters.pdf import PdfConverter
-                from marker.models import create_model_dict
-                from marker.output import text_from_rendered
-                
-                # Create converter
-                converter = PdfConverter(
-                    artifact_dict=create_model_dict(),
-                )
-                
-                # Convert PDF
-                rendered = converter(pdf_path)
-                full_text, _, images = text_from_rendered(rendered)
-                
-                # Create output filename with _m.md suffix
-                pdf_name = Path(pdf_path).stem
-                output_path = run_dir / f"{pdf_name}_m.md"
-                
-                # Clean markdown before saving
-                thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
-                cleaned_text = clean_markdown_tables(full_text)
-                
-                # Save cleaned markdown
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(cleaned_text)
-                
-                converted_files.append(str(output_path))
-                thread_safe_print(f"Successfully converted: {output_path.name}")
-                
-            except Exception as e:
-                thread_safe_print(f"Failed to convert {Path(pdf_path).name}: {e}")
-                continue
+        if not pdf_files:
+            return converted_files
+        
+        # Progress tracking
+        progress_tracker = {
+            'total': len(pdf_files),
+            'completed': 0,
+            'failed': 0,
+            'lock': threading.Lock()
+        }
+        
+        thread_safe_print(f"Starting parallel PDF conversion with {max_pdf_workers} workers...")
+        
+        # Use ThreadPoolExecutor for parallel conversion
+        with ThreadPoolExecutor(max_workers=max_pdf_workers) as executor:
+            # Submit all PDF conversion tasks
+            future_to_pdf = {
+                executor.submit(self._convert_single_pdf, pdf_path, run_dir, progress_tracker): pdf_path 
+                for pdf_path in pdf_files
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_pdf):
+                pdf_path = future_to_pdf[future]
+                try:
+                    result = future.result()
+                    if result:
+                        converted_files.append(result)
+                except Exception as e:
+                    thread_safe_print(f"PDF conversion failed for {Path(pdf_path).name}: {e}")
+        
+        thread_safe_print(f"PDF conversion complete: {progress_tracker['completed']} succeeded, {progress_tracker['failed']} failed")
         
         return converted_files
     
@@ -609,15 +651,33 @@ if __name__ == "__main__":
     thread_safe_print(f"\nSelected groups: {', '.join(selected_groups)}")
     thread_safe_print(f"Processing sections: {selected_sections}")
     
-    # Step 3: Ask about number of workers for parallel processing
-    thread_safe_print("\nNote: Rate limiting protection enabled")
+    # Step 3: Ask about PDF conversion workers (if PDFs selected)
+    max_pdf_workers = 3  # default
+    if source_file_selection['pdf_files']:
+        thread_safe_print(f"\nPDF Conversion Settings:")
+        thread_safe_print(f"You have {len(source_file_selection['pdf_files'])} PDF files to convert.")
+        
+        while True:
+            try:
+                pdf_worker_input = input(f"Number of parallel workers for PDF conversion (1-5, recommended: 3): ").strip()
+                max_pdf_workers = int(pdf_worker_input)
+                if 1 <= max_pdf_workers <= 5:
+                    break
+                else:
+                    thread_safe_print("Please enter a number between 1 and 5")
+            except ValueError:
+                thread_safe_print("Please enter a valid number")
+    
+    # Step 4: Ask about number of workers for section processing
+    thread_safe_print("\nSection Processing Settings:")
+    thread_safe_print("Note: Rate limiting protection enabled")
     thread_safe_print("- Automatic retry with exponential backoff for rate limits")
     thread_safe_print("- Extracts retry delays from API responses")
     thread_safe_print("- Up to 3 retry attempts with intelligent delays")
     
     while True:
         try:
-            worker_input = input(f"\nNumber of parallel workers (1-3, recommended: 2 for {len(selected_sections)} sections): ").strip()
+            worker_input = input(f"Number of parallel workers for section analysis (1-3, recommended: 2 for {len(selected_sections)} sections): ").strip()
             max_workers = int(worker_input)
             if 1 <= max_workers <= 3:
                 break
@@ -626,7 +686,7 @@ if __name__ == "__main__":
         except ValueError:
             thread_safe_print("Please enter a valid number")
     
-    # Step 4: Ask about discovery pipeline
+    # Step 5: Ask about discovery pipeline
     while True:
         discovery_choice = input("\nUse experimental discovery pipeline for deep insights? (y/n): ").strip().lower()
         if discovery_choice in ['y', 'yes', 'n', 'no']:
@@ -635,13 +695,13 @@ if __name__ == "__main__":
     
     use_discovery = discovery_choice in ['y', 'yes']
     
-    # Step 5: Now initialize ProfileDash with source files (includes PDF conversion)
+    # Step 6: Now initialize ProfileDash with source files (includes PDF conversion)
     thread_safe_print("\n" + "="*60)
     thread_safe_print("STARTING PROCESSING")
     thread_safe_print("="*60)
     
     try:
-        analyst = IntelligentAnalyst(source_file_selection)
+        analyst = IntelligentAnalyst(source_file_selection, max_pdf_workers)
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your files and try again.")

@@ -4,7 +4,7 @@ from typing import Dict, List
 from datetime import datetime
 from pathlib import Path
 import google.generativeai as genai
-from .utils import retry_with_backoff, thread_safe_print
+from .utils import retry_with_backoff, thread_safe_print, clean_markdown_tables
 from .profile_sections import sections
 import markdown
 from markdown.extensions import tables
@@ -91,6 +91,9 @@ class ProfileGenerator:
                 
                 with open(md_file, 'r', encoding='utf-8') as f:
                     content = f.read()
+                
+                # Clean corrupted tables first
+                content = clean_markdown_tables(content)
                 
                 # Clean up problematic code block wrappers
                 content = self._clean_markdown_content(content)

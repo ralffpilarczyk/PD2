@@ -3,7 +3,7 @@ import json
 from typing import List, Dict
 from datetime import datetime
 from pathlib import Path
-from .utils import thread_safe_print
+from .utils import thread_safe_print, clean_markdown_tables
 
 class FileManager:
     """Handles all file I/O operations and directory management"""
@@ -35,7 +35,13 @@ class FileManager:
         for path in file_paths:
             try:
                 with open(path, 'r', encoding='utf-8') as f:
-                    contents.append(f"--- Document: {os.path.basename(path)} ---\n{f.read()}\n")
+                    raw_content = f.read()
+                
+                # Clean corrupted markdown tables
+                thread_safe_print(f"Checking {os.path.basename(path)} for table corruption...")
+                cleaned_content = clean_markdown_tables(raw_content)
+                
+                contents.append(f"--- Document: {os.path.basename(path)} ---\n{cleaned_content}\n")
             except Exception as e:
                 thread_safe_print(f"Warning: Failed to load {path}: {e}")
                 continue

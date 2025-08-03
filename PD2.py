@@ -17,8 +17,8 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 # Import modular components
 from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections
 
-# Import thread_safe_print and retry_with_backoff from utils
-from src.utils import thread_safe_print, retry_with_backoff
+# Import thread_safe_print, retry_with_backoff, and clean_markdown_tables from utils
+from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tables
 
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
@@ -106,9 +106,13 @@ class IntelligentAnalyst:
                 pdf_name = Path(pdf_path).stem
                 output_path = run_dir / f"{pdf_name}_m.md"
                 
-                # Save converted markdown
+                # Clean markdown before saving
+                thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
+                cleaned_text = clean_markdown_tables(full_text)
+                
+                # Save cleaned markdown
                 with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(full_text)
+                    f.write(cleaned_text)
                 
                 converted_files.append(str(output_path))
                 thread_safe_print(f"Successfully converted: {output_path.name}")

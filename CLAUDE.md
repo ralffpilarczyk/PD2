@@ -79,6 +79,9 @@ No formal test suite exists. When making changes:
   - Verifies GEMINI_API_KEY is set
   - Checks for Marker library availability
   - Creates required directory structure
+- **Markdown Table Corruption Protection**: Two-layer protection against malformed tables
+  - Pre-processing: Automatically fixes corrupted tables from PDF conversion (excessive dashes, huge cells)
+  - LLM Instructions: Explicit rules to prevent reproducing corrupted table structures
 
 ## Known Limitations
 - Depends on Marker library for PDF conversion

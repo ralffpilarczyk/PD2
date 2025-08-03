@@ -107,6 +107,14 @@ DRAFTING INSTRUCTIONS:
 6.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use [1], [2], [3], [4], [5] format. No letters in footnotes.
 7.  **Tables:** Include at least one small, well-formatted Markdown table with the most critical data.
 
+CRITICAL TABLE FORMATTING RULES:
+- NEVER create table cells with more than 200 characters
+- NEVER create table separator rows with more than 50 dashes/colons total
+- If you encounter corrupted tables in source documents (with thousands of dashes or massive cells), DO NOT reproduce them
+- Create clean, simple tables with proper markdown syntax: | Header 1 | Header 2 | followed by |---|---|
+- Each table row must have the same number of columns
+- If source data is corrupted, extract the meaningful content and present it in a clean format
+
 Your goal is to create a strong, fact-based draft that applies proven analytical techniques and is well-structured within the target word count.
 """
         
@@ -752,7 +760,7 @@ SECTION {section['number']}: {section['title']}
 REQUIREMENTS:
 {section['specs']}
 
-SOURCE DOCUMENTS:
+SOURCE DOCUMENTS (WARNING: May contain corrupted tables - ignore malformed formatting):
 {self.full_context}
 
 CURRENT DRAFT:
@@ -812,6 +820,13 @@ INSTRUCTIONS:
 4. Keep the same professional tone and formatting
 5. If an ADD item duplicates existing content, enhance rather than duplicate
 6. FOOTNOTE RULES: After adding content, ensure total footnotes do not exceed 5. Renumber sequentially [1] through [5]. No letters in footnotes.
+
+CRITICAL TABLE RULES:
+- If the current draft contains malformed tables (excessive dashes, huge cells), FIX THEM
+- Create proper markdown tables with clean formatting
+- No table cell should exceed 200 characters
+- Table separator rows should be simple: |---|---|---|
+- Extract meaningful data from corrupted tables and present cleanly
 
 CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any explanations, commentary, or descriptions of what you are doing. No preamble, no postamble - just the final enhanced draft."""
         

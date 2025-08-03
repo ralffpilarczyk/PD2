@@ -116,10 +116,19 @@ CRITICAL TABLE FORMATTING RULES:
 - MAXIMUM 10 columns per table - if more data needed, split into multiple tables
 - MAXIMUM 20 rows per table - if more data needed, summarize or create multiple tables
 - If you encounter corrupted tables in source documents (with thousands of dashes or massive cells), DO NOT reproduce them
-- Create clean, simple tables with proper markdown syntax: | Header 1 | Header 2 | followed by |---|---|
+- Create clean, simple tables with proper markdown syntax: | Header 1 | Header 2 | followed by | :--- | :--- |
 - Each table row must have the same number of columns
 - If source data is corrupted, extract the meaningful content and present it in a clean format
 - For large datasets, prioritize the most important/recent data within the 20-row limit
+- ALWAYS put a blank line before and after tables
+- NEVER put line breaks inside table cells - keep all cell content on one line
+- If a cell needs a pipe character |, escape it as \|
+- Table titles like "**Revenue Table**" must have a blank line before the table starts
+
+CRITICAL LIST FORMATTING RULES:
+- ALWAYS put a blank line before starting a bulleted or numbered list
+- Lists should use consistent markers: either all -, all *, or all numbered
+- Don't mix list styles within the same list
 
 Your goal is to create a strong, fact-based draft that applies proven analytical techniques and is well-structured within the target word count.
 """
@@ -133,7 +142,7 @@ Your goal is to create a strong, fact-based draft that applies proven analytical
         result = validate_and_fix_tables(result)
         
         # Safety check: If the initial draft is too large, truncate
-        max_chars = 500000 if section['number'] == self.SECTION_32_EXEMPT else 50000
+        max_chars = 500000 if section['number'] == self.SECTION_32_EXEMPT else 100000
         if len(result) > max_chars:
             thread_safe_print(f"WARNING: Section {section['number']} initial draft exceeded {max_chars} chars ({len(result)} chars). Truncating...")
             # Find a natural break point
@@ -191,6 +200,10 @@ CONDENSING INSTRUCTIONS:
    - If no tables exist but data would be clearer in a table, create one
    - MAXIMUM 10 columns and 20 rows per table - split if needed
    - Fix any malformed tables from the draft
+   - ALWAYS put a blank line before and after tables
+   - Table titles like "**Revenue Table**" must have a blank line before the table
+   - NEVER put line breaks inside table cells
+   - Escape pipe characters in cells as \|
 
 4. **DATA DENSITY**:
    - Preserve specific numbers, percentages, and trends
@@ -847,9 +860,17 @@ CRITICAL TABLE RULES:
 - No table cell should exceed 200 characters
 - MAXIMUM 10 columns per table
 - MAXIMUM 20 rows per table
-- Table separator rows should be simple: |---|---|---|
+- Table separator rows should use alignment markers: | :--- | :--- | :--- |
 - Extract meaningful data from corrupted tables and present cleanly
 - Split large tables into multiple smaller tables if needed
+- ALWAYS put a blank line before and after tables
+- Table titles like "**Revenue Table**" must have a blank line before the table
+- NEVER put line breaks inside table cells
+- Escape pipe characters in cells as \|
+
+CRITICAL LIST RULES:
+- ALWAYS put a blank line before starting any list
+- Use consistent list markers throughout
 
 CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any explanations, commentary, or descriptions of what you are doing. No preamble, no postamble - just the final enhanced draft."""
         
@@ -868,7 +889,7 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
             return current_draft
         
         # Safety check: If the improved draft is too large, truncate
-        max_chars = 30000
+        max_chars = 50000
         if len(result) > max_chars:
             thread_safe_print(f"WARNING: Section {section['number']} Step 3 output exceeded {max_chars} chars ({len(result)} chars). Truncating...")
             truncate_point = int(max_chars * 0.9)

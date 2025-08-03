@@ -190,6 +190,65 @@ class ProfileGenerator:
             
             # Then convert footnote definitions from [^1]: to [1]
             content = re.sub(r'^\[\^(\d+)\]:\s*', r'[\1] ', content, flags=re.MULTILINE)
+        
+        # Ensure blank lines before tables for proper markdown parsing
+        lines = content.split('\n')
+        fixed_lines = []
+        for i, line in enumerate(lines):
+            # Check if current line is a table (starts with |)
+            if line.strip().startswith('|') and i > 0:
+                prev_line = lines[i-1].strip()
+                # If previous line exists and isn't empty, add blank line
+                if prev_line and not prev_line.startswith('|'):
+                    if not fixed_lines or fixed_lines[-1].strip():  # Avoid multiple blank lines
+                        fixed_lines.append('')
+                        thread_safe_print("  → Added blank line before table")
+            
+            # Check if current line starts a list (-, *, or numbered)
+            if re.match(r'^\s*[-*]|\s*\d+\.', line) and i > 0:
+                prev_line = lines[i-1].strip()
+                # If previous line exists and isn't empty or part of a list
+                if prev_line and not re.match(r'^\s*[-*]|\s*\d+\.', prev_line):
+                    if not fixed_lines or fixed_lines[-1].strip():  # Avoid multiple blank lines
+                        fixed_lines.append('')
+                        thread_safe_print("  → Added blank line before list")
+            
+            fixed_lines.append(line)
+        
+        content = '\n'.join(fixed_lines)
+        
+        # Fix line breaks inside table cells (replace with spaces)
+        # This regex finds table rows and processes them
+        def fix_table_cell_breaks(match):
+            row = match.group(0)
+            # Replace newlines within cells with spaces
+            cells = row.split('|')
+            fixed_cells = []
+            for cell in cells:
+                # Replace internal newlines with spaces
+                fixed_cell = ' '.join(cell.split('\n'))
+                fixed_cells.append(fixed_cell)
+            return '|'.join(fixed_cells)
+        
+        # Process each table row
+        lines = content.split('\n')
+        in_table = False
+        fixed_lines = []
+        
+        for line in lines:
+            if '|' in line and (line.strip().startswith('|') or line.strip().endswith('|')):
+                in_table = True
+                # Fix line breaks in this table row
+                fixed_line = fix_table_cell_breaks(re.match(r'.*', line))
+                # Also escape any unescaped pipes within cells (not at cell boundaries)
+                # This is tricky - for now just document it in the instructions
+                fixed_lines.append(fixed_line)
+            else:
+                if in_table and line.strip() == '':
+                    in_table = False
+                fixed_lines.append(line)
+        
+        content = '\n'.join(fixed_lines)
             
         return content
     

@@ -145,6 +145,49 @@ def _fix_single_table(table_lines: list) -> list:
     if not table_lines:
         return table_lines
     
+    # First, fix special characters in table cells
+    fixed_lines = []
+    for line in table_lines:
+        if '|' in line and not re.match(r'^\s*\|[\s\-:|]+\|?\s*$', line):
+            # This is a data or header row, not a separator
+            # Split carefully to handle escaped pipes
+            cells = []
+            current_cell = []
+            i = 0
+            while i < len(line):
+                if i < len(line) - 1 and line[i] == '\\' and line[i+1] == '|':
+                    # Already escaped pipe, keep it
+                    current_cell.append('\\|')
+                    i += 2
+                elif line[i] == '|':
+                    # Cell boundary
+                    cells.append(''.join(current_cell))
+                    current_cell = []
+                    i += 1
+                else:
+                    current_cell.append(line[i])
+                    i += 1
+            # Add the last cell
+            if current_cell:
+                cells.append(''.join(current_cell))
+            
+            # Now escape any remaining unescaped pipes within cells
+            fixed_cells = []
+            for j, cell in enumerate(cells):
+                # Skip first and last empty cells from split
+                if j == 0 or j == len(cells) - 1:
+                    fixed_cells.append(cell)
+                else:
+                    # Look for unescaped pipes within the cell content
+                    fixed_cell = re.sub(r'(?<!\\)\|', r'\\|', cell)
+                    fixed_cells.append(fixed_cell)
+            
+            line = '|'.join(fixed_cells)
+        
+        fixed_lines.append(line)
+    
+    table_lines = fixed_lines
+    
     # Check column count
     max_cols = max(line.count('|') - 1 for line in table_lines if '|' in line)
     

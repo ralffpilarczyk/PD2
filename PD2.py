@@ -537,9 +537,11 @@ if __name__ == "__main__":
         # Check for Marker (PDF conversion)
         from marker.converters.pdf import PdfConverter
         thread_safe_print("✓ Marker library available for PDF conversion")
+        pdf_support = True
     except ImportError as e:
         thread_safe_print("WARNING: Marker library not available - PDF files cannot be processed")
         thread_safe_print("To enable PDF support, install with: pip install marker-pdf")
+        pdf_support = False
         # Don't exit - user might only want to use MD files
     
     # Check 3: Create base directories
@@ -550,23 +552,22 @@ if __name__ == "__main__":
     
     thread_safe_print("Pre-flight checks completed\n")
     
-    # Select source files (PDF and/or MD) with retry capability
+    # Step 1: Select source files (PDF and/or MD) with retry capability
     source_file_selection = select_source_files()
     if not source_file_selection:
         thread_safe_print("No files selected. Exiting.")
         exit()
     
-    # Initialize ProfileDash with source files
-    try:
-        analyst = IntelligentAnalyst(source_file_selection)
-    except Exception as e:
-        thread_safe_print(f"\nFailed to initialize analyst: {e}")
-        thread_safe_print("Please check your files and try again.")
+    # Check if PDFs were selected without support
+    if source_file_selection['pdf_files'] and not pdf_support:
+        thread_safe_print("\nERROR: PDF files selected but Marker library not available.")
+        thread_safe_print("Please install with: pip install marker-pdf")
         exit()
     
     # Available sections for validation
     available_sections = [s['number'] for s in sections]
     
+    # Step 2: Select analysis components (before PDF conversion)
     thread_safe_print("\nSelect analysis components:")
     
     selected_sections = []
@@ -608,7 +609,7 @@ if __name__ == "__main__":
     thread_safe_print(f"\nSelected groups: {', '.join(selected_groups)}")
     thread_safe_print(f"Processing sections: {selected_sections}")
     
-    # Ask about number of workers for parallel processing
+    # Step 3: Ask about number of workers for parallel processing
     thread_safe_print("\nNote: Rate limiting protection enabled")
     thread_safe_print("- Automatic retry with exponential backoff for rate limits")
     thread_safe_print("- Extracts retry delays from API responses")
@@ -625,7 +626,7 @@ if __name__ == "__main__":
         except ValueError:
             thread_safe_print("Please enter a valid number")
     
-    # Ask about discovery pipeline
+    # Step 4: Ask about discovery pipeline
     while True:
         discovery_choice = input("\nUse experimental discovery pipeline for deep insights? (y/n): ").strip().lower()
         if discovery_choice in ['y', 'yes', 'n', 'no']:
@@ -633,6 +634,19 @@ if __name__ == "__main__":
         thread_safe_print("Please enter 'y' or 'n'")
     
     use_discovery = discovery_choice in ['y', 'yes']
+    
+    # Step 5: Now initialize ProfileDash with source files (includes PDF conversion)
+    thread_safe_print("\n" + "="*60)
+    thread_safe_print("STARTING PROCESSING")
+    thread_safe_print("="*60)
+    
+    try:
+        analyst = IntelligentAnalyst(source_file_selection)
+    except Exception as e:
+        thread_safe_print(f"\nFailed to initialize analyst: {e}")
+        thread_safe_print("Please check your files and try again.")
+        exit()
+    
     if use_discovery:
         thread_safe_print("Discovery pipeline enabled - will use 6-stage analysis for deeper insights")
         thread_safe_print("Note: This will make ~6 LLM calls per section instead of 1")

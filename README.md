@@ -1,8 +1,16 @@
 # ProfileDash 2.0
 
-## Description
+**An intelligent document analysis system for financial research**
 
-ProfileDash 2.0 (PD2) is a document analysis system designed for investment professionals. It automatically processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 32 specialized analytical sections. Each section undergoes multiple refinement steps to produce insights focused on value creation and business prospects.
+ProfileDash 2.0 (PD2) automatically processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 32 specialized analytical sections. Built for investment professionals, it uses Google's Gemini API to produce insights focused on value creation and business prospects.
+
+## Key Features
+
+- **32 Analytical Sections**: From operating footprint to capital allocation efficiency
+- **Multi-Step Refinement**: Each section undergoes progressive analysis to ~500 words of essential insights
+- **Learning System**: Captures and reuses analytical patterns across analyses
+- **Parallel Processing**: Analyze multiple sections simultaneously
+- **Professional Output**: HTML reports with proper formatting and table of contents
 
 ## License
 
@@ -17,18 +25,12 @@ Before installing PD2, ensure you have:
 - Python 3.8 or newer installed ([Download Python](https://www.python.org/downloads/))
 - A Google Gemini API key ([Get API Key](https://makersuite.google.com/app/apikey))
 
-### Step 2: Download PD2
+### Step 2: Clone the Repository
 
-1. Open your terminal (Mac/Linux) or Command Prompt (Windows)
-2. Navigate to where you want to install PD2:
-   ```bash
-   cd Documents
-   ```
-3. Clone the repository:
-   ```bash
-   git clone https://github.com/ralffpilarczyk/PD2.git
-   cd PD2
-   ```
+```bash
+git clone https://github.com/ralffpilarczyk/PD2.git
+cd PD2
+```
 
 ### Step 3: Install Dependencies
 
@@ -39,11 +41,14 @@ pip install -r requirements.txt
 
 ### Step 4: Configure API Key
 
-1. Create a configuration file:
+1. Copy the example configuration file:
    ```bash
-   echo "GEMINI_API_KEY=your-api-key-here" > .env
+   cp .env.example .env
    ```
-2. Replace `your-api-key-here` with your actual Gemini API key
+2. Edit `.env` and add your Gemini API key:
+   ```bash
+   GEMINI_API_KEY=your-actual-api-key-here
+   ```
 
 ## Running PD2
 
@@ -74,14 +79,14 @@ When you run PD2, you'll see the following options:
 
 After selecting sections, you'll be asked:
 
-1. **Use experimental discovery pipeline?** (y/n)
-   - `n` (recommended): Standard analysis with 5 steps per section
-   - `y`: Advanced analysis with 13 steps per section (finds deeper insights but takes longer)
-
-2. **Number of parallel workers** (1-3)
+1. **Number of parallel workers** (1-5, default: 2)
    - `1`: Analyze sections one at a time (slowest, most stable)
    - `2` (recommended): Analyze 2 sections simultaneously
-   - `3`: Analyze 3 sections simultaneously (fastest, may hit rate limits)
+   - `3-5`: Faster analysis but may hit API rate limits
+
+2. **Use experimental discovery pipeline?** (y/n)
+   - `n` (recommended): Standard analysis
+   - `y`: Advanced analysis with deeper pattern recognition (takes longer)
 
 ### Step 5: Wait for Analysis
 
@@ -322,9 +327,9 @@ section_XX/
 ### Key Features
 
 #### Parallel Processing
-- Supports 1-3 workers for concurrent section analysis
+- Supports 1-5 workers for concurrent section analysis
 - Automatic retry with exponential backoff for rate limits
-- Section context included in rate limit messages
+- PDF conversion uses single worker (PyTorch tensor constraints)
 
 #### Quality Controls
 - Footnote management (max 5 per section, sequential numbering)
@@ -366,9 +371,27 @@ section_XX/
    - Solution: Check that your `.env` file contains `GEMINI_API_KEY=your-actual-key`
 
 3. **Rate limit errors**
-   - Solution: Use fewer parallel workers (1 or 2 instead of 3)
+   - Solution: Use fewer parallel workers (1 or 2 instead of 3-5)
 
 4. **Empty output for a section**
    - This occasionally happens due to API errors
    - Solution: Run the analysis again for that specific section
+
+5. **PDF conversion errors**
+   - Some PDFs may fail to convert properly
+   - Solution: Try converting the PDF to text manually first
+
+6. **Tables not rendering in HTML**
+   - Usually caused by malformed markdown
+   - The system attempts to auto-fix these issues
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+## Acknowledgments
+
+- Built with Google's Gemini API
+- PDF processing powered by Marker library
+- Inspired by the needs of investment professionals for systematic document analysis
 

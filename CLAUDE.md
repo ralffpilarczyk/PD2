@@ -1,17 +1,19 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI assistants when working with code in this repository.
 
 ## Project Overview
-ProfileDash 2.0 is an intelligent document analysis system for financial analysis. It processes PDF financial documents (annual reports, financial statements, presentations) and generates comprehensive company profiles with 32 different analytical sections.
+ProfileDash 2.0 is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 32 different analytical sections using Google's Gemini API.
 
 ## Architecture
 The project uses a clean modular architecture with all core components in the `src/` package:
 - `PD2.py` - Main application entry point with UI and orchestration
-- `src/core_analyzer.py` - 4-step analysis pipeline (draft → completeness → insights → polish)
-- `src/insight_memory.py` - Learning system with section-based memory
-- `src/profile_generator.py` - HTML report generation
-- `src/utils.py` - Shared utilities including rate limiting
+- `src/core_analyzer.py` - Multi-step analysis pipeline with progressive refinement
+- `src/insight_memory.py` - Learning system that captures analytical patterns
+- `src/profile_generator.py` - HTML report generation with markdown processing
+- `src/utils.py` - Shared utilities including rate limiting and markdown fixes
+- `src/file_manager.py` - Handles file I/O and markdown preprocessing
+- `src/profile_sections.py` - Defines all 32 analysis sections
 
 ## Key Commands
 ```bash
@@ -27,7 +29,8 @@ pip install -r requirements.txt
 2. **Rate Limiting**: All Gemini API calls must use `retry_with_backoff` from `src/utils.py`
 3. **Memory System**: Learning insights stored in `memory/learning_memory.json` - section-based, max 30 words, quality score 9-10
 4. **Section 32**: Special handling - no word limits, pure data extraction
-5. **Parallel Processing**: Use ThreadPoolExecutor with 1-3 workers (2 recommended)
+5. **Parallel Processing**: Section analysis uses ThreadPoolExecutor (1-5 workers configurable)
+6. **PDF Conversion**: Uses single worker to avoid PyTorch tensor memory issues in Marker library
 
 ## Code Style & Communication
 1. **No Emojis**: Do not use emojis in code, comments, commit messages, or documentation
@@ -48,11 +51,13 @@ When analyzing company data, always apply multi-layer analytical thinking:
 **Quality Standard**: Would this insight change an investor's view of the company's prospects? If no, remove it.
 
 ## Analysis Pipeline
-Each section goes through 4 refinement steps with different word limits and temperatures:
-1. Initial Draft (1000 words, temp varies by section)
-2. Completeness Critique (1000 words, temp 0.2)
-3. Insight Critique (700 words, temp 0.9)
-4. Polish Critique (500 words, temp 0.6)
+Each section goes through multiple refinement steps with progressive condensation:
+1. Initial Draft - Comprehensive analysis with all relevant data
+2. Completeness Check - Identifies missing critical information
+3. Enhanced Draft - Incorporates missing elements
+4. Deep Analysis & Polish - Condenses to ~500 words of essential insights
+5. (Optional) Discovery Pipeline - Additional pattern finding for deeper insights
+6. Learning Extraction - Captures reusable analytical methodologies
 
 ## Important Patterns
 - Section definitions in `profile_sections.py` organized into 5 groups
@@ -69,22 +74,30 @@ No formal test suite exists. When making changes:
 - Check `quality_metrics/` for tracking data
 - Verify HTML output renders correctly
 
-## Safety Features
-- **Output Size Limits**: Prevents excessive LLM outputs from breaking the pipeline
-  - Initial draft: 50KB limit (500KB for Section 32)
-  - Step 3 improved draft: 30KB limit
-  - Step 4 final output: 10KB limit (~500 words)
-- **Thread-Safe Operations**: All print statements use thread_safe_print for parallel processing
-- **Pre-flight Checks**: Validates environment before starting
-  - Verifies GEMINI_API_KEY is set
-  - Checks for Marker library availability
-  - Creates required directory structure
-- **Markdown Table Corruption Protection**: Two-layer protection against malformed tables
-  - Pre-processing: Automatically fixes corrupted tables from PDF conversion (excessive dashes, huge cells)
-  - LLM Instructions: Explicit rules to prevent reproducing corrupted table structures
+## Recent Improvements
+- **Markdown Table Fixes**: Automatic correction of corrupted tables from PDF conversion
+- **HTML Rendering**: Fixed table rendering and Section 32 code block issues
+- **Workflow Optimization**: All user selections happen upfront before processing
+- **Safety Features**: Output size limits prevent excessive LLM generation
+- **Thread Safety**: All operations use thread-safe printing for parallel processing
+
+## Output Structure
+```
+runs/
+└── run_YYYY_MM_DD_HH_MM_SS/
+    ├── section_1/
+    │   ├── step_1_initial_draft.md
+    │   ├── step_2_completeness_check.txt
+    │   ├── step_3_enhanced_draft.md
+    │   ├── step_4_final_section.md
+    │   └── step_6_learning.json
+    ├── [Company]_profile.md      # Combined markdown
+    ├── [Company]_profile.html    # Final HTML output
+    └── run_summary.txt          # Processing summary
+```
 
 ## Known Limitations
-- Depends on Marker library for PDF conversion
-- Basic table rendering in HTML output
-- No formal linting or type checking setup
-- LLM tends to inflate quality scores (requires harsh filtering)
+- Depends on Marker library for PDF conversion (can have table corruption issues)
+- PDF conversion limited to single worker due to PyTorch tensor memory constraints
+- No formal test suite or type checking
+- LLM quality scoring requires aggressive filtering (9-10 threshold)

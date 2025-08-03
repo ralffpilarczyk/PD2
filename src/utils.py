@@ -81,6 +81,100 @@ def clean_markdown_tables(content: str) -> str:
     return '\n'.join(cleaned_lines)
 
 
+def validate_and_fix_tables(content: str) -> str:
+    """Validate and fix tables to meet size constraints (max 10 columns, 20 rows).
+    
+    Args:
+        content: Markdown content potentially containing tables
+        
+    Returns:
+        Content with validated/fixed tables
+    """
+    import re
+    
+    lines = content.split('\n')
+    fixed_lines = []
+    in_table = False
+    table_lines = []
+    table_count = 0
+    fixes_made = 0
+    
+    for i, line in enumerate(lines):
+        # Check if this line is part of a table
+        if '|' in line and (i == 0 or '|' in lines[i-1] or (i > 0 and re.match(r'^\s*\|[\s\-:|]+\|?\s*$', lines[i-1]))):
+            if not in_table:
+                in_table = True
+                table_lines = []
+            table_lines.append(line)
+        else:
+            # Not a table line
+            if in_table:
+                # Process the completed table
+                fixed_table = _fix_single_table(table_lines)
+                if fixed_table != table_lines:
+                    fixes_made += 1
+                fixed_lines.extend(fixed_table)
+                table_lines = []
+                in_table = False
+                table_count += 1
+            fixed_lines.append(line)
+    
+    # Handle table at end of content
+    if in_table and table_lines:
+        fixed_table = _fix_single_table(table_lines)
+        if fixed_table != table_lines:
+            fixes_made += 1
+        fixed_lines.extend(fixed_table)
+        table_count += 1
+    
+    if fixes_made > 0:
+        thread_safe_print(f"Fixed {fixes_made} tables to meet size constraints")
+    
+    return '\n'.join(fixed_lines)
+
+
+def _fix_single_table(table_lines: list) -> list:
+    """Fix a single table to meet constraints (max 10 columns, 20 rows).
+    
+    Args:
+        table_lines: List of lines forming a table
+        
+    Returns:
+        Fixed table lines
+    """
+    if not table_lines:
+        return table_lines
+    
+    # Check column count
+    max_cols = max(line.count('|') - 1 for line in table_lines if '|' in line)
+    
+    # Fix excessive columns
+    if max_cols > 10:
+        thread_safe_print(f"Table has {max_cols} columns, reducing to 10")
+        fixed_lines = []
+        for line in table_lines:
+            if '|' in line:
+                cells = line.split('|')
+                # Keep first 10 columns plus the empty cells at start/end
+                if len(cells) > 12:  # Account for empty cells from split
+                    cells = cells[:11] + ['... truncated']
+                fixed_lines.append('|'.join(cells))
+            else:
+                fixed_lines.append(line)
+        table_lines = fixed_lines
+    
+    # Fix excessive rows (excluding header and separator)
+    data_rows = [line for line in table_lines if '|' in line and not re.match(r'^\s*\|[\s\-:|]+\|?\s*$', line)]
+    if len(data_rows) > 22:  # 20 data rows + header + possible second header
+        thread_safe_print(f"Table has {len(data_rows)-1} data rows, reducing to 20")
+        # Keep header, separator, first 20 data rows
+        header_lines = table_lines[:2] if len(table_lines) > 1 and re.match(r'^\s*\|[\s\-:|]+\|?\s*$', table_lines[1]) else table_lines[:1]
+        kept_data = data_rows[1:21] if len(header_lines) == 2 else data_rows[:20]
+        table_lines = header_lines + kept_data + ['| ... additional rows truncated ... |']
+    
+    return table_lines
+
+
 def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
     """Retry function with exponential backoff for rate limits"""
     context_str = f"Section {context} - " if context else ""

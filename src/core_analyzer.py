@@ -3,7 +3,7 @@ from typing import Dict
 import re
 import os
 from datetime import datetime
-from .utils import retry_with_backoff, thread_safe_print
+from .utils import retry_with_backoff, thread_safe_print, validate_and_fix_tables
 from .profile_sections import sections
 
 
@@ -110,10 +110,13 @@ DRAFTING INSTRUCTIONS:
 CRITICAL TABLE FORMATTING RULES:
 - NEVER create table cells with more than 200 characters
 - NEVER create table separator rows with more than 50 dashes/colons total
+- MAXIMUM 10 columns per table - if more data needed, split into multiple tables
+- MAXIMUM 20 rows per table - if more data needed, summarize or create multiple tables
 - If you encounter corrupted tables in source documents (with thousands of dashes or massive cells), DO NOT reproduce them
 - Create clean, simple tables with proper markdown syntax: | Header 1 | Header 2 | followed by |---|---|
 - Each table row must have the same number of columns
 - If source data is corrupted, extract the meaningful content and present it in a clean format
+- For large datasets, prioritize the most important/recent data within the 20-row limit
 
 Your goal is to create a strong, fact-based draft that applies proven analytical techniques and is well-structured within the target word count.
 """
@@ -122,6 +125,9 @@ Your goal is to create a strong, fact-based draft that applies proven analytical
             lambda: self.model_medium_temp.generate_content(prompt).text,
             context=section['number']
         )
+        
+        # Validate and fix tables BEFORE size check
+        result = validate_and_fix_tables(result)
         
         # Safety check: If the initial draft is too large, truncate
         max_chars = 500000 if section['number'] == self.SECTION_32_EXEMPT else 50000
@@ -180,6 +186,8 @@ CONDENSING INSTRUCTIONS:
    - If the draft contains tables, KEEP at least one summary table
    - For financial sections, tables are essential - preserve key metrics in table format
    - If no tables exist but data would be clearer in a table, create one
+   - MAXIMUM 10 columns and 20 rows per table - split if needed
+   - Fix any malformed tables from the draft
 
 4. **DATA DENSITY**:
    - Preserve specific numbers, percentages, and trends
@@ -217,6 +225,15 @@ Generate the condensed version that respects the section's specific focus."""
             lambda: self.model_medium_temp.generate_content(prompt).text,
             context=section['number']
         )
+        
+        # Validate and fix tables
+        result = validate_and_fix_tables(result)
+        
+        # Check for empty or very short output (indicating failure)
+        if not result or len(result.strip()) < 100:
+            thread_safe_print(f"WARNING: Section {section['number']} Step 4 produced empty or minimal output. Using previous draft.")
+            # Return the input draft as fallback
+            return comprehensive_draft
         
         # Safety check: If the final output is too large, truncate
         max_chars = 10000  # ~500 words * 6 chars/word * 3.3 safety factor
@@ -825,8 +842,11 @@ CRITICAL TABLE RULES:
 - If the current draft contains malformed tables (excessive dashes, huge cells), FIX THEM
 - Create proper markdown tables with clean formatting
 - No table cell should exceed 200 characters
+- MAXIMUM 10 columns per table
+- MAXIMUM 20 rows per table
 - Table separator rows should be simple: |---|---|---|
 - Extract meaningful data from corrupted tables and present cleanly
+- Split large tables into multiple smaller tables if needed
 
 CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any explanations, commentary, or descriptions of what you are doing. No preamble, no postamble - just the final enhanced draft."""
         
@@ -834,6 +854,15 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
             lambda: self.model_medium_temp.generate_content(prompt).text,
             context=section['number']
         )
+        
+        # Validate and fix tables
+        result = validate_and_fix_tables(result)
+        
+        # Check for empty or very short output (indicating failure)
+        if not result or len(result.strip()) < 100:
+            thread_safe_print(f"WARNING: Section {section['number']} Step 3 produced empty or minimal output. Using original draft.")
+            # Return the original draft as fallback
+            return current_draft
         
         # Safety check: If the improved draft is too large, truncate
         max_chars = 30000

@@ -286,8 +286,8 @@ class ProfileGenerator:
         
         # Group sections by category (like the real system does)
         groups = {
-            "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 14],
-            "SWOT Analysis": [s for s in processed_sections if 15 <= s[0] <= 18], 
+            "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 12],
+            "Strategy and SWOT": [s for s in processed_sections if 13 <= s[0] <= 18], 
             "Sellside Positioning": [s for s in processed_sections if 19 <= s[0] <= 25],
             "Buyside Due Diligence": [s for s in processed_sections if 26 <= s[0] <= 31],
             "Data Book": [s for s in processed_sections if s[0] == 32]

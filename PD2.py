@@ -425,12 +425,12 @@ Generate comprehensive methodology candidates - subsequent harsh filtering will 
 # Section Groups Configuration
 SECTION_GROUPS = {
     "Company Profile": {
-        "sections": list(range(1, 15)),  # 1-14
-        "prompt": "1. Company profile (sections 1-14) (y/n): "
+        "sections": list(range(1, 13)),  # 1-12
+        "prompt": "1. Company profile (sections 1-12) (y/n): "
     },
-    "SWOT Analysis": {
-        "sections": list(range(15, 19)),  # 15-18
-        "prompt": "2. SWOT Analysis (sections 15-18) (y/n): "
+    "Strategy and SWOT": {
+        "sections": list(range(13, 19)),  # 13-18
+        "prompt": "2. Strategy and SWOT (sections 13-18) (y/n): "
     },
     "Sellside Positioning": {
         "sections": list(range(19, 26)),  # 19-25

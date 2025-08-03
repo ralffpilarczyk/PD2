@@ -82,6 +82,9 @@ CRITICAL RESTRICTIONS:
 - DO NOT write any analysis, insights, commentary, or explanatory text.
 - DO NOT write executive summaries or narrative sections.
 - The output must contain ONLY: Markdown headers for table groups, the tables themselves, and footnotes.
+- DO NOT wrap your output in code blocks (no ```html or ```markdown)
+- DO NOT use HTML tags like <div>, <table>, etc. - use ONLY Markdown syntax
+- Tables must use Markdown pipe syntax: | Header | Header | with | :--- | :--- | separators
 
 This is a data-only section. Any narrative text will be removed.
 """

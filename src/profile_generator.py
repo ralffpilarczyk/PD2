@@ -115,8 +115,22 @@ class ProfileGenerator:
         """Clean up problematic markdown code block wrappers and malformed tables from section content"""
         content = content.strip()
         
+        # Special handling for Section 32 - check if content is wrapped in HTML code blocks
+        if content.startswith('```html\n') and content.endswith('\n```'):
+            # Remove the HTML code block wrapper for Section 32
+            content = content[8:-4]  # Remove ```html\n at start and \n``` at end
+            content = content.strip()
+            thread_safe_print("  → Removed HTML code block wrapper (Section 32)")
+        elif content.startswith('```html'):
+            # Handle case without newline after ```html
+            content = content[7:]  # Remove ```html at start
+            if content.endswith('```'):
+                content = content[:-3]  # Remove ``` at end
+            content = content.strip()
+            thread_safe_print("  → Removed HTML code block wrapper (Section 32)")
+        
         # Check if content is wrapped in markdown code block
-        if content.startswith('```markdown\n') and content.endswith('\n```'):
+        elif content.startswith('```markdown\n') and content.endswith('\n```'):
             # Remove the wrapper
             content = content[12:-4]  # Remove ```markdown\n at start and \n``` at end
             content = content.strip()
@@ -140,6 +154,26 @@ class ProfileGenerator:
             # Also fix if it's just dashes
             content = re.sub(r'(-{50,})', '---', content)
         
+        # Fix tables that lost their alignment markers during processing
+        # This fixes tables like |---|---|---| back to proper markdown format
+        lines = content.split('\n')
+        fixed_lines = []
+        for i, line in enumerate(lines):
+            # Check if this looks like a broken separator line
+            if re.match(r'^\s*\|(\s*-+\s*\|)+\s*$', line) and i > 0:
+                # Get column count from previous line
+                prev_line = lines[i-1]
+                if '|' in prev_line:
+                    col_count = prev_line.count('|') - 1
+                    # Create proper separator with alignment markers
+                    if col_count > 0:
+                        separator = '|' + ' :--- |' * col_count
+                        fixed_lines.append(separator)
+                        thread_safe_print(f"  → Fixed table separator line with {col_count} columns")
+                        continue
+            fixed_lines.append(line)
+        content = '\n'.join(fixed_lines)
+        
         # Remove duplicate section titles that LLM sometimes generates
         # Look for patterns like "## SECTION 1: Title" or "# SECTION 1: Title" at the start
         lines = content.split('\n')
@@ -147,6 +181,15 @@ class ProfileGenerator:
             lines = lines[1:]  # Remove the first line
             content = '\n'.join(lines).strip()
             thread_safe_print("  → Removed duplicate section title")
+        
+        # Fix footnote format - convert [^1] style to [1] style
+        if '[^' in content:
+            thread_safe_print("  → Converting extended footnote syntax to standard format")
+            # First, convert inline references from [^1] to [1]
+            content = re.sub(r'\[\^(\d+)\]', r'[\1]', content)
+            
+            # Then convert footnote definitions from [^1]: to [1]
+            content = re.sub(r'^\[\^(\d+)\]:\s*', r'[\1] ', content, flags=re.MULTILINE)
             
         return content
     

@@ -24,12 +24,11 @@ from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tabl
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
     
-    def __init__(self, source_files: dict, max_pdf_workers: int = 3):
+    def __init__(self, source_files: dict):
         """Initialize ProfileDash with modular components
         
         Args:
             source_files: Dict with 'pdf_files' and 'md_files' lists
-            max_pdf_workers: Number of parallel workers for PDF conversion (1-5)
         """
         # Generate run timestamp
         self.run_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
@@ -51,7 +50,7 @@ class IntelligentAnalyst:
         # Convert PDFs to markdown if any exist
         if pdf_files:
             thread_safe_print(f"Converting {len(pdf_files)} PDF file(s) to markdown...")
-            converted_files = self._convert_pdfs_to_markdown(pdf_files, max_pdf_workers)
+            converted_files = self._convert_pdfs_to_markdown(pdf_files)
             all_markdown_files.extend(converted_files)
         
         # Add markdown files directly (no conversion needed)
@@ -125,7 +124,7 @@ class IntelligentAnalyst:
                 progress_tracker['failed'] += 1
             return None
 
-    def _convert_pdfs_to_markdown(self, pdf_files: List[str], max_pdf_workers: int = 3) -> List[str]:
+    def _convert_pdfs_to_markdown(self, pdf_files: List[str]) -> List[str]:
         """Convert PDF files to markdown using Marker with parallel processing"""
         converted_files = []
         run_dir = Path(f"runs/run_{self.run_timestamp}")
@@ -141,10 +140,10 @@ class IntelligentAnalyst:
             'lock': threading.Lock()
         }
         
-        thread_safe_print(f"Starting parallel PDF conversion with {max_pdf_workers} workers...")
+        thread_safe_print(f"Starting PDF conversion...")
         
-        # Use ThreadPoolExecutor for parallel conversion
-        with ThreadPoolExecutor(max_workers=max_pdf_workers) as executor:
+        # Use single worker to avoid PyTorch tensor memory issues in Marker
+        with ThreadPoolExecutor(max_workers=1) as executor:
             # Submit all PDF conversion tasks
             future_to_pdf = {
                 executor.submit(self._convert_single_pdf, pdf_path, run_dir, progress_tracker): pdf_path 
@@ -651,24 +650,9 @@ if __name__ == "__main__":
     thread_safe_print(f"\nSelected groups: {', '.join(selected_groups)}")
     thread_safe_print(f"Processing sections: {selected_sections}")
     
-    # Step 3: Ask about PDF conversion workers (if PDFs selected)
-    max_pdf_workers = 3  # default
-    if source_file_selection['pdf_files']:
-        thread_safe_print(f"\nPDF Conversion Settings:")
-        thread_safe_print(f"You have {len(source_file_selection['pdf_files'])} PDF files to convert.")
-        
-        while True:
-            try:
-                pdf_worker_input = input(f"Number of parallel workers for PDF conversion (1-5, recommended: 3): ").strip()
-                max_pdf_workers = int(pdf_worker_input)
-                if 1 <= max_pdf_workers <= 5:
-                    break
-                else:
-                    thread_safe_print("Please enter a number between 1 and 5")
-            except ValueError:
-                thread_safe_print("Please enter a valid number")
+    # PDF conversion uses single worker to avoid PyTorch tensor memory issues
     
-    # Step 4: Ask about number of workers for section processing
+    # Step 3: Ask about number of workers for section processing
     thread_safe_print("\nSection Processing Settings:")
     thread_safe_print("Note: Rate limiting protection enabled")
     thread_safe_print("- Automatic retry with exponential backoff for rate limits")
@@ -686,7 +670,7 @@ if __name__ == "__main__":
         except ValueError:
             thread_safe_print("Please enter a valid number")
     
-    # Step 5: Ask about discovery pipeline
+    # Step 4: Ask about discovery pipeline
     while True:
         discovery_choice = input("\nUse experimental discovery pipeline for deep insights? (y/n): ").strip().lower()
         if discovery_choice in ['y', 'yes', 'n', 'no']:
@@ -701,7 +685,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60)
     
     try:
-        analyst = IntelligentAnalyst(source_file_selection, max_pdf_workers)
+        analyst = IntelligentAnalyst(source_file_selection)
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your files and try again.")

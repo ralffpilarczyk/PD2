@@ -4,7 +4,7 @@ from typing import Dict, List
 from datetime import datetime
 from pathlib import Path
 import google.generativeai as genai
-from .utils import retry_with_backoff, thread_safe_print, clean_markdown_tables
+from .utils import retry_with_backoff, thread_safe_print, clean_markdown_tables, validate_and_fix_tables
 from .profile_sections import sections
 import markdown
 from markdown.extensions import tables
@@ -91,12 +91,20 @@ class ProfileGenerator:
                 
                 with open(md_file, 'r', encoding='utf-8') as f:
                     content = f.read()
+
+                # Skip near-empty content to reduce blank sections
+                if not content or len(content.strip()) < 50:
+                    thread_safe_print(f"  → Skipping section {section_num} due to empty content in {os.path.basename(md_file)}")
+                    continue
                 
                 # Clean corrupted tables first
                 content = clean_markdown_tables(content)
-                
-                # Clean up problematic code block wrappers
+
+                # Clean up problematic wrappers and normalize formatting
                 content = self._clean_markdown_content(content)
+
+                # Final table validation/normalization (single utility)
+                content = validate_and_fix_tables(content)
                     
                 # Add section with proper title and anchor
                 combined_markdown += f'\n\n<a id="section_{section_num}"></a>\n\n# Section {section_num}: {section_title}\n\n'
@@ -106,7 +114,7 @@ class ProfileGenerator:
                 # Track processed sections for TOC
                 processed_sections.append((section_num, section_title))
         
-        # Apply footnote management to ensure sequential numbering
+        # Apply footnote label scoping to avoid cross-section conflicts
         combined_markdown = self._manage_footnotes(combined_markdown)
         
         return combined_markdown, processed_sections
@@ -143,36 +151,8 @@ class ProfileGenerator:
             content = content.strip()
             thread_safe_print("  → Cleaned problematic markdown code block wrapper")
         
-        # Fix malformed markdown tables with excessive column separators
+        # Table structure fixes are handled centrally by validate_and_fix_tables
         import re
-        # Look for table separator lines with excessive colons (more than 50 consecutive)
-        malformed_table_pattern = r'(\|[^|]*)(:-{50,})'
-        if re.search(malformed_table_pattern, content):
-            thread_safe_print("  → Detected and fixing malformed table with excessive column separators")
-            # Replace excessive colons with standard separator
-            content = re.sub(r'(:-{50,})', ':---', content)
-            # Also fix if it's just dashes
-            content = re.sub(r'(-{50,})', '---', content)
-        
-        # Fix tables that lost their alignment markers during processing
-        # This fixes tables like |---|---|---| back to proper markdown format
-        lines = content.split('\n')
-        fixed_lines = []
-        for i, line in enumerate(lines):
-            # Check if this looks like a broken separator line
-            if re.match(r'^\s*\|(\s*-+\s*\|)+\s*$', line) and i > 0:
-                # Get column count from previous line
-                prev_line = lines[i-1]
-                if '|' in prev_line:
-                    col_count = prev_line.count('|') - 1
-                    # Create proper separator with alignment markers
-                    if col_count > 0:
-                        separator = '|' + ' :--- |' * col_count
-                        fixed_lines.append(separator)
-                        thread_safe_print(f"  → Fixed table separator line with {col_count} columns")
-                        continue
-            fixed_lines.append(line)
-        content = '\n'.join(fixed_lines)
         
         # Remove duplicate section titles that LLM sometimes generates
         # Look for patterns like "## SECTION 1: Title" or "# SECTION 1: Title" at the start
@@ -181,15 +161,6 @@ class ProfileGenerator:
             lines = lines[1:]  # Remove the first line
             content = '\n'.join(lines).strip()
             thread_safe_print("  → Removed duplicate section title")
-        
-        # Fix footnote format - convert [^1] style to [1] style
-        if '[^' in content:
-            thread_safe_print("  → Converting extended footnote syntax to standard format")
-            # First, convert inline references from [^1] to [1]
-            content = re.sub(r'\[\^(\d+)\]', r'[\1]', content)
-            
-            # Then convert footnote definitions from [^1]: to [1]
-            content = re.sub(r'^\[\^(\d+)\]:\s*', r'[\1] ', content, flags=re.MULTILINE)
         
         # Ensure blank lines before tables for proper markdown parsing
         lines = content.split('\n')
@@ -205,10 +176,10 @@ class ProfileGenerator:
                         thread_safe_print("  → Added blank line before table")
             
             # Check if current line starts a list (-, *, or numbered)
-            if re.match(r'^\s*[-*]|\s*\d+\.', line) and i > 0:
+            if re.match(r'^\s*(?:[-*]|\d+\.)', line) and i > 0:
                 prev_line = lines[i-1].strip()
                 # If previous line exists and isn't empty or part of a list
-                if prev_line and not re.match(r'^\s*[-*]|\s*\d+\.', prev_line):
+                if prev_line and not re.match(r'^\s*(?:[-*]|\d+\.)', prev_line):
                     if not fixed_lines or fixed_lines[-1].strip():  # Avoid multiple blank lines
                         fixed_lines.append('')
                         thread_safe_print("  → Added blank line before list")
@@ -216,114 +187,58 @@ class ProfileGenerator:
             fixed_lines.append(line)
         
         content = '\n'.join(fixed_lines)
-        
-        # Fix line breaks inside table cells (replace with spaces)
-        # This regex finds table rows and processes them
-        def fix_table_cell_breaks(match):
-            row = match.group(0)
-            # Replace newlines within cells with spaces
-            cells = row.split('|')
-            fixed_cells = []
-            for cell in cells:
-                # Replace internal newlines with spaces
-                fixed_cell = ' '.join(cell.split('\n'))
-                fixed_cells.append(fixed_cell)
-            return '|'.join(fixed_cells)
-        
-        # Process each table row
-        lines = content.split('\n')
-        in_table = False
-        fixed_lines = []
-        
-        for line in lines:
-            if '|' in line and (line.strip().startswith('|') or line.strip().endswith('|')):
-                in_table = True
-                # Fix line breaks in this table row
-                fixed_line = fix_table_cell_breaks(re.match(r'.*', line))
-                # Also escape any unescaped pipes within cells (not at cell boundaries)
-                # This is tricky - for now just document it in the instructions
-                fixed_lines.append(fixed_line)
-            else:
-                if in_table and line.strip() == '':
-                    in_table = False
-                fixed_lines.append(line)
-        
-        content = '\n'.join(fixed_lines)
             
         return content
     
     def _manage_footnotes(self, markdown_content):
-        """Manage footnotes to ensure sequential numbering and reasonable limits"""
+        """Scope markdown footnote labels per section to avoid cross-section collisions.
+
+        Transforms [^1] and corresponding definitions [^1]: ... into
+        [^s{section}_{1}] per section. Does not renumber globally.
+        """
         import re
-        
-        # Track footnote counter across all sections
-        footnote_counter = 1
-        footnote_map = {}
-        
-        # Split content by sections to process each section separately
-        sections = re.split(r'(<a id="section_\d+"></a>)', markdown_content)
-        
-        processed_sections = []
-        
-        for i, section in enumerate(sections):
-            if not section.strip():
+
+        parts = re.split(r'(<a id="section_(\d+)"></a>)', markdown_content)
+        processed = []
+
+        i = 0
+        while i < len(parts):
+            part = parts[i]
+            if not part:
+                i += 1
                 continue
-                
-            # Check if this is a section marker
-            if section.startswith('<a id="section_'):
-                processed_sections.append(section)
-                continue
-            
-            # Process section content
-            section_footnote_count = 0
-            section_footnotes = []
-            
-            # Find all footnote references in this section
-            footnote_refs = re.findall(r'<sup>\((\d+)\)</sup>', section)
-            
-            # Create mapping for this section's footnotes
-            section_footnote_map = {}
-            for old_num in set(footnote_refs):
-                if section_footnote_count < 8:  # Limit to 8 footnotes per section
-                    section_footnote_map[old_num] = str(footnote_counter)
-                    footnote_counter += 1
-                    section_footnote_count += 1
+
+            # Section anchor
+            if part.startswith('<a id="section_'):
+                processed.append(part)
+                # Next part should be section number captured by split; skip it in output
+                # parts: [text, anchor, num, content, anchor, num, content, ...]
+                # After anchor and num, the next part is the content
+                i += 1  # move to captured group with section number
+                if i < len(parts):
+                    section_num = parts[i]
                 else:
-                    # Remove excess footnotes
-                    section_footnote_map[old_num] = None
-            
-            # Replace footnote references
-            for old_num, new_num in section_footnote_map.items():
-                if new_num is not None:
-                    section = re.sub(f'<sup>\\({old_num}\\)</sup>', f'<sup>({new_num})</sup>', section)
+                    section_num = None
+                i += 1
+                if i < len(parts):
+                    section_content = parts[i]
                 else:
-                    # Remove excess footnotes
-                    section = re.sub(f'<sup>\\({old_num}\\)</sup>', '', section)
-            
-            # Update footnote definitions at the end of the section
-            # Find footnote definitions (they appear after "Footnotes:" or similar)
-            footnote_section_match = re.search(r'(Footnotes?:.*?)(?=\n\n---|$)', section, re.DOTALL)
-            if footnote_section_match:
-                footnote_section = footnote_section_match.group(1)
-                
-                # Replace footnote numbers in definitions
-                for old_num, new_num in section_footnote_map.items():
-                    if new_num is not None:
-                        footnote_section = re.sub(f'<sup>\\({old_num}\\)</sup>', f'<sup>({new_num})</sup>', footnote_section)
-                    else:
-                        # Remove excess footnote definitions
-                        footnote_section = re.sub(f'<sup>\\({old_num}\\)</sup>[^<]*?<br />', '', footnote_section)
-                
-                # Replace the footnote section in the main content
-                section = re.sub(r'Footnotes?:.*?(?=\n\n---|$)', footnote_section, section, flags=re.DOTALL)
-            
-            processed_sections.append(section)
-            
-            # Print footnote management info
-            if section_footnote_count > 0:
-                thread_safe_print(f"  → Managed {section_footnote_count} footnotes (max 8 per section)")
-        
-        return ''.join(processed_sections)
+                    section_content = ''
+
+                if section_num:
+                    prefix = f"s{section_num}_"
+                    # Map [^n] -> [^{prefix}{n}] in references
+                    section_content = re.sub(r"\[\^(\d+)\]", lambda m: f"[^{prefix}{m.group(1)}]", section_content)
+                    # Map definitions ^[n]: -> ^[prefix+n]:
+                    section_content = re.sub(r"^\[\^(\d+)\]:", lambda m: f"[^{prefix}{m.group(1)}]:", section_content, flags=re.MULTILINE)
+
+                processed.append(section_content)
+            else:
+                # Preamble or trailing content
+                processed.append(part)
+            i += 1
+
+        return ''.join(processed)
     
     def _get_section_title(self, section_num):
         """Get the proper section title from section definitions"""
@@ -465,7 +380,7 @@ Examples:
     def _markdown_to_html(self, markdown_content: str) -> str:
         """Convert markdown content to HTML using proper markdown parser"""
         # Note: Removed 'nl2br' extension as it interferes with table rendering
-        md = markdown.Markdown(extensions=['tables', 'fenced_code', 'extra'])
+        md = markdown.Markdown(extensions=['tables', 'fenced_code', 'extra', 'footnotes'])
         return md.convert(markdown_content)
     
     def _get_css_styles(self) -> str:

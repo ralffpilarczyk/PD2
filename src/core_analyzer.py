@@ -71,12 +71,12 @@ APPENDIX OUTPUT REQUIREMENTS:
 2. Prioritize: Financial statements, segment data, operational metrics, key ratios
 3. Organize tables logically under clear Markdown headers.
 4. Format tables correctly in Markdown.
-5. Include clear source references for each table using [1], [2], [3] footnote format.
+5. Include clear source references for each table using Markdown footnotes [^1], [^2], [^3] format.
 
 SIZE CONSTRAINTS:
 - Focus on the 15-20 most important tables
 - For very large tables, include key sections or summaries
-- Ensure output remains under 150KB total
+- Ensure output remains under 500KB total
 
 CRITICAL RESTRICTIONS:
 - DO NOT write any analysis, insights, commentary, or explanatory text.
@@ -107,7 +107,7 @@ DRAFTING INSTRUCTIONS:
 3.  **Analytical Methods:** If analytical methodology is provided above, apply those proven techniques to this analysis.
 4.  **Data First:** Extract all relevant data points first, with precise citations.
 5.  **Insightful Analysis:** Provide brief but insightful analysis connecting the data points. Look for non-obvious patterns and implications. Avoid long, speculative paragraphs.
-6.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use [1], [2], [3], [4], [5] format. No letters in footnotes.
+6.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use Markdown footnotes [^1], [^2], [^3], [^4], [^5] with definitions at the end of the section. No letters in footnotes.
 7.  **Tables:** Include at least one small, well-formatted Markdown table with the most critical data.
 
 CRITICAL TABLE FORMATTING RULES:
@@ -231,7 +231,7 @@ WHAT TO REMOVE:
 
 CONSTRAINTS:
 - Maximum 500 words total
-- Maximum 5 footnotes [1], [2], [3], [4], [5]
+- Maximum 5 Markdown footnotes [^1] .. [^5], with definitions at the end of the section
 - At least one table where appropriate
 - Every sentence must add value
 
@@ -716,9 +716,9 @@ EXAMPLE PATTERN:
 FOOTNOTE REQUIREMENTS:
 - Use exactly 5 footnotes maximum for the entire section
 - Select ONLY the 5 most important/material data points to cite
-- Use sequential numbering: [1], [2], [3], [4], [5]
+- Use Markdown footnotes [^1]..[^5] with definitions at the end of the section
 - No letters in footnotes (not [a], [b] or [1a], [1b])
-- Place footnote section at the end with source citations from the original draft
+- Place footnote definitions at the end with source citations from the original draft
 
 Generate the final fact-dense analytical output with proper footnote citations."""
         
@@ -852,7 +852,7 @@ INSTRUCTIONS:
 3. Preserve all existing content - do not remove anything
 4. Keep the same professional tone and formatting
 5. If an ADD item duplicates existing content, enhance rather than duplicate
-6. FOOTNOTE RULES: After adding content, ensure total footnotes do not exceed 5. Renumber sequentially [1] through [5]. No letters in footnotes.
+6. FOOTNOTE RULES: After adding content, ensure total footnotes do not exceed 5. Use Markdown footnotes [^1]..[^5] with definitions at the end of the section.
 
 CRITICAL TABLE RULES:
 - If the current draft contains malformed tables (excessive dashes, huge cells), FIX THEM

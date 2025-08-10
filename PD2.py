@@ -90,13 +90,14 @@ class IntelligentAnalyst:
             from marker.models import create_model_dict
             from marker.output import text_from_rendered
             
-            # Create converter
-            converter = PdfConverter(
-                artifact_dict=create_model_dict(),
-            )
+            # Create/reuse converter artifacts lazily via attribute cache
+            if not hasattr(self, '_marker_converter'):
+                self._marker_converter = PdfConverter(
+                    artifact_dict=create_model_dict(),
+                )
             
             # Convert PDF
-            rendered = converter(pdf_path)
+            rendered = self._marker_converter(pdf_path)
             full_text, _, images = text_from_rendered(rendered)
             
             # Create output filename with _m.md suffix
@@ -119,10 +120,50 @@ class IntelligentAnalyst:
             return str(output_path)
             
         except Exception as e:
-            thread_safe_print(f"Failed to convert {Path(pdf_path).name}: {e}")
-            with progress_tracker['lock']:
-                progress_tracker['failed'] += 1
-            return None
+            thread_safe_print(f"Failed to convert {Path(pdf_path).name} with Marker: {e}")
+            # Retry once with Marker, then fallback to pdfminer
+            try:
+                from marker.converters.pdf import PdfConverter
+                from marker.models import create_model_dict
+                from marker.output import text_from_rendered
+                if not hasattr(self, '_marker_converter_retry'):
+                    self._marker_converter_retry = PdfConverter(
+                        artifact_dict=create_model_dict(),
+                    )
+                rendered = self._marker_converter_retry(pdf_path)
+                full_text, _, images = text_from_rendered(rendered)
+
+                pdf_name = Path(pdf_path).stem
+                output_path = run_dir / f"{pdf_name}_m.md"
+                thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
+                cleaned_text = clean_markdown_tables(full_text)
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    f.write(cleaned_text)
+                with progress_tracker['lock']:
+                    progress_tracker['completed'] += 1
+                    thread_safe_print(f"Successfully converted on retry: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
+                return str(output_path)
+            except Exception as e2:
+                thread_safe_print(f"Marker retry failed for {Path(pdf_path).name}: {e2}. Falling back to pdfminer...")
+                try:
+                    # Minimal pdfminer text extraction fallback
+                    from pdfminer.high_level import extract_text
+                    text_content = extract_text(pdf_path)
+                    pdf_name = Path(pdf_path).stem
+                    output_path = run_dir / f"{pdf_name}_m.md"
+                    thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
+                    cleaned_text = clean_markdown_tables(text_content or '')
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write(cleaned_text)
+                    with progress_tracker['lock']:
+                        progress_tracker['completed'] += 1
+                        thread_safe_print(f"Pdfminer fallback succeeded: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
+                    return str(output_path)
+                except Exception as e3:
+                    thread_safe_print(f"Fallback failed for {Path(pdf_path).name}: {e3}")
+                    with progress_tracker['lock']:
+                        progress_tracker['failed'] += 1
+                    return None
 
     def _convert_pdfs_to_markdown(self, pdf_files: List[str]) -> List[str]:
         """Convert PDF files to markdown using Marker with parallel processing"""
@@ -180,6 +221,18 @@ class IntelligentAnalyst:
             thread_safe_print(f"Section {section_num} - Step 1: Creating initial draft...")
             initial_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
             self.file_manager.save_step_output(section_num, "step_1_initial_draft.md", initial_draft)
+
+            # Failsafe: Retry Step 1 once if empty or too short
+            def _is_empty(text: str, minimum: int = 100) -> bool:
+                return not text or len(text.strip()) < minimum
+
+            if _is_empty(initial_draft):
+                thread_safe_print(f"WARNING: Section {section_num} Step 1 produced empty/short output. Retrying once...")
+                retry_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
+                if not _is_empty(retry_draft):
+                    initial_draft = retry_draft
+                # Save retry attempt separately for diagnostics
+                self.file_manager.save_step_output(section_num, "step_1_initial_draft_retry.md", retry_draft or "")
             
             # For Section 32, the initial draft is the final output. No critiques needed.
             if section['number'] == self.core_analyzer.SECTION_32_EXEMPT:
@@ -209,10 +262,38 @@ class IntelligentAnalyst:
                     # Load Step 3 draft for discovery analysis
                     augmented_output = self.core_analyzer.augment_with_discovery(section, improved_draft, step4_output)
                     self.file_manager.save_step_output(section_num, "step_5_discovery_augmented.md", augmented_output)
-                    final_output = augmented_output
+                    # Adopt augmented output only if it has substance; otherwise keep Step 4
+                    final_output = augmented_output if augmented_output and len(augmented_output.strip()) >= 200 else step4_output
                 else:
                     final_output = step4_output
             
+            # Final failsafe: choose the last non-empty among outputs
+            if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
+                candidates = [final_output]
+                try:
+                    candidates.append(step4_output)
+                except UnboundLocalError:
+                    pass
+                try:
+                    candidates.append(improved_draft)
+                except UnboundLocalError:
+                    pass
+                candidates.append(initial_draft)
+                final_chosen = next((c for c in candidates if c and len(c.strip()) >= 200), None)
+                if final_chosen is None:
+                    thread_safe_print(f"WARNING: Section {section_num} generated empty outputs across steps. Inserting placeholder.")
+                    final_output = f"_This section failed to generate content during this run._"
+                    # Overwrite final file with placeholder to avoid blank HTML
+                    self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
+                else:
+                    final_output = final_chosen
+            else:
+                # Section 32 special-case placeholder if empty
+                if _is_empty(final_output, minimum=200):
+                    thread_safe_print(f"WARNING: Section {section_num} appendix is empty. Inserting placeholder.")
+                    final_output = "_Appendix could not be generated from the provided documents in this run._"
+                    self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
+
             # Step 6: Learning Extraction (Applied to the final output)
             thread_safe_print(f"Section {section_num} - Step 6: Learning extraction...")
             # Run learning extraction only on analytical sections

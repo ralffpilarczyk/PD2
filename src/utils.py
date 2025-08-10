@@ -5,6 +5,7 @@ import threading
 
 # Thread-safe print lock
 print_lock = threading.Lock()
+_llm_semaphore = threading.Semaphore(2)  # limit in-flight LLM calls globally
 
 def thread_safe_print(*args, **kwargs):
     """Thread-safe print function"""
@@ -223,7 +224,12 @@ def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
     context_str = f"Section {context} - " if context else ""
     for attempt in range(max_retries):
         try:
-            return func()
+            # Simple global gate to avoid burst concurrency
+            _llm_semaphore.acquire()
+            try:
+                return func()
+            finally:
+                _llm_semaphore.release()
         except Exception as e:
             error_str = str(e)
             if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():

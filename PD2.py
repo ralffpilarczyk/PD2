@@ -723,6 +723,22 @@ def prompt_yes_no(prompt_text: str) -> bool:
         if ch in ('y', 'n'):
             return ch == 'y'
         # Re-prompt on any other key
+
+def prompt_single_digit(prompt_text: str, valid_digits: str, default_digit: str) -> str:
+    """Display a numeric prompt that accepts a single key without Enter.
+    Returns the chosen digit as a string; falls back to default_digit on Enter/blank.
+    """
+    while True:
+        print(f"{prompt_text}", end='', flush=True)
+        ch = _read_single_key()
+        # Echo selection for user feedback
+        print(ch)
+        if not ch or ch in ('\r', '\n'):
+            return default_digit
+        ch = ch.strip()
+        if ch in valid_digits:
+            return ch
+        # Re-prompt on any other key
 def select_source_files():
     """Interactively select source files"""
     from tkinter import filedialog, messagebox
@@ -824,24 +840,19 @@ if __name__ == "__main__":
     
     thread_safe_print("Pre-flight checks completed\n")
     
-    # Model selection (Flash vs Flash-Lite)
+    # Model selection (Flash / Flash-Lite / 2.0 Flash)
     thread_safe_print("Select LLM model:")
     thread_safe_print("  1) gemini-2.5-flash       (higher quality)")
     thread_safe_print("  2) gemini-2.5-flash-lite  (cheaper)")
     thread_safe_print("  3) gemini-2.0-flash       (legacy, cheaper)")
     selected_model = None
-    while True:
-        choice = input("Choose model [1/2/3] (default 1): ").strip()
-        if choice in ("", "1"):
-            selected_model = 'gemini-2.5-flash'
-            break
-        if choice == "2":
-            selected_model = 'gemini-2.5-flash-lite'
-            break
-        if choice == "3":
-            selected_model = 'gemini-2.0-flash'
-            break
-        thread_safe_print("Please enter 1 or 2.")
+    choice = prompt_single_digit("Choose model [1/2/3] (default 1): ", valid_digits="123", default_digit="1")
+    if choice == "1":
+        selected_model = 'gemini-2.5-flash'
+    elif choice == "2":
+        selected_model = 'gemini-2.5-flash-lite'
+    else:
+        selected_model = 'gemini-2.0-flash'
 
     # Optional LLM warm-up to reduce first-call latency (uses selected model)
     try:
@@ -910,17 +921,18 @@ if __name__ == "__main__":
     thread_safe_print("- Up to 3 retry attempts with intelligent delays")
     
     while True:
-        try:
-            env_cap = int(os.environ.get("MAX_SECTION_WORKERS", "3"))
-            env_cap = 1 if env_cap < 1 else (8 if env_cap > 8 else env_cap)
-            worker_input = input(f"Number of parallel workers for section analysis (1-{env_cap}, recommended: min(2,{env_cap}) for {len(selected_sections)} sections): ").strip()
-            max_workers = int(worker_input)
-            if 1 <= max_workers <= env_cap:
-                break
-            else:
-                thread_safe_print(f"Please enter a number between 1 and {env_cap}")
-        except ValueError:
-            thread_safe_print("Please enter a valid number")
+        env_cap = int(os.environ.get("MAX_SECTION_WORKERS", "3"))
+        env_cap = 1 if env_cap < 1 else (8 if env_cap > 8 else env_cap)
+        default_workers = min(2, env_cap)
+        valid_digits = ''.join(str(i) for i in range(1, env_cap + 1))
+        choice = prompt_single_digit(
+            f"Number of parallel workers for section analysis (1-{env_cap}, default {default_workers}): ",
+            valid_digits=valid_digits,
+            default_digit=str(default_workers)
+        )
+        max_workers = int(choice)
+        if 1 <= max_workers <= env_cap:
+            break
     
     # Step 4: Ask about discovery pipeline
     use_discovery = prompt_yes_no("\nUse experimental discovery pipeline for deep insights? (y/n): ")

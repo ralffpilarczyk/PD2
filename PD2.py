@@ -826,16 +826,20 @@ if __name__ == "__main__":
     
     # Model selection (Flash vs Flash-Lite)
     thread_safe_print("Select LLM model:")
-    thread_safe_print("  1) gemini-2.5-flash  (higher quality)")
+    thread_safe_print("  1) gemini-2.5-flash       (higher quality)")
     thread_safe_print("  2) gemini-2.5-flash-lite  (cheaper)")
+    thread_safe_print("  3) gemini-2.0-flash       (legacy, cheaper)")
     selected_model = None
     while True:
-        choice = input("Choose model [1/2] (default 1): ").strip()
+        choice = input("Choose model [1/2/3] (default 1): ").strip()
         if choice in ("", "1"):
             selected_model = 'gemini-2.5-flash'
             break
         if choice == "2":
             selected_model = 'gemini-2.5-flash-lite'
+            break
+        if choice == "3":
+            selected_model = 'gemini-2.0-flash'
             break
         thread_safe_print("Please enter 1 or 2.")
 

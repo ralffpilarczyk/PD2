@@ -13,12 +13,12 @@ from markdown.extensions import tables
 class ProfileGenerator:
     """Handles generation of professional HTML profiles"""
     
-    def __init__(self, run_timestamp: str):
+    def __init__(self, run_timestamp: str, model_name: str = 'gemini-2.5-flash'):
         """Initialize profile generator"""
         self.run_timestamp = run_timestamp
         # Use medium temperature model for company name extraction
         self.model = genai.GenerativeModel(
-            'gemini-2.5-flash',
+            model_name,
             generation_config=genai.types.GenerationConfig(temperature=0.6)
         )
     

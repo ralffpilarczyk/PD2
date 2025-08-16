@@ -9,10 +9,11 @@ from .utils import retry_with_backoff, thread_safe_print
 class InsightMemory:
     """Clean, flexible insight memory system for section-based analytical instructions"""
     
-    def __init__(self, run_timestamp: str):
+    def __init__(self, run_timestamp: str, model_name: str = 'gemini-2.5-flash'):
         """Initialize with dynamic section support"""
         self.run_timestamp = run_timestamp
         self.memory_file = "memory/learning_memory.json"
+        self.model_name = model_name
         self.learning_memory = self._load_memory()
         
         # Configuration
@@ -196,7 +197,7 @@ class InsightMemory:
     
     def cleanup_and_diversify(self):
         """Use LLM to independently re-evaluate and select only the best insights"""
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel(self.model_name)
         
         for section_key, insights in self.learning_memory["insights"].items():
             if len(insights) <= 2:  # Skip sections with very few insights

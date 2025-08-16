@@ -37,7 +37,7 @@ from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tabl
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
     
-    def __init__(self, source_files: dict):
+    def __init__(self, source_files: dict, model_name: str = 'gemini-2.5-flash'):
         """Initialize ProfileDash with modular components
         
         Args:
@@ -80,8 +80,8 @@ class IntelligentAnalyst:
         self.full_context = self.file_manager.load_markdown_files(all_markdown_files)
         
         # Initialize other components
-        self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp)
-        self.insight_memory = InsightMemory(self.run_timestamp)
+        self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp, model_name=model_name)
+        self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name)
         self.quality_tracker = QualityTracker()
         
         # Ensure memory file exists
@@ -479,7 +479,7 @@ class IntelligentAnalyst:
         thread_safe_print("GENERATING FINAL PROFILE (Phase 1)")
         thread_safe_print(f"{'='*50}")
         try:
-            profile_generator = ProfileGenerator(self.run_timestamp)
+            profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
             # Include 32 in list so placeholder (if present) is picked up
             phase1_list = non32 + ([self.core_analyzer.SECTION_32_EXEMPT] if has32 else [])
             profile_generator.generate_html_profile(results, phase1_list, self.full_context, sections)
@@ -499,7 +499,7 @@ class IntelligentAnalyst:
                 thread_safe_print(f"Appendix generation failed: {e}")
             # Regenerate profile with full set
             try:
-                profile_generator = ProfileGenerator(self.run_timestamp)
+                profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
                 profile_generator.generate_html_profile(results, section_numbers, self.full_context, sections)
                 thread_safe_print("Profile updated with Appendix (if available)")
             except Exception as e:
@@ -824,9 +824,24 @@ if __name__ == "__main__":
     
     thread_safe_print("Pre-flight checks completed\n")
     
-    # Optional LLM warm-up to reduce first-call latency
+    # Model selection (Flash vs Flash-Lite)
+    thread_safe_print("Select LLM model:")
+    thread_safe_print("  1) gemini-2.5-flash  (higher quality)")
+    thread_safe_print("  2) gemini-2.5-flash-lite  (cheaper)")
+    selected_model = None
+    while True:
+        choice = input("Choose model [1/2] (default 1): ").strip()
+        if choice in ("", "1"):
+            selected_model = 'gemini-2.5-flash'
+            break
+        if choice == "2":
+            selected_model = 'gemini-2.5-flash-lite'
+            break
+        thread_safe_print("Please enter 1 or 2.")
+
+    # Optional LLM warm-up to reduce first-call latency (uses selected model)
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash', generation_config=genai.types.GenerationConfig(temperature=0.0))
+        model = genai.GenerativeModel(selected_model, generation_config=genai.types.GenerationConfig(temperature=0.0))
         _ = retry_with_backoff(lambda: model.generate_content("ping").text)
         thread_safe_print("✓ LLM warm-up completed")
     except Exception as e:
@@ -912,7 +927,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60)
     
     try:
-        analyst = IntelligentAnalyst(source_file_selection)
+        analyst = IntelligentAnalyst(source_file_selection, model_name=selected_model)
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your files and try again.")

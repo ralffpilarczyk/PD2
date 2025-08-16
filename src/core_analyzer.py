@@ -21,13 +21,14 @@ class CoreAnalyzer:
     MEDIUM_TEMP = 0.6        # Balanced refinement (polish, initial draft)
     HIGH_TEMP = 0.9          # Creative breakthrough thinking (insights) - reduced to avoid safety blocks
     
-    def __init__(self, full_context: str, use_discovery_pipeline: bool = False, run_timestamp: str = None):
+    def __init__(self, full_context: str, use_discovery_pipeline: bool = False, run_timestamp: str = None, model_name: str = 'gemini-2.5-flash'):
         """Initialize core analyzer with document context
         
         Args:
             full_context: The full document context to analyze
             use_discovery_pipeline: Whether to use the 6-stage discovery pipeline (default: False)
             run_timestamp: Optional run timestamp for organizing outputs
+            model_name: The Gemini model to use (e.g., 'gemini-2.5-flash' or 'gemini-2.5-flash-lite')
         """
         self.full_context = full_context
         
@@ -37,17 +38,20 @@ class CoreAnalyzer:
         # Run timestamp for organizing outputs
         self.run_timestamp = run_timestamp or datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         
+        # Selected model name
+        self.model_name = model_name
+        
         # Create models with different temperatures for different cognitive phases
         self.model_low_temp = genai.GenerativeModel(
-            'gemini-2.5-flash',
+            self.model_name,
             generation_config=genai.types.GenerationConfig(temperature=self.LOW_TEMP)
         )
         self.model_medium_temp = genai.GenerativeModel(
-            'gemini-2.5-flash', 
+            self.model_name, 
             generation_config=genai.types.GenerationConfig(temperature=self.MEDIUM_TEMP)
         )
         self.model_high_temp = genai.GenerativeModel(
-            'gemini-2.5-flash',
+            self.model_name,
             generation_config=genai.types.GenerationConfig(temperature=self.HIGH_TEMP)
         )
     

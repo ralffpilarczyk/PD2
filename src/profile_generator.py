@@ -16,6 +16,7 @@ class ProfileGenerator:
     def __init__(self, run_timestamp: str, model_name: str = 'gemini-2.5-flash'):
         """Initialize profile generator"""
         self.run_timestamp = run_timestamp
+        self.model_name = model_name
         # Use medium temperature model for company name extraction
         self.model = genai.GenerativeModel(
             model_name,
@@ -301,6 +302,14 @@ class ProfileGenerator:
         # Get current date
         generation_date = datetime.now().strftime('%B %d, %Y')
         
+        # Human-readable model label for cover note
+        model_label_map = {
+            'gemini-2.5-flash': 'Gemini 2.5 Flash',
+            'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite',
+            'gemini-2.0-flash': 'Gemini 2.0 Flash',
+        }
+        model_label = model_label_map.get(self.model_name, self.model_name)
+        
         # Group sections by category (like the real system does)
         groups = {
             "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 12],
@@ -315,7 +324,7 @@ class ProfileGenerator:
             <h1 class="company-name">{company_name}</h1>
             <h2 class="product-name">ProfileDash 2.0</h2>
             <div class="generation-info">
-                Profile generated via Gemini 2.5 Flash on {generation_date}<br>
+                Profile generated via {model_label} on {generation_date}<br>
                 Under MIT License
             </div>
             

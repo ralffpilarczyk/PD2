@@ -2,10 +2,22 @@ import time
 import random
 import re
 import threading
+import os
 
 # Thread-safe print lock
 print_lock = threading.Lock()
-_llm_semaphore = threading.Semaphore(2)  # limit in-flight LLM calls globally
+
+# Configurable global LLM concurrency (default 4). Bound to sane limits (1-16).
+try:
+    _max_inflight = int(os.environ.get("LLM_MAX_INFLIGHT", "4"))
+    if _max_inflight < 1:
+        _max_inflight = 1
+    if _max_inflight > 16:
+        _max_inflight = 16
+except Exception:
+    _max_inflight = 4
+
+_llm_semaphore = threading.Semaphore(_max_inflight)
 
 def thread_safe_print(*args, **kwargs):
     """Thread-safe print function"""

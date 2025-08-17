@@ -9,7 +9,8 @@ import time
 from typing import Dict, List, Optional, Tuple, Any
 from ..utils import thread_safe_print, retry_with_backoff
 from .database import CompetitiveDatabase
-import google.generativeai as genai
+import google.generativeai as gga
+from google import genai as genai_client
 from google.genai import types
 from .entity_resolution import resolve_entities
 
@@ -21,9 +22,10 @@ class PeerDiscovery:
         """Initialize with database and grounding-capable model"""
         self.db = db
         self.model_name = model_name
-        # Always use 2.5-flash for grounding (required for google_search tool)
-        self.grounding_model = genai.GenerativeModel("gemini-2.5-flash")
-        self.analysis_model = genai.GenerativeModel(model_name)
+        # Client for grounded Google Search calls
+        self.client = genai_client.Client()
+        # Use GenerativeModel for non-grounded analysis prompts
+        self.analysis_model = gga.GenerativeModel(model_name)
         self.search_delay = 6.0  # 6 second minimum between searches
         self.last_search_time = 0
     
@@ -141,11 +143,13 @@ Focus on finding companies that compete directly in this specific market cell.""
         thread_safe_print(f"Searching: {search_query}")
         
         try:
-            tools = [types.Tool(google_search=types.GoogleSearch())]
+            grounding_tool = types.Tool(google_search=types.GoogleSearch())
+            config = types.GenerateContentConfig(tools=[grounding_tool])
             response = retry_with_backoff(
-                lambda: self.grounding_model.generate_content(
-                    f"Find direct competitors for this search: {search_query}. Focus on company names, market presence evidence, and competitive positioning.",
-                    tools=tools
+                lambda: self.client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=f"Find direct competitors for this search: {search_query}. Focus on company names, market presence evidence, and competitive positioning.",
+                    config=config,
                 )
             )
             

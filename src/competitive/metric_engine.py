@@ -13,6 +13,7 @@ from ..utils import thread_safe_print, retry_with_backoff
 from .database import CompetitiveDatabase
 import google.generativeai as genai
 from google.genai import types
+from google import genai as genai_client
 
 
 class MetricEngine:
@@ -56,8 +57,8 @@ class MetricEngine:
         """Initialize with database and models"""
         self.db = db
         self.model_name = model_name
-        # Use 2.5-flash for grounding, user's model for analysis
-        self.grounding_model = genai.GenerativeModel("gemini-2.5-flash")
+        # Use client+config for grounded calls; GenerativeModel for analysis
+        self.client = genai_client.Client()
         self.analysis_model = genai.GenerativeModel(model_name)
         self.search_delay = 6.0
         self.last_search_time = 0
@@ -340,11 +341,13 @@ Return single optimized query only, no explanation needed."""
             thread_safe_print(f"Searching {metric_name}: {current_query}")
 
             try:
-                tools = [types.Tool(google_search=types.GoogleSearch())]
+                grounding_tool = types.Tool(google_search=types.GoogleSearch())
+                config = types.GenerateContentConfig(tools=[grounding_tool])
                 response = retry_with_backoff(
-                    lambda: self.grounding_model.generate_content(
-                        f"Find specific data for this metric search: {current_query}. Focus on numerical values, units, time periods, and source credibility.",
-                        tools=tools
+                    lambda: self.client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=f"Find specific data for this metric search: {current_query}. Focus on numerical values, units, time periods, and source credibility.",
+                        config=config,
                     )
                 )
 

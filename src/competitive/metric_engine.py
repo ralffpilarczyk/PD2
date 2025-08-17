@@ -105,9 +105,9 @@ Select {target_count} metrics that:
 4. Focus on metrics where competitive battles are won/lost
 5. Balance financial, operational, and strategic dimensions
 
-Return JSON array with this exact format:
+Return JSON array with this exact format (note: braces are literal, not placeholders):
 [
-    {
+    {{
         "name": "Market Share",
         "definition": "Percentage of total market revenue captured by the company",
         "capability_family": "scale_footprint",
@@ -117,7 +117,7 @@ Return JSON array with this exact format:
         "priority_score": 0.95,
         "search_keywords": ["market share", "market position", "competitive position"],
         "rationale": "Critical metric for understanding competitive position and scale advantages"
-    }
+    }}
 ]
 
 Directionality options: "higher_better", "lower_better", "neutral"

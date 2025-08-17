@@ -263,10 +263,40 @@ Examples of poor market cells:
         """
         thread_safe_print("Validating market cells with business logic...")
         
+        def _parse_share(cell: Dict[str, Any]) -> float:
+            # Parse 'estimated_revenue_share' like "15%" → 0.15; otherwise 0.0
+            share = cell.get('estimated_revenue_share')
+            if isinstance(share, (int, float)):
+                return max(0.0, min(1.0, float(share) if share <= 1 else float(share) / 100.0))
+            if isinstance(share, str):
+                import re
+                m = re.search(r"(\d+(?:\.\d+)?)\s*%", share)
+                if m:
+                    return max(0.0, min(1.0, float(m.group(1)) / 100.0))
+            return 0.0
+
+        def _effective_materiality(cell: Dict[str, Any]) -> float:
+            # Take the higher of LLM materiality_score and parsed revenue share
+            score = float(cell.get('materiality_score', 0) or 0)
+            share = _parse_share(cell)
+            return max(score, share)
+
+        # Keywords that commonly represent non-core, small experimental units unless significant
+        small_unit_keywords = [
+            'digital banking', 'e-wallet', 'wallet', 'micro-financing', 'micro financing',
+            'fintech', 'digital finance', 'martech', 'digital advertising', 'advertising',
+            'data analytics', 'ai-driven', 'ai powered', 'ad tech', 'adtech'
+        ]
+
         validated_cells = []
+        small_cells_buffer = []
         for cell in market_cells:
             # Check minimum materiality threshold
-            if cell.get('materiality_score', 0) >= 0.2:  # 20% threshold
+            eff = _effective_materiality(cell)
+            is_small = any(kw in cell.get('product_service', '').lower() for kw in small_unit_keywords)
+            # Require higher bar for small/experimental units
+            min_threshold = 0.3 if is_small else 0.2
+            if eff >= min_threshold:
                 
                 # Ensure all required fields are present and meaningful
                 if (cell.get('product_service') and 
@@ -275,13 +305,30 @@ Examples of poor market cells:
                     cell.get('product_service').lower() not in ['unknown', 'n/a', ''] and
                     cell.get('geography').lower() not in ['unknown', 'n/a', ''] and
                     cell.get('customer_segment').lower() not in ['unknown', 'n/a', '']):
-                    
-                    validated_cells.append(cell)
+                    # Attach effective score for later ranking
+                    cell['materiality_score'] = eff
+                    if is_small:
+                        small_cells_buffer.append(cell)
+                    else:
+                        validated_cells.append(cell)
                 else:
                     thread_safe_print(f"Rejected market cell due to missing/invalid fields: {cell}")
             else:
-                thread_safe_print(f"Rejected market cell due to low materiality ({cell.get('materiality_score', 0):.2f}): {cell.get('product_service', 'Unknown')}")
+                thread_safe_print(f"Rejected market cell due to low materiality ({eff:.2f}): {cell.get('product_service', 'Unknown')}")
         
+        # Allow at most one small/experimental unit if it is highly material
+        if small_cells_buffer:
+            small_cells_buffer.sort(key=lambda c: c.get('materiality_score', 0), reverse=True)
+            top_small = small_cells_buffer[0]
+            # Only include if truly material (>= 0.35)
+            if top_small.get('materiality_score', 0) >= 0.35:
+                validated_cells.append(top_small)
+
+        # Rank by materiality and limit to top 4–5 to avoid over-segmentation
+        validated_cells.sort(key=lambda c: c.get('materiality_score', 0), reverse=True)
+        if len(validated_cells) > 5:
+            validated_cells = validated_cells[:5]
+
         # Ensure at least one market cell exists
         if not validated_cells:
             thread_safe_print("No valid market cells found, creating default...")

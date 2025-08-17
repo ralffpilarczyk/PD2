@@ -3,3 +3,4 @@ markitdown[all]
 python-dotenv
 google-generativeai
 markdown
+requests

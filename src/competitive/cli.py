@@ -17,6 +17,7 @@ from src.utils import thread_safe_print
 from src.competitive.database import CompetitiveDatabase
 from src.competitive.market_mapper import MarketMapper
 from src.competitive.peer_discovery import PeerDiscovery
+from src.competitive.metric_engine import MetricEngine
 
 # Import Google Generative AI
 try:
@@ -48,6 +49,7 @@ class CompetitiveAnalysisCLI:
         # Initialize analysis components
         self.market_mapper = MarketMapper(self.db)
         self.peer_discovery = PeerDiscovery(self.db)
+        self.metric_engine = MetricEngine(self.db)
         
         thread_safe_print(f"Competitive Analysis CLI initialized")
         thread_safe_print(f"Output directory: {self.output_dir}")
@@ -130,8 +132,25 @@ class CompetitiveAnalysisCLI:
             except ValueError:
                 print("Please enter a valid number.")
     
+    def prompt_analysis_scope(self) -> str:
+        """Prompt user for analysis scope"""
+        print("\nWhat scope of analysis would you like?")
+        print("1. Phase 1 only: Company analysis + competitor discovery")
+        print("2. Phase 2 full: Phase 1 + metric collection + data normalization")
+        print("Recommended: Phase 2 full (default)")
+        
+        while True:
+            choice = input("Choose option (1-2, or press Enter for Phase 2): ").strip()
+            
+            if not choice or choice == "2":
+                return "phase2"
+            elif choice == "1":
+                return "phase1"
+            else:
+                print("Invalid choice. Please enter 1 or 2.")
+    
     def analyze_company(self, company_name: str, document_content: str, 
-                       max_competitors: int = 3) -> Optional[dict]:
+                       max_competitors: int = 3, analysis_scope: str = "phase2") -> Optional[dict]:
         """
         Run complete competitive analysis for a company.
         Returns analysis results or None if failed.
@@ -165,14 +184,29 @@ class CompetitiveAnalysisCLI:
                 max_competitors_per_cell=max_competitors
             )
             
+            # Phase 2: Metric Collection & Normalization (if requested)
+            metrics_summary = None
+            if analysis_scope == "phase2":
+                thread_safe_print(f"\n📊 Phase 2: Metric Collection & Data Normalization")
+                metrics_results = self.metric_engine.process_and_save_all_metrics(company_id)
+                
+                if metrics_results.get('success'):
+                    metrics_summary = metrics_results['summary']
+                    thread_safe_print(f"✅ Phase 2 completed successfully!")
+                else:
+                    thread_safe_print(f"⚠ Phase 2 completed with limited data: {metrics_results.get('error', 'Unknown error')}")
+                    metrics_summary = {"error": metrics_results.get('error')}
+            
             # Compile results
             results = {
                 'company_context': company_context,
                 'market_cells': market_cells,
                 'competitors_by_market_cell': all_competitors,
+                'metrics_summary': metrics_summary,
                 'analysis_metadata': {
                     'timestamp': self.timestamp,
                     'company_id': company_id,
+                    'analysis_scope': analysis_scope,
                     'total_market_cells': len(market_cells),
                     'total_competitors_found': sum(len(comps) for comps in all_competitors.values()),
                     'output_directory': str(self.output_dir)
@@ -241,10 +275,23 @@ class CompetitiveAnalysisCLI:
                 else:
                     print(f"    • No competitors found")
         
+        # Metrics summary (Phase 2)
+        metrics_summary = results.get('metrics_summary')
+        if metrics_summary:
+            print(f"\nMetrics Collection Summary:")
+            if 'error' in metrics_summary:
+                print(f"  Error: {metrics_summary['error']}")
+            else:
+                print(f"  Metrics Attempted: {metrics_summary.get('metrics_attempted', 0)}")
+                print(f"  Observations Saved: {metrics_summary.get('observations_saved', 0)}")
+                print(f"  Success Rate: {metrics_summary.get('observations_saved', 0) / max(1, metrics_summary.get('metrics_attempted', 1)):.1%}")
+                print(f"  Normalization Errors: {metrics_summary.get('normalization_errors', 0)}")
+        
         # Metadata
         metadata = results['analysis_metadata']
         print(f"\nAnalysis Metadata:")
         print(f"  Timestamp: {metadata['timestamp']}")
+        print(f"  Analysis Scope: {metadata.get('analysis_scope', 'phase1')}")
         print(f"  Total Market Cells: {metadata['total_market_cells']}")
         print(f"  Total Competitors: {metadata['total_competitors_found']}")
         print(f"  Output Directory: {metadata['output_directory']}")
@@ -266,12 +313,14 @@ class CompetitiveAnalysisCLI:
             company_name = self.prompt_company_name()
             document_content = self.prompt_document_input()
             max_competitors = self.prompt_max_competitors()
+            analysis_scope = self.prompt_analysis_scope()
             
             # Run analysis
             results = self.analyze_company(
                 company_name=company_name,
                 document_content=document_content,
-                max_competitors=max_competitors
+                max_competitors=max_competitors,
+                analysis_scope=analysis_scope
             )
             
             # Display results

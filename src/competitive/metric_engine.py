@@ -340,10 +340,11 @@ Return single optimized query only, no explanation needed."""
             thread_safe_print(f"Searching {metric_name}: {current_query}")
 
             try:
+                tools = [types.Tool(google_search=types.GoogleSearch())]
                 response = retry_with_backoff(
                     lambda: self.grounding_model.generate_content(
                         f"Find specific data for this metric search: {current_query}. Focus on numerical values, units, time periods, and source credibility.",
-                        tools=[{"google_search": {}}]
+                        tools=tools
                     )
                 )
 

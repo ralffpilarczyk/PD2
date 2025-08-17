@@ -18,6 +18,9 @@ from src.competitive.database import CompetitiveDatabase
 from src.competitive.market_mapper import MarketMapper
 from src.competitive.peer_discovery import PeerDiscovery
 from src.competitive.metric_engine import MetricEngine
+from src.competitive.competitive_analyzer import CompetitiveAnalyzer
+from src.competitive.strategy_bundler import StrategyBundler
+from src.competitive.report_generator import CompetitiveReportGenerator
 
 # Import Google Generative AI
 try:
@@ -50,6 +53,9 @@ class CompetitiveAnalysisCLI:
         self.market_mapper = MarketMapper(self.db)
         self.peer_discovery = PeerDiscovery(self.db)
         self.metric_engine = MetricEngine(self.db)
+        self.competitive_analyzer = CompetitiveAnalyzer(self.db)
+        self.strategy_bundler = StrategyBundler(self.db)
+        self.report_generator = CompetitiveReportGenerator(self.db, str(self.output_dir))
         
         thread_safe_print(f"Competitive Analysis CLI initialized")
         thread_safe_print(f"Output directory: {self.output_dir}")
@@ -136,18 +142,21 @@ class CompetitiveAnalysisCLI:
         """Prompt user for analysis scope"""
         print("\nWhat scope of analysis would you like?")
         print("1. Phase 1 only: Company analysis + competitor discovery")
-        print("2. Phase 2 full: Phase 1 + metric collection + data normalization")
-        print("Recommended: Phase 2 full (default)")
+        print("2. Phase 2: Phase 1 + metric collection + data normalization")
+        print("3. Phase 3 full: All phases + competitive scoring + strategy recommendations + HTML report")
+        print("Recommended: Phase 3 full (default)")
         
         while True:
-            choice = input("Choose option (1-2, or press Enter for Phase 2): ").strip()
+            choice = input("Choose option (1-3, or press Enter for Phase 3): ").strip()
             
-            if not choice or choice == "2":
+            if not choice or choice == "3":
+                return "phase3"
+            elif choice == "2":
                 return "phase2"
             elif choice == "1":
                 return "phase1"
             else:
-                print("Invalid choice. Please enter 1 or 2.")
+                print("Invalid choice. Please enter 1, 2, or 3.")
     
     def analyze_company(self, company_name: str, document_content: str, 
                        max_competitors: int = 3, analysis_scope: str = "phase2") -> Optional[dict]:
@@ -186,7 +195,12 @@ class CompetitiveAnalysisCLI:
             
             # Phase 2: Metric Collection & Normalization (if requested)
             metrics_summary = None
-            if analysis_scope == "phase2":
+            competitive_analyses = {}
+            strategy_bundles = {}
+            html_report_path = ""
+            json_evidence_path = ""
+            
+            if analysis_scope in ["phase2", "phase3"]:
                 thread_safe_print(f"\n📊 Phase 2: Metric Collection & Data Normalization")
                 metrics_results = self.metric_engine.process_and_save_all_metrics(company_id)
                 
@@ -197,19 +211,58 @@ class CompetitiveAnalysisCLI:
                     thread_safe_print(f"⚠ Phase 2 completed with limited data: {metrics_results.get('error', 'Unknown error')}")
                     metrics_summary = {"error": metrics_results.get('error')}
             
+            # Phase 3: Competitive Analysis & Strategy Generation (if requested)
+            if analysis_scope == "phase3":
+                thread_safe_print(f"\n🎯 Phase 3: Competitive Analysis & Strategy Generation")
+                
+                # Step 1: Competitive Scoring & Analysis
+                competitive_analyses = self.competitive_analyzer.analyze_all_market_cells(company_id)
+                
+                if competitive_analyses:
+                    thread_safe_print(f"✅ Competitive analysis completed for {len(competitive_analyses)} market cells")
+                    
+                    # Step 2: Strategy Bundle Generation
+                    strategy_bundles = self.strategy_bundler.generate_all_strategy_bundles(company_id, competitive_analyses)
+                    
+                    if strategy_bundles:
+                        thread_safe_print(f"✅ Strategy bundles generated for {len(strategy_bundles)} market cells")
+                    
+                    # Step 3: Report Generation
+                    thread_safe_print(f"\n📄 Generating comprehensive reports...")
+                    
+                    html_report_path = self.report_generator.generate_comprehensive_report(
+                        company_id=company_id,
+                        competitive_analyses=competitive_analyses,
+                        strategy_bundles=strategy_bundles
+                    )
+                    
+                    json_evidence_path = self.report_generator.generate_json_evidence_pack(
+                        company_id=company_id,
+                        competitive_analyses=competitive_analyses,
+                        strategy_bundles=strategy_bundles
+                    )
+                    
+                    thread_safe_print(f"✅ Phase 3 completed successfully!")
+                else:
+                    thread_safe_print(f"⚠ Phase 3 could not proceed - no competitive analysis data")
+            
             # Compile results
             results = {
                 'company_context': company_context,
                 'market_cells': market_cells,
                 'competitors_by_market_cell': all_competitors,
                 'metrics_summary': metrics_summary,
+                'competitive_analyses': competitive_analyses,
+                'strategy_bundles': strategy_bundles,
                 'analysis_metadata': {
                     'timestamp': self.timestamp,
                     'company_id': company_id,
                     'analysis_scope': analysis_scope,
                     'total_market_cells': len(market_cells),
                     'total_competitors_found': sum(len(comps) for comps in all_competitors.values()),
-                    'output_directory': str(self.output_dir)
+                    'output_directory': str(self.output_dir),
+                    'html_report_path': html_report_path,
+                    'json_evidence_path': json_evidence_path
                 }
             }
             
@@ -286,6 +339,45 @@ class CompetitiveAnalysisCLI:
                 print(f"  Observations Saved: {metrics_summary.get('observations_saved', 0)}")
                 print(f"  Success Rate: {metrics_summary.get('observations_saved', 0) / max(1, metrics_summary.get('metrics_attempted', 1)):.1%}")
                 print(f"  Normalization Errors: {metrics_summary.get('normalization_errors', 0)}")
+        
+        # Competitive analysis summary (Phase 3)
+        competitive_analyses = results.get('competitive_analyses', {})
+        if competitive_analyses:
+            print(f"\nCompetitive Analysis Summary:")
+            total_analyzed = len(competitive_analyses)
+            successful_analyses = sum(1 for analysis in competitive_analyses.values() 
+                                    if analysis.get('competitive_analysis', {}).get('success'))
+            print(f"  Market Cells Analyzed: {successful_analyses}/{total_analyzed}")
+            
+            # Overall competitive positions
+            positions = []
+            for analysis_data in competitive_analyses.values():
+                comp_analysis = analysis_data.get('competitive_analysis', {})
+                if comp_analysis.get('success'):
+                    position = comp_analysis.get('overall_position', {}).get('position', '')
+                    if position:
+                        positions.append(position)
+            
+            if positions:
+                most_common_position = max(set(positions), key=positions.count)
+                print(f"  Most Common Position: {most_common_position}")
+        
+        # Strategy bundles summary (Phase 3)
+        strategy_bundles = results.get('strategy_bundles', {})
+        if strategy_bundles:
+            total_bundles = sum(len(bundles) for bundles in strategy_bundles.values())
+            print(f"\nStrategy Recommendations:")
+            print(f"  Total Strategy Bundles: {total_bundles}")
+            print(f"  Market Cells with Strategies: {len([k for k, v in strategy_bundles.items() if v])}")
+        
+        # Report paths (Phase 3)
+        html_path = results.get('analysis_metadata', {}).get('html_report_path')
+        json_path = results.get('analysis_metadata', {}).get('json_evidence_path')
+        if html_path:
+            print(f"\n📄 Reports Generated:")
+            print(f"  HTML Report: {html_path}")
+            if json_path:
+                print(f"  JSON Evidence Pack: {json_path}")
         
         # Metadata
         metadata = results['analysis_metadata']

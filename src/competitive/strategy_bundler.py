@@ -141,7 +141,7 @@ Generate 3-4 distinct strategy concepts that address the competitive situation:
             "people": "human resources needed"
         }},
         "strategic_category": "cost_reduction/innovation_investment/market_expansion/operational_excellence/customer_focus/scale_building"
-    }
+    }}
 ]
 
 Focus on:

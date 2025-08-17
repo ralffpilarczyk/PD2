@@ -61,61 +61,50 @@ class CompetitiveAnalysisCLI:
         thread_safe_print(f"Output directory: {self.output_dir}")
         thread_safe_print(f"Database: {db_path}")
     
-    def prompt_company_name(self) -> str:
-        """Prompt user for company name"""
+    def select_source_files(self) -> list:
+        """Open a file chooser to select PDFs and/or Markdown files."""
+        from tkinter import filedialog
+        import tkinter as tk
         while True:
-            company_name = input("\nEnter company name for competitive analysis: ").strip()
-            if company_name:
-                return company_name
-            print("Please enter a valid company name.")
-    
-    def prompt_document_input(self) -> str:
-        """Prompt user for document input method and content"""
-        print("\nHow would you like to provide company information?")
-        print("1. Type/paste text directly")
-        print("2. Load from file")
-        print("3. Use company name only (minimal analysis)")
-        
-        while True:
-            choice = input("Choose option (1-3): ").strip()
-            
-            if choice == "1":
-                print("\nPaste company information (press Ctrl+D or Ctrl+Z when done):")
-                lines = []
-                try:
-                    while True:
-                        line = input()
-                        lines.append(line)
-                except EOFError:
-                    pass
-                
-                content = "\n".join(lines).strip()
-                if content:
-                    return content
+            root = tk.Tk()
+            root.withdraw()
+            print("\nSelect PDF files (for conversion) and/or Markdown/Text files (direct use)...")
+            selected = filedialog.askopenfilenames(
+                title="Select PDF and/or Markdown/Text Files",
+                filetypes=[
+                    ("PDF files", "*.pdf"),
+                    ("Markdown files", "*.md"),
+                    ("Text files", "*.txt"),
+                    ("All files", "*.*"),
+                ],
+            )
+            root.destroy()
+            if not selected:
+                print("No files selected. Please try again.")
+                continue
+            return list(selected)
+
+    def load_documents_to_text(self, paths: list) -> str:
+        """Read selected files into a single text blob. PDFs use pdfminer extraction."""
+        contents = []
+        for p in paths:
+            try:
+                lower = p.lower()
+                if lower.endswith(".md") or lower.endswith(".txt"):
+                    with open(p, "r", encoding="utf-8") as f:
+                        contents.append(f"--- Document: {p} ---\n" + f.read())
+                elif lower.endswith(".pdf"):
+                    try:
+                        from pdfminer.high_level import extract_text
+                        text = extract_text(p) or ""
+                        contents.append(f"--- PDF: {p} ---\n" + text)
+                    except Exception as e:
+                        print(f"Warning: PDF extraction failed for {p}: {e}")
                 else:
-                    print("No content provided. Please try again.")
-                    continue
-                    
-            elif choice == "2":
-                file_path = input("Enter file path: ").strip()
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read().strip()
-                    if content:
-                        print(f"Loaded {len(content)} characters from {file_path}")
-                        return content
-                    else:
-                        print("File is empty. Please try again.")
-                        continue
-                except Exception as e:
-                    print(f"Error reading file: {e}. Please try again.")
-                    continue
-                    
-            elif choice == "3":
-                return "Minimal analysis mode - using company name only."
-                
-            else:
-                print("Invalid choice. Please enter 1, 2, or 3.")
+                    print(f"Skipping unsupported file type: {p}")
+            except Exception as e:
+                print(f"Warning: Failed to read {p}: {e}")
+        return "\n\n".join(contents).strip()
     
     def prompt_max_competitors(self) -> int:
         """Prompt user for maximum competitors per market cell"""
@@ -158,14 +147,14 @@ class CompetitiveAnalysisCLI:
             else:
                 print("Invalid choice. Please enter 1, 2, or 3.")
     
-    def analyze_company(self, company_name: str, document_content: str, 
+    def analyze_company(self, company_name: str = None, document_content: str = "", 
                        max_competitors: int = 3, analysis_scope: str = "phase2") -> Optional[dict]:
         """
         Run complete competitive analysis for a company.
         Returns analysis results or None if failed.
         """
         try:
-            thread_safe_print(f"\nStarting competitive analysis for: {company_name}")
+            thread_safe_print(f"\nStarting competitive analysis")
             
             # Phase 1: Market Cell Discovery
             thread_safe_print("\nPhase 1: Company Analysis & Market Cell Discovery")
@@ -401,15 +390,18 @@ class CompetitiveAnalysisCLI:
         print("=" * 40)
         
         try:
-            # Get user inputs
-            company_name = self.prompt_company_name()
-            document_content = self.prompt_document_input()
+            # File upload like PD2
+            paths = self.select_source_files()
+            document_content = self.load_documents_to_text(paths)
+            if not document_content:
+                print("No readable content from selected files. Exiting.")
+                return
             max_competitors = self.prompt_max_competitors()
             analysis_scope = self.prompt_analysis_scope()
             
             # Run analysis
             results = self.analyze_company(
-                company_name=company_name,
+                company_name=None,
                 document_content=document_content,
                 max_competitors=max_competitors,
                 analysis_scope=analysis_scope

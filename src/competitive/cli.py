@@ -374,7 +374,7 @@ class CompetitiveAnalysisCLI:
         html_path = results.get('analysis_metadata', {}).get('html_report_path')
         json_path = results.get('analysis_metadata', {}).get('json_evidence_path')
         if html_path:
-                print(f"\nReports Generated:")
+            print(f"\nReports Generated:")
             print(f"  HTML Report: {html_path}")
             if json_path:
                 print(f"  JSON Evidence Pack: {json_path}")

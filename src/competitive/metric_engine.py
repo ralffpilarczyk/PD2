@@ -262,7 +262,7 @@ Focus on metrics that executives care about and that drive business value."""
         Generate intelligent search query for a specific metric.
         Uses company context and competitor info to create targeted queries.
         """
-        prompt = f"""Generate targeted search query for this competitive metric:
+        prompt = f"""Generate a targeted search query for this competitive metric using recency without fixed years:
 
 COMPANY CONTEXT: {json.dumps(company_context, indent=2)}
 COMPETITOR: {competitor_name} in {market_cell['geography']}
@@ -272,14 +272,14 @@ METRIC: {metric['name']} - {metric['definition']}
 Create 1 optimized search query that will find this specific metric:
 - Use exact competitor name and market geography
 - Include metric-specific terminology
-- Add recent time qualifiers (2024, Q3 2024, latest)
+- Prefer recency without fixed years (use terms like "latest", "recent quarter", "this year", "TTM")
 - Use industry-specific language from company context
 - Target high-quality sources (earnings, reports, filings)
 
-Examples of good queries:
-- "Vodafone Germany mobile subscriber numbers Q3 2024 earnings"
-- "Deutsche Telekom Germany market share telecommunications 2024"
-- "O2 Germany ARPU average revenue per user latest quarterly"
+Examples of good queries (note: avoid hardcoded years):
+- "Vodafone Germany mobile subscriber numbers latest earnings"
+- "Deutsche Telekom Germany market share telecommunications latest"
+- "O2 Germany ARPU average revenue per user recent quarter"
 
 Examples of poor queries:
 - "Vodafone revenue" (too broad)
@@ -451,12 +451,12 @@ Extract and structure this information as strictly valid JSON (no comments, no t
   "data_quality_flags": ["recent", "exact_match"]
 }}
 
-Confidence scoring guide:
-- 0.9-1.0: Earnings reports, regulatory filings, clear recent data
-- 0.7-0.8: Company disclosures, analyst reports, clear methodology  
-- 0.5-0.6: News articles, press releases, indirect mentions
-- 0.3-0.4: Unclear sources, old data, proxy metrics
-- 0.0-0.2: Speculative, unreliable, or contradictory data
+Confidence scoring guide (no code comments in JSON output):
+- 0.9-1.0: earnings reports, regulatory filings, clear recent data
+- 0.7-0.8: company disclosures, analyst reports
+- 0.5-0.6: news articles, press releases
+- 0.3-0.4: unclear sources, old data, proxy metrics
+- 0.0-0.2: speculative or contradictory data
 
 Extract ALL numerical values found, even if multiple or conflicting."""
         

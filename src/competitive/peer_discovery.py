@@ -60,11 +60,11 @@ Generate 2-3 highly specific search queries that will find direct competitors:
 - Include industry-specific terminology from the company context
 - Use geographic qualifiers that match the market cell
 - Include business model descriptors (B2B/B2C/enterprise/consumer)
-- Add recent time qualifiers (2024, 2023)
+- Prefer recency without fixed years (use terms like "latest", "recent quarter", "this year", "TTM")
 - Use competitive keywords extracted from company documents
 
 Examples of good queries:
-- "Singapore digital banking fintech competitors DBS UOB 2024"
+- "Singapore digital banking fintech competitors DBS UOB latest"
 - "European B2B payment processing competitors Stripe Adyen"
 - "Southeast Asia e-commerce logistics competitors Shopee Lazada"
 

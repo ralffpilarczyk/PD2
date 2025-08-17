@@ -339,15 +339,11 @@ Return single optimized query only, no explanation needed."""
             self._rate_limit_search()
             thread_safe_print(f"Searching {metric_name}: {current_query}")
 
-            # Configure grounding tool
-            grounding_tool = types.Tool(google_search=types.GoogleSearch())
-            config = types.GenerateContentConfig(tools=[grounding_tool])
-
             try:
                 response = retry_with_backoff(
                     lambda: self.grounding_model.generate_content(
-                        contents=f"Find specific data for this metric search: {current_query}. Focus on numerical values, units, time periods, and source credibility.",
-                        config=config
+                        f"Find specific data for this metric search: {current_query}. Focus on numerical values, units, time periods, and source credibility.",
+                        tools=[{"google_search": {}}]
                     )
                 )
 

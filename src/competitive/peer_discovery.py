@@ -10,7 +10,6 @@ from typing import Dict, List, Optional, Tuple, Any
 from ..utils import thread_safe_print, retry_with_backoff
 from .database import CompetitiveDatabase
 import google.generativeai as genai
-from google.genai import types
 from .entity_resolution import resolve_entities
 
 
@@ -140,15 +139,11 @@ Focus on finding companies that compete directly in this specific market cell.""
         
         thread_safe_print(f"Searching: {search_query}")
         
-        # Configure grounding tool
-        grounding_tool = types.Tool(google_search=types.GoogleSearch())
-        config = types.GenerateContentConfig(tools=[grounding_tool])
-        
         try:
             response = retry_with_backoff(
                 lambda: self.grounding_model.generate_content(
-                    contents=f"Find direct competitors for this search: {search_query}. Focus on company names, market presence evidence, and competitive positioning.",
-                    config=config
+                    f"Find direct competitors for this search: {search_query}. Focus on company names, market presence evidence, and competitive positioning.",
+                    tools=[{"google_search": {}}]
                 )
             )
             

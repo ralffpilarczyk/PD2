@@ -261,6 +261,7 @@ Then augments Step 4 output with 1-2 critical insights maximum.
 - Rewrote README.md with clearer instructions
 - Cleaned .env.example (removed unused MAX_WORKERS)
 - Added troubleshooting section
+ - Added WEBSEARCH.md with a detailed module/API contract and workflows for a standalone competitive analysis app (web grounding, peer selection, normalization, scoring, and PD2 integration)
 
 ## Current Issues
 
@@ -272,6 +273,7 @@ Then augments Step 4 output with 1-2 critical insights maximum.
 - Occasional 500/504 errors from Gemini API
 - Rate limiting despite backoff implementation
 - Some sections may need re-running
+ - Grounded search (google_search tool) requires supported models (2.5 Flash or 2.0 Flash). When users select Flash‑Lite, the system should temporarily switch to a supported model for web grounding to maintain citation quality.
 
 ### 3. Table Rendering Edge Cases
 - Some tables still don't render if title formatting is unusual
@@ -297,6 +299,11 @@ export LLM_MAX_INFLIGHT=4            # in-flight LLM calls (1-16)
 export MAX_SECTION_WORKERS=3         # parallel section workers (1-8)
 export SUBMISSION_STAGGER_SEC=0.5    # seconds between submissions
 export MARKER_PROCESS_WORKERS=2      # Marker process pool (1-5)
+
+# Model selection happens interactively at startup. Options:
+# 1) gemini-2.5-flash (default)
+# 2) gemini-2.5-flash-lite (cheaper)
+# 3) gemini-2.0-flash (legacy)
 
 # 3. Run with existing markdown files (faster)
 python PD2.py
@@ -327,6 +334,7 @@ open runs/run_[timestamp]/[Company]_profile.html
 - `src/core_analyzer.py`: All step methods and size limits
 - `src/utils.py`: `retry_with_backoff()` for rate limiting
   and global LLM concurrency gate (LLM_MAX_INFLIGHT)
+ - `WEBSEARCH.md`: Design spec for standalone competitive analysis and Google Search grounding
 
 **For PDF Conversion**:
 - `PD2.py`: Process-pool Marker conversion, cache, and BLAS thread constraints
@@ -334,6 +342,9 @@ open runs/run_[timestamp]/[Company]_profile.html
 
 **For Section Definitions**:
 - `src/profile_sections.py`: All 32 section specs
+
+**For Competitor Analysis (Standalone Plan)**:
+- `WEBSEARCH.md`: Architecture, API contracts, prompt library, and workflows for the competitive analysis app to power Sections 13–18 (and selective injections in 1–12)
 
 ### Testing Checklist
 
@@ -344,6 +355,7 @@ After any changes, verify:
 4. Footnotes appear properly
 5. All selected sections appear in final HTML
 6. When Section 32 is selected, verify core profile appears first; appendix stitched afterwards
+7. When running grounded web searches (future integration), confirm citations render and sources are high-trust; ensure Flash‑Lite runs switch to a supported model for grounding
 
 ### Common Commands
 

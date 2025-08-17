@@ -128,7 +128,7 @@ Once complete, find your analysis in:
   - Current draft from Step 1
 - **Temperature:** 0.2 (low)
 - **Output:** ADD list of missing data items (max 5 suggestions)
-- **Saved as:** `step_2_add_list.txt`
+- **Saved as:** `step_2_completeness_check.txt`
 - **Note:** Skipped for Section 32
 
 #### Step 3: Apply Completeness
@@ -310,7 +310,7 @@ The discovery pipeline augmentation uses a two-stage process to ensure only crit
 ```
 section_XX/
 ├── step_1_initial_draft.md
-├── step_2_add_list.txt (skipped for Section 32)
+├── step_2_completeness_check.txt (skipped for Section 32)
 ├── step_3_improved_draft.md (skipped for Section 32)
 ├── step_4_final_section.md
 ├── step_5_discovery_augmented.md (only if discovery ON)

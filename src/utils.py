@@ -14,7 +14,8 @@ try:
         _max_inflight = 1
     if _max_inflight > 16:
         _max_inflight = 16
-except Exception:
+except (ValueError, TypeError):
+    # Invalid environment variable value, use default
     _max_inflight = 4
 
 _llm_semaphore = threading.Semaphore(_max_inflight)
@@ -253,7 +254,8 @@ def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
                             delay_match = re.search(r'seconds:\s*(\d+)', error_str)
                             if delay_match:
                                 delay = max(delay, int(delay_match.group(1)))
-                        except:
+                        except (ValueError, AttributeError):
+                            # Unable to parse retry delay from error message
                             pass
                     
                     thread_safe_print(f"{context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")

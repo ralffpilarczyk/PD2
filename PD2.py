@@ -8,12 +8,14 @@ import sys
 try:
     import termios
     import tty
-except Exception:
+except ImportError:
+    # Unix terminal control not available (likely Windows)
     termios = None
     tty = None
 try:
     import msvcrt  # Windows
-except Exception:
+except ImportError:
+    # Windows msvcrt not available (likely Unix/Mac)
     msvcrt = None
 from dotenv import load_dotenv
 from datetime import datetime
@@ -242,7 +244,8 @@ class IntelligentAnalyst:
                 workers_env = 1
             if workers_env > 5:
                 workers_env = 5
-        except Exception:
+        except (ValueError, TypeError):
+            thread_safe_print("Warning: Invalid MARKER_PROCESS_WORKERS value, using default of 2")
             workers_env = 2
 
         def _worker(pdf_path: str) -> Optional[str]:
@@ -327,6 +330,10 @@ class IntelligentAnalyst:
                 # Save retry attempt separately for diagnostics
                 self.file_manager.save_step_output(section_num, "step_1_initial_draft_retry.md", retry_draft or "")
             
+            # Initialize variables to avoid UnboundLocalError
+            improved_draft = None
+            step4_output = None
+            
             # For Section 32, the initial draft is the final output. No critiques needed.
             if section['number'] == self.core_analyzer.SECTION_32_EXEMPT:
                 thread_safe_print(f"Section {section_num} is a data appendix. Skipping analytical and polish steps.")
@@ -336,7 +343,7 @@ class IntelligentAnalyst:
                 # Step 2: Completeness Check
                 thread_safe_print(f"Section {section_num} - Step 2: Checking for missing content...")
                 add_list = self.core_analyzer.completeness_check(section, initial_draft)
-                self.file_manager.save_step_output(section_num, "step_2_add_list.txt", add_list)
+                self.file_manager.save_step_output(section_num, "step_2_completeness_check.txt", add_list)
                 
                 # Step 3: Apply Completeness Changes
                 thread_safe_print(f"Section {section_num} - Step 3: Applying completeness changes...")
@@ -363,18 +370,14 @@ class IntelligentAnalyst:
             # Final failsafe: choose the last non-empty among outputs
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
                 candidates = [final_output]
-                try:
+                if step4_output is not None:
                     candidates.append(step4_output)
-                except UnboundLocalError:
-                    pass
-                try:
+                if improved_draft is not None:
                     candidates.append(improved_draft)
-                except UnboundLocalError:
-                    pass
                 candidates.append(initial_draft)
                 final_chosen = next((c for c in candidates if c and len(c.strip()) >= 200), None)
                 if final_chosen is None:
-                    thread_safe_print(f"WARNING: Section {section_num} generated empty outputs across steps. Inserting placeholder.")
+                    thread_safe_print(f"Section {section_num} - WARNING: Generated empty outputs across steps. Inserting placeholder.")
                     final_output = f"_This section failed to generate content during this run._"
                     # Overwrite final file with placeholder to avoid blank HTML
                     self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
@@ -383,7 +386,7 @@ class IntelligentAnalyst:
             else:
                 # Section 32 special-case placeholder if empty
                 if _is_empty(final_output, minimum=200):
-                    thread_safe_print(f"WARNING: Section {section_num} appendix is empty. Inserting placeholder.")
+                    thread_safe_print(f"Section {section_num} - WARNING: Appendix is empty. Inserting placeholder.")
                     final_output = "_Appendix could not be generated from the provided documents in this run._"
                     self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
 
@@ -418,12 +421,14 @@ class IntelligentAnalyst:
         try:
             env_cap = int(os.environ.get("MAX_SECTION_WORKERS", "3"))
             env_cap = 1 if env_cap < 1 else (8 if env_cap > 8 else env_cap)
-        except Exception:
+        except (ValueError, TypeError):
+            thread_safe_print("Warning: Invalid MAX_SECTION_WORKERS value, using default of 3")
             env_cap = 3
         actual_workers = min(max_workers, len(section_numbers), env_cap)
         try:
             stagger = float(os.environ.get("SUBMISSION_STAGGER_SEC", "0.5"))
-        except Exception:
+        except (ValueError, TypeError):
+            thread_safe_print("Warning: Invalid SUBMISSION_STAGGER_SEC value, using default of 0.5")
             stagger = 0.5
 
         def _run_parallel(sec_list: List[int]) -> Dict[int, str]:
@@ -580,7 +585,7 @@ NEW_INSIGHTS:
 Generate comprehensive methodology candidates - subsequent harsh filtering will select only the best transferable techniques.
 """
         
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel(self.core_analyzer.model_name)
         new_insights_text = retry_with_backoff(
             lambda: model.generate_content(prompt).text
         )
@@ -714,9 +719,9 @@ def _read_single_key() -> str:
 def prompt_yes_no(prompt_text: str) -> bool:
     """Display a (y/n) prompt that accepts a single key without Enter. Returns True for yes."""
     while True:
-        print(f"{prompt_text}", end='', flush=True)
+        thread_safe_print(f"{prompt_text}", end='', flush=True)
         ch = _read_single_key()
-        print(ch)
+        thread_safe_print(ch)
         if not ch:
             continue
         ch = ch.strip().lower()
@@ -729,10 +734,10 @@ def prompt_single_digit(prompt_text: str, valid_digits: str, default_digit: str)
     Returns the chosen digit as a string; falls back to default_digit on Enter/blank.
     """
     while True:
-        print(f"{prompt_text}", end='', flush=True)
+        thread_safe_print(f"{prompt_text}", end='', flush=True)
         ch = _read_single_key()
         # Echo selection for user feedback
-        print(ch)
+        thread_safe_print(ch)
         if not ch or ch in ('\r', '\n'):
             return default_digit
         ch = ch.strip()

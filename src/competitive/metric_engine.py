@@ -105,7 +105,7 @@ Select {target_count} metrics that:
 4. Focus on metrics where competitive battles are won/lost
 5. Balance financial, operational, and strategic dimensions
 
-Return JSON array with this exact format (note: braces are literal, not placeholders):
+Return strictly valid JSON array with this exact format (no comments, no trailing commas, double-quoted keys/strings; braces are literal, not placeholders):
 [
     {{
         "name": "Market Share",
@@ -428,28 +428,28 @@ SEARCH RESULTS: {search_results['response_text']}
 COMPETITOR: {competitor_name}
 METRIC SOUGHT: {metric['name']} - {metric['definition']}
 
-Extract and structure this information:
+Extract and structure this information as strictly valid JSON (no comments, no trailing commas):
 
-{{
-    "metric_found": true/false,
-    "values": [
-        {{
-            "value": "extracted numeric value",
-            "units": "currency/users/percent/etc",
-            "period": "Q3 2024/2024/TTM/etc", 
-            "scope": "geographic/business scope",
-            "source_quality": "earnings_report/regulatory_filing/news/analyst",
-            "confidence": 0.9, // 0.0-1.0 based on source quality and clarity
-            "extraction_notes": "context about the metric"
-        }}
-    ],
-    "source_metadata": {{
-        "source_title": "title from search results",
-        "source_url": "URL if available", 
-        "search_query": "original query used"
-    }},
-    "data_quality_flags": ["recent/outdated", "exact_match/proxy_metric", "clear/ambiguous"]
-}}
+{
+  "metric_found": true,
+  "values": [
+    {
+      "value": "extracted numeric value",
+      "units": "currency/users/percent/etc",
+      "period": "Q3 2024",
+      "scope": "geographic/business scope",
+      "source_quality": "earnings_report",
+      "confidence": 0.9,
+      "extraction_notes": "context about the metric"
+    }
+  ],
+  "source_metadata": {
+    "source_title": "title from search results",
+    "source_url": "URL if available",
+    "search_query": "original query used"
+  },
+  "data_quality_flags": ["recent", "exact_match"]
+}
 
 Confidence scoring guide:
 - 0.9-1.0: Earnings reports, regulatory filings, clear recent data
@@ -465,8 +465,8 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                 lambda: self.analysis_model.generate_content(prompt).text
             )
             
-            # Extract JSON from response
-            json_match = re.search(r'\{.*?\}', response_text, re.DOTALL)
+            # Extract JSON from response (first JSON object best-effort)
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
                 extracted_data = json.loads(json_match.group())
                 

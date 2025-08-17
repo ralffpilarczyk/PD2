@@ -78,6 +78,24 @@ class MetricEngine:
             time.sleep(sleep_time)
         
         self.last_search_time = time.time()
+
+    def _broaden_query(self, query: str, step: int) -> str:
+        """Progressively broaden a search query by relaxing specificity.
+        step 1: remove quarter qualifiers (e.g., Q1/Q2/Q3/Q4)
+        step 2: remove explicit years (20xx)
+        """
+        broadened = query
+        try:
+            if step == 1:
+                broadened = re.sub(r"\bQ[1-4]\b", "", broadened, flags=re.IGNORECASE)
+                broadened = re.sub(r"\bQ[1-4]\s*20\d{2}\b", "", broadened, flags=re.IGNORECASE)
+            elif step >= 2:
+                broadened = re.sub(r"\b20\d{2}\b", "", broadened)
+            # Collapse extra whitespace
+            broadened = re.sub(r"\s+", " ", broadened).strip()
+        except Exception:
+            pass
+        return broadened
     
     def select_metrics_for_market_cell(self, company_context: Dict[str, Any], 
                                      market_cell: Dict[str, Any],
@@ -365,8 +383,8 @@ Return single optimized query only, no explanation needed."""
                     }
 
                     # Extract grounding chunks (sources)
-                    if hasattr(metadata, 'grounding_chunks'):
-                        for chunk in metadata.grounding_chunks:
+                if metadata is not None and hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
+                    for chunk in (metadata.grounding_chunks or []):
                             if hasattr(chunk, 'web'):
                                 grounding_metadata['grounding_chunks'].append({
                                     'uri': chunk.web.uri,
@@ -374,8 +392,8 @@ Return single optimized query only, no explanation needed."""
                                 })
 
                     # Extract grounding supports (citations)
-                    if hasattr(metadata, 'grounding_supports'):
-                        for support in metadata.grounding_supports:
+                if metadata is not None and hasattr(metadata, 'grounding_supports') and metadata.grounding_supports:
+                    for support in (metadata.grounding_supports or []):
                             grounding_metadata['grounding_supports'].append({
                                 'segment_text': support.segment.text,
                                 'start_index': support.segment.start_index,

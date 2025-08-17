@@ -55,9 +55,11 @@ quality_metrics/
 memory/
 
 # Documentation
-HANDOVER.md
 PLAN.md
 HANDOVER_SCRIPT.md
+
+# Manuals folder
+Manuals/
 
 # VS Code workspace
 *.code-workspace

@@ -430,10 +430,10 @@ METRIC SOUGHT: {metric['name']} - {metric['definition']}
 
 Extract and structure this information as strictly valid JSON (no comments, no trailing commas):
 
-{
+{{
   "metric_found": true,
   "values": [
-    {
+    {{
       "value": "extracted numeric value",
       "units": "currency/users/percent/etc",
       "period": "Q3 2024",
@@ -441,15 +441,15 @@ Extract and structure this information as strictly valid JSON (no comments, no t
       "source_quality": "earnings_report",
       "confidence": 0.9,
       "extraction_notes": "context about the metric"
-    }
+    }}
   ],
-  "source_metadata": {
+  "source_metadata": {{
     "source_title": "title from search results",
-    "source_url": "URL if available",
+    "source_url": "URL if available", 
     "search_query": "original query used"
-  },
+  }},
   "data_quality_flags": ["recent", "exact_match"]
-}
+}}
 
 Confidence scoring guide:
 - 0.9-1.0: Earnings reports, regulatory filings, clear recent data

@@ -35,10 +35,10 @@ class StrategyBundler:
         Generate 2-3 viable strategy bundles for a market cell based on competitive analysis.
         Includes deep conflict detection and resource allocation analysis.
         """
-        thread_safe_print(f"🎯 Generating strategy bundles for market cell {market_cell_id}")
+        thread_safe_print(f"Generating strategy bundles for market cell {market_cell_id}")
         
         if not competitive_analysis.get('success'):
-            thread_safe_print("⚠ Cannot generate strategies without competitive analysis")
+            thread_safe_print("Cannot generate strategies without competitive analysis")
             return []
         
         # Extract key insights for strategy generation
@@ -60,7 +60,7 @@ class StrategyBundler:
         )
         
         if not strategy_concepts:
-            thread_safe_print("⚠ No strategy concepts generated")
+            thread_safe_print("No strategy concepts generated")
             return []
         
         # Analyze resource conflicts and optimize bundles
@@ -69,7 +69,7 @@ class StrategyBundler:
         # Save to database
         saved_bundles = self._save_strategy_bundles(market_cell_id, optimized_bundles)
         
-        thread_safe_print(f"✅ Generated {len(saved_bundles)} strategy bundles")
+        thread_safe_print(f"Generated {len(saved_bundles)} strategy bundles")
         return saved_bundles
     
     def _get_market_cell_context(self, market_cell_id: int) -> Dict[str, Any]:
@@ -239,7 +239,7 @@ Return valid JSON array only."""
         Analyze resource conflicts and optimize strategy bundles.
         Applies deep thinking about resource allocation and strategic conflicts.
         """
-        thread_safe_print("🔍 Analyzing resource conflicts and optimizing bundles...")
+        thread_safe_print("Analyzing resource conflicts and optimizing bundles...")
         
         # Group strategies by resource requirements and strategic category
         strategy_groups = self._group_strategies_by_resources(strategy_concepts)
@@ -530,9 +530,9 @@ Return valid JSON array only."""
                 """, (
                     market_cell_id,
                     bundle['name'],
-                    bundle['description'],
-                    json.dumps(bundle.get('strategies', [])),
-                    json.dumps(bundle.get('resource_summary', {})),
+                    bundle.get('description', ''),
+                    json.dumps(list({en for s in bundle.get('strategies', []) for en in s.get('required_enablers', [])})),
+                    json.dumps({k: v for k, v in bundle.get('resource_summary', {}).items()}),
                     json.dumps(bundle.get('risk_assessment', [])),
                     bundle.get('estimated_timeline', 12),
                     json.dumps(bundle.get('resource_summary', {})),
@@ -550,7 +550,7 @@ Return valid JSON array only."""
         Generate strategy bundles for all market cells with competitive analysis.
         Returns strategy bundles by market cell ID.
         """
-        thread_safe_print(f"\n🎯 Generating strategy bundles for company {company_id}")
+        thread_safe_print(f"\nGenerating strategy bundles for company {company_id}")
         
         all_bundles = {}
         
@@ -559,12 +559,12 @@ Return valid JSON array only."""
                 competitive_analysis = analysis_data['competitive_analysis']
                 market_cell_name = analysis_data.get('market_cell_name', f'Market Cell {market_cell_id}')
                 
-                thread_safe_print(f"\n📋 Generating strategies for: {market_cell_name}")
+                thread_safe_print(f"\nGenerating strategies for: {market_cell_name}")
                 
                 bundles = self.generate_strategy_bundles(market_cell_id, competitive_analysis)
                 all_bundles[market_cell_id] = bundles
                 
-                thread_safe_print(f"  ✅ Generated {len(bundles)} strategy bundles")
+                thread_safe_print(f"  Generated {len(bundles)} strategy bundles")
         
-        thread_safe_print(f"\n✅ Strategy generation complete for {len(all_bundles)} market cells")
+        thread_safe_print(f"\nStrategy generation complete for {len(all_bundles)} market cells")
         return all_bundles

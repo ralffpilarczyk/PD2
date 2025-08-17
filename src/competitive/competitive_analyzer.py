@@ -33,13 +33,13 @@ class CompetitiveAnalyzer:
         Calculate competitive scores for all metrics in a market cell.
         Returns comprehensive scoring analysis.
         """
-        thread_safe_print(f"📊 Calculating competitive scores for market cell {market_cell_id}")
+        thread_safe_print(f"Calculating competitive scores for market cell {market_cell_id}")
         
         # Get observations for this market cell
         observations = self._get_market_cell_observations(market_cell_id, company_id)
         
         if not observations:
-            thread_safe_print(f"⚠ No observations found for market cell {market_cell_id}")
+            thread_safe_print(f"No observations found for market cell {market_cell_id}")
             return {"success": False, "error": "No observations found"}
         
         # Group observations by metric
@@ -57,7 +57,7 @@ class CompetitiveAnalyzer:
                 scored_metrics.append(metric_scores)
         
         if not scored_metrics:
-            thread_safe_print(f"⚠ No metrics could be scored for market cell {market_cell_id}")
+            thread_safe_print(f"No metrics could be scored for market cell {market_cell_id}")
             return {"success": False, "error": "No metrics could be scored"}
         
         # Identify top strengths and weaknesses
@@ -65,8 +65,8 @@ class CompetitiveAnalyzer:
         
         # Calculate overall competitive position
         overall_position = self._calculate_overall_position(scored_metrics)
-        
-        thread_safe_print(f"✅ Competitive scoring complete: {len(scored_metrics)} metrics analyzed")
+
+        thread_safe_print(f"Competitive scoring complete: {len(scored_metrics)} metrics analyzed")
         
         return {
             "success": True,
@@ -131,8 +131,8 @@ class CompetitiveAnalyzer:
         # Get metric metadata
         metric_info = observations[0]  # All observations have same metric info
         metric_name = metric_info['metric_name']
-        
-        thread_safe_print(f"  📈 Scoring metric: {metric_name}")
+
+        thread_safe_print(f"  Scoring metric: {metric_name}")
         
         try:
             # Step 1: Determine anchor (best-in-class by default)
@@ -178,7 +178,7 @@ class CompetitiveAnalyzer:
             }
             
         except Exception as e:
-            thread_safe_print(f"⚠ Error scoring {metric_name}: {e}")
+            thread_safe_print(f"Error scoring {metric_name}: {e}")
             return None
     
     def _determine_anchor(self, observations: List[Dict[str, Any]]) -> Tuple[float, str]:
@@ -399,13 +399,13 @@ class CompetitiveAnalyzer:
         Run competitive analysis for all market cells of a company.
         Returns analysis results by market cell ID.
         """
-        thread_safe_print(f"\n🎯 Starting competitive analysis for company {company_id}")
+        thread_safe_print(f"\nStarting competitive analysis for company {company_id}")
         
         # Get all market cells for the company
         market_cells = self.db.get_market_cells_for_company(company_id)
         
         if not market_cells:
-            thread_safe_print(f"⚠ No market cells found for company {company_id}")
+            thread_safe_print(f"No market cells found for company {company_id}")
             return {}
         
         analysis_results = {}
@@ -414,7 +414,7 @@ class CompetitiveAnalyzer:
             market_cell_id = market_cell_row['id']
             market_cell_name = f"{market_cell_row['product_service']} × {market_cell_row['geography']} × {market_cell_row['customer_segment']}"
             
-            thread_safe_print(f"\n📊 Analyzing market cell: {market_cell_name}")
+            thread_safe_print(f"\nAnalyzing market cell: {market_cell_name}")
             
             # Calculate competitive scores
             scores = self.calculate_competitive_scores(market_cell_id, company_id)
@@ -431,10 +431,10 @@ class CompetitiveAnalyzer:
                 strengths_count = len(scores.get('top_strengths', []))
                 weaknesses_count = len(scores.get('top_weaknesses', []))
                 
-                thread_safe_print(f"  ✅ {position}")
-                thread_safe_print(f"  💪 {strengths_count} key strengths, ⚠ {weaknesses_count} key weaknesses")
+                thread_safe_print(f"  {position}")
+                thread_safe_print(f"  {strengths_count} key strengths, {weaknesses_count} key weaknesses")
             else:
-                thread_safe_print(f"  ❌ Analysis failed: {scores.get('error', 'Unknown error')}")
+                thread_safe_print(f"  Analysis failed: {scores.get('error', 'Unknown error')}")
         
-        thread_safe_print(f"\n✅ Competitive analysis complete for {len(analysis_results)} market cells")
+        thread_safe_print(f"\nCompetitive analysis complete for {len(analysis_results)} market cells")
         return analysis_results

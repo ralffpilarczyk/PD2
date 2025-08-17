@@ -76,13 +76,13 @@ Focus on factual information from the documents. Be specific about geographic ma
                 if company_name and not context.get('company_name'):
                     context['company_name'] = company_name
                 
-                thread_safe_print(f"✓ Extracted context for {context.get('company_name', 'company')}")
+                thread_safe_print(f"Extracted context for {context.get('company_name', 'company')}")
                 return context
             else:
                 raise ValueError("No valid JSON found in response")
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Error extracting company context: {e}")
+            thread_safe_print(f"Error extracting company context: {e}")
             # Return minimal context with provided company name
             return {
                 "company_name": company_name or "Unknown Company",
@@ -174,13 +174,13 @@ Examples of poor market cells:
                 if len(validated_cells) > 8:
                     validated_cells = self._consolidate_market_cells(validated_cells)
                 
-                thread_safe_print(f"✓ Discovered {len(validated_cells)} market cells")
+                thread_safe_print(f"Discovered {len(validated_cells)} market cells")
                 return validated_cells
             else:
                 raise ValueError("No valid JSON array found in response")
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Error discovering market cells: {e}")
+            thread_safe_print(f"Error discovering market cells: {e}")
             # Return default market cell based on context
             return [{
                 "product_service": company_context.get('products_services', 'Core Business'),
@@ -198,19 +198,61 @@ Examples of poor market cells:
         """
         thread_safe_print(f"Consolidating {len(market_cells)} market cells to maximum 8...")
         
-        # Sort by materiality score (highest first)
-        sorted_cells = sorted(market_cells, key=lambda x: x['materiality_score'], reverse=True)
+        # Group by dominant dimension (geography/product/customer) if too many
+        if len(market_cells) <= 8:
+            return market_cells
         
-        # Take top 8 most material cells
-        consolidated = sorted_cells[:8]
+        # Determine dominant dimension by frequency and summed materiality
+        def _group_by_key(key: str):
+            groups = {}
+            for cell in market_cells:
+                k = cell.get(key, 'Unknown')
+                groups.setdefault(k, []).append(cell)
+            return groups
         
-        # Adjust materiality scores to account for consolidation
+        geo_groups = _group_by_key('geography')
+        prod_groups = _group_by_key('product_service')
+        cust_groups = _group_by_key('customer_segment')
+        
+        def _score(groups):
+            return sum(len(v) for v in groups.values()) + sum(sum(c.get('materiality_score', 0) for c in v) for v in groups.values())
+        
+        # Choose grouping with highest score as dominant dimension
+        dominant = max([
+            ('geography', geo_groups, _score(geo_groups)),
+            ('product_service', prod_groups, _score(prod_groups)),
+            ('customer_segment', cust_groups, _score(cust_groups))
+        ], key=lambda x: x[2])
+        _, groups, _ = dominant
+        
+        # Aggregate into consolidated cells per group, dropping groups <10% materiality
+        consolidated = []
+        total_materiality = sum(cell.get('materiality_score', 0) for cell in market_cells)
+        for group_key, cells in groups.items():
+            materiality_sum = sum(c.get('materiality_score', 0) for c in cells)
+            if total_materiality and (materiality_sum / total_materiality) < 0.10:
+                continue
+            # Create consolidated representation
+            representative = max(cells, key=lambda c: c.get('materiality_score', 0))
+            consolidated.append({
+                'product_service': representative.get('product_service', 'Consolidated'),
+                'geography': representative.get('geography', 'Consolidated'),
+                'customer_segment': representative.get('customer_segment', 'Consolidated'),
+                'materiality_score': materiality_sum,
+                'rationale': f"Consolidated group '{group_key}' with {len(cells)} cells"
+            })
+        
+        # Sort and limit to 8
+        consolidated.sort(key=lambda x: x['materiality_score'], reverse=True)
+        consolidated = consolidated[:8]
+        
+        # Normalize materiality scores
         total_score = sum(cell['materiality_score'] for cell in consolidated)
         if total_score > 0:
             for cell in consolidated:
                 cell['materiality_score'] = cell['materiality_score'] / total_score
         
-        thread_safe_print(f"✓ Consolidated to {len(consolidated)} market cells")
+        thread_safe_print(f"Consolidated to {len(consolidated)} market cells")
         return consolidated
     
     def validate_market_cells(self, market_cells: List[Dict[str, Any]], 
@@ -236,13 +278,13 @@ Examples of poor market cells:
                     
                     validated_cells.append(cell)
                 else:
-                    thread_safe_print(f"⚠ Rejected market cell due to missing/invalid fields: {cell}")
+                    thread_safe_print(f"Rejected market cell due to missing/invalid fields: {cell}")
             else:
-                thread_safe_print(f"⚠ Rejected market cell due to low materiality ({cell.get('materiality_score', 0):.2f}): {cell.get('product_service', 'Unknown')}")
+                thread_safe_print(f"Rejected market cell due to low materiality ({cell.get('materiality_score', 0):.2f}): {cell.get('product_service', 'Unknown')}")
         
         # Ensure at least one market cell exists
         if not validated_cells:
-            thread_safe_print("⚠ No valid market cells found, creating default...")
+            thread_safe_print("No valid market cells found, creating default...")
             validated_cells = [{
                 "product_service": company_context.get('products_services', 'Core Business'),
                 "geography": "Global",
@@ -252,7 +294,7 @@ Examples of poor market cells:
                 "estimated_revenue_share": "100%"
             }]
         
-        thread_safe_print(f"✓ Validated {len(validated_cells)} market cells")
+        thread_safe_print(f"Validated {len(validated_cells)} market cells")
         return validated_cells
     
     def save_company_and_market_cells(self, company_context: Dict[str, Any], 
@@ -281,7 +323,7 @@ Examples of poor market cells:
             )
             market_cell_ids.append(market_cell_id)
         
-        thread_safe_print(f"✓ Saved company (ID: {company_id}) and {len(market_cell_ids)} market cells")
+        thread_safe_print(f"Saved company (ID: {company_id}) and {len(market_cell_ids)} market cells")
         return company_id, market_cell_ids
     
     def analyze_company_from_documents(self, document_content: str, 
@@ -290,7 +332,7 @@ Examples of poor market cells:
         Complete analysis pipeline: extract context → discover market cells → validate.
         Returns (company_context, validated_market_cells).
         """
-        thread_safe_print("🔍 Starting company analysis from documents...")
+        thread_safe_print("Starting company analysis from documents...")
         
         # Step 1: Extract company context
         company_context = self.extract_company_context(document_content, company_name)
@@ -304,5 +346,5 @@ Examples of poor market cells:
         # Step 4: Save to database
         company_id, market_cell_ids = self.save_company_and_market_cells(company_context, validated_cells)
         
-        thread_safe_print(f"✅ Company analysis complete for {company_context['company_name']}")
+        thread_safe_print(f"Company analysis complete for {company_context['company_name']}")
         return company_context, validated_cells

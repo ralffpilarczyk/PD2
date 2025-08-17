@@ -32,6 +32,7 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Import modular components
 from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections
+from src.competitive.cli import CompetitiveAnalysisCLI
 
 # Import thread_safe_print, retry_with_backoff, and clean_markdown_tables from utils
 from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tables
@@ -85,6 +86,7 @@ class IntelligentAnalyst:
         self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp, model_name=model_name)
         self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name)
         self.quality_tracker = QualityTracker()
+        self.competitive_evidence = None
         
         # Ensure memory file exists
         self.file_manager.ensure_memory_file_exists(self.insight_memory.get_memory_data())
@@ -94,6 +96,10 @@ class IntelligentAnalyst:
             self.insight_memory.get_memory_data(), 
             "pre_run_memory.json"
         )
+    
+    def set_competitive_evidence(self, evidence: dict):
+        """Attach competitive evidence pack to enable section injections."""
+        self.competitive_evidence = evidence or None
     
     def _convert_single_pdf(self, pdf_path: str, run_dir: Path, progress_tracker: dict) -> str:
         """Convert a single PDF file to markdown"""
@@ -366,6 +372,17 @@ class IntelligentAnalyst:
                     final_output = augmented_output if augmented_output and len(augmented_output.strip()) >= 200 else step4_output
                 else:
                     final_output = step4_output
+
+                # Optional: inject competitive intelligence for sections 13-18
+                if self.competitive_evidence and 13 <= section['number'] <= 18:
+                    try:
+                        mini_tables = self.competitive_evidence.get('mini_tables', [])
+                        if mini_tables:
+                            table_md = self._render_competitive_table(mini_tables[0])
+                            if table_md:
+                                final_output = f"{final_output}\n\n## Competitive Intelligence (Snapshot)\n\n{table_md}"
+                    except Exception as inj_err:
+                        thread_safe_print(f"Warning: Competitive injection failed: {inj_err}")
             
             # Final failsafe: choose the last non-empty among outputs
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
@@ -409,6 +426,22 @@ class IntelligentAnalyst:
             thread_safe_print(f"An error occurred in section {section_num}: {e}")
             # Optionally re-raise or handle as per overall error strategy
             return f"Section {section_num} failed."
+
+    def _render_competitive_table(self, table: dict) -> str:
+        """Render a mini-table dict from evidence pack as markdown."""
+        try:
+            headers = table.get('headers', [])
+            rows = table.get('rows', [])
+            if not headers or not rows:
+                return ""
+            md = []
+            md.append("| " + " | ".join(headers) + " |")
+            md.append("|" + "---|" * len(headers))
+            for row in rows[:10]:
+                md.append("| " + " | ".join(str(c) for c in row) + " |")
+            return "\n".join(md)
+        except Exception:
+            return ""
 
     def process_all_sections(self, section_numbers: List[int] = None, max_workers: int = 3):
         """Process multiple sections with two-phase scheduling (Section 32 deferred)."""
@@ -939,7 +972,34 @@ if __name__ == "__main__":
         if 1 <= max_workers <= env_cap:
             break
     
-    # Step 4: Ask about discovery pipeline
+    # Step 4: Offer competitive analysis pre-run
+    run_competitive = prompt_yes_no("\nRun competitive analysis first? (y/n): ")
+    competitive_evidence = None
+    if run_competitive:
+        try:
+            thread_safe_print("\nStarting competitive analysis (standalone module)...")
+            comp_cli = CompetitiveAnalysisCLI()
+            # Use minimal mode: company name and combined document context
+            # Prompt company name to label outputs
+            company_name = input("Enter company name for competitive analysis (for labelling): ").strip() or "Company"
+            # Feed PD2 combined context to competitive module Phase 3 end-to-end
+            results = comp_cli.analyze_company(
+                company_name=company_name,
+                document_content=analyst.full_context,
+                max_competitors=3,
+                analysis_scope="phase3"
+            )
+            if results and results.get('analysis_metadata', {}).get('json_evidence_path'):
+                ev_path = results['analysis_metadata']['json_evidence_path']
+                with open(ev_path, 'r', encoding='utf-8') as f:
+                    competitive_evidence = json.load(f)
+            # Attach evidence for section injections
+            analyst.set_competitive_evidence(competitive_evidence)
+            thread_safe_print("Competitive analysis step completed")
+        except Exception as ce:
+            thread_safe_print(f"Warning: Competitive analysis failed or was skipped: {ce}")
+
+    # Step 5: Ask about discovery pipeline
     use_discovery = prompt_yes_no("\nUse experimental discovery pipeline for deep insights? (y/n): ")
     
     # Step 6: Now initialize ProfileDash with source files (includes PDF conversion)

@@ -39,7 +39,7 @@ class CompetitiveReportGenerator:
         Generate comprehensive competitive intelligence report.
         Returns path to generated HTML file.
         """
-        thread_safe_print(f"📄 Generating comprehensive competitive analysis report...")
+        thread_safe_print(f"Generating comprehensive competitive analysis report...")
         
         # Get company information
         company_info = self._get_company_info(company_id)
@@ -65,7 +65,7 @@ class CompetitiveReportGenerator:
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
         
-        thread_safe_print(f"✅ Report generated: {html_path}")
+        thread_safe_print(f"Report generated: {html_path}")
         return str(html_path)
     
     def _get_company_info(self, company_id: int) -> Optional[Dict[str, Any]]:
@@ -719,7 +719,7 @@ class CompetitiveReportGenerator:
         Generate JSON evidence pack for PD2 integration.
         Returns path to generated JSON file.
         """
-        thread_safe_print(f"📋 Generating JSON evidence pack...")
+        thread_safe_print(f"Generating JSON evidence pack...")
         
         # Get company information
         company_info = self._get_company_info(company_id)
@@ -751,7 +751,7 @@ class CompetitiveReportGenerator:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(evidence_pack, f, indent=2, default=str)
         
-        thread_safe_print(f"✅ Evidence pack generated: {json_path}")
+        thread_safe_print(f"Evidence pack generated: {json_path}")
         return str(json_path)
     
     def _generate_mini_tables(self, competitive_analyses: Dict[int, Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -781,9 +781,10 @@ class CompetitiveReportGenerator:
                     metric_name = metric.get('metric_name', 'Unknown')
                     anchor_competitor = metric.get('anchor_competitor', 'Unknown')
                     
-                    # Find our company's differentiation (simplified)
+                    # Compute our position vs anchor using differentiation map
                     differentiation = metric.get('differentiation', {})
-                    our_diff = next(iter(differentiation.values()), 0) if differentiation else 0
+                    # Our company name may not be directly present in differentiation map; leave 'Parity' when unknown
+                    our_diff = differentiation.get(market_info.get('company_name', ''), 0)
                     
                     gap_str = f"{our_diff:+.1%}" if our_diff != 0 else "Parity"
                     confidence = metric.get('confidence', 0)

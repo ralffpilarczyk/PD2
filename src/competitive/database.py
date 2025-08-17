@@ -188,6 +188,32 @@ class CompetitiveDatabase:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_search_cache_expires ON search_cache(expires_at)")
             
             conn.commit()
+
+            # Non-breaking migrations (best-effort, ignore if columns already exist)
+            try:
+                conn.execute("ALTER TABLE competitors ADD COLUMN is_self INTEGER DEFAULT 0")
+            except Exception:
+                pass
+
+            try:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS comparisons (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        market_cell_id INTEGER,
+                        metric_id INTEGER,
+                        subject_value REAL,
+                        anchor_competitor TEXT,
+                        gap REAL,
+                        confidence REAL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (market_cell_id) REFERENCES market_cells (id),
+                        FOREIGN KEY (metric_id) REFERENCES metrics (id)
+                    )
+                    """
+                )
+            except Exception:
+                pass
     
     def insert_company(self, name: str, context: Dict[str, Any]) -> int:
         """Insert company and return company_id"""
@@ -220,14 +246,17 @@ class CompetitiveDatabase:
     
     def insert_competitor(self, market_cell_id: int, name: str, 
                          parent_company: str = None, evidence_score: float = 0.0,
-                         presence_evidence: str = None) -> int:
+                          presence_evidence: str = None, is_self: int = 0) -> int:
         """Insert competitor and return competitor_id"""
         with self.get_connection() as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 INSERT INTO competitors 
-                (market_cell_id, name, parent_company, evidence_score, presence_evidence)
-                VALUES (?, ?, ?, ?, ?)
-            """, (market_cell_id, name, parent_company, evidence_score, presence_evidence))
+                (market_cell_id, name, parent_company, evidence_score, presence_evidence, is_self)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (market_cell_id, name, parent_company, evidence_score, presence_evidence, is_self)
+            )
             return cursor.lastrowid
     
     def get_company_by_name(self, name: str) -> Optional[sqlite3.Row]:
@@ -255,6 +284,69 @@ class CompetitiveDatabase:
                 ORDER BY evidence_score DESC
             """, (market_cell_id,))
             return cursor.fetchall()
+
+    # --- Provenance helpers ---
+    def upsert_source(self, url: str, title: str = None, source_type: str = None,
+                      date_published: str = None, trust_score: float = None,
+                      cached_content: str = None) -> int:
+        """Insert or update a source record and return its ID."""
+        content_hash = hashlib.md5((cached_content or url or '').encode()).hexdigest()
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                """
+                INSERT OR REPLACE INTO sources (url, title, source_type, date_published, trust_score, cached_content, content_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (url, title, source_type, date_published, trust_score, cached_content, content_hash)
+            )
+            return cursor.lastrowid
+
+    def link_observation_to_source(self, observation_id: int, source_id: int, citation_text: str = None):
+        """Create link between observation and source (idempotent)."""
+        with self.get_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO observation_sources (observation_id, source_id, citation_text)
+                VALUES (?, ?, ?)
+                """,
+                (observation_id, source_id, citation_text)
+            )
+
+    def get_run_directory(self) -> Path:
+        """Return the run directory (parent of the database file)."""
+        return Path(self.db_path).parent
+
+    def save_source_snapshot(self, url: str, content: str) -> Path:
+        """Save a local snapshot of source content under competitive/sources and return path."""
+        run_dir = self.get_run_directory()
+        sources_dir = run_dir / "sources"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+        content_hash = hashlib.md5((content or url or '').encode()).hexdigest()
+        file_path = sources_dir / f"{content_hash}.txt"
+        try:
+            file_path.write_text(content or '', encoding='utf-8')
+        except Exception:
+            pass
+        return file_path
+
+    # --- Convenience helpers ---
+    def get_or_create_self_competitor(self, market_cell_id: int, company_name: str) -> int:
+        """Ensure a self competitor record exists for given market cell; return its ID."""
+        with self.get_connection() as conn:
+            row = conn.execute(
+                "SELECT id FROM competitors WHERE market_cell_id = ? AND name = ?",
+                (market_cell_id, company_name)
+            ).fetchone()
+            if row:
+                return row['id']
+            cursor = conn.execute(
+                """
+                INSERT INTO competitors (market_cell_id, name, parent_company, evidence_score, presence_evidence, is_self)
+                VALUES (?, ?, ?, ?, ?, 1)
+                """,
+                (market_cell_id, company_name, company_name, 1.0, "Subject company")
+            )
+            return cursor.lastrowid
     
     def cache_search_query(self, query_text: str, company_name: str, 
                           market_cell: str, metric_name: str,

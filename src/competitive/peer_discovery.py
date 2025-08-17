@@ -11,6 +11,7 @@ from ..utils import thread_safe_print, retry_with_backoff
 from .database import CompetitiveDatabase
 import google.generativeai as genai
 from google.genai import types
+from .entity_resolution import resolve_entities
 
 
 class PeerDiscovery:
@@ -44,7 +45,7 @@ class PeerDiscovery:
         Generate intelligent, context-aware search queries for finding competitors.
         Uses company understanding to create targeted searches.
         """
-        thread_safe_print(f"Generating search queries for market cell: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}")
+        thread_safe_print(f"Generating search queries for market cell: {market_cell['product_service']} x {market_cell['geography']} x {market_cell['customer_segment']}")
         
         prompt = f"""Based on this company context, generate targeted search queries for direct competitors in the specified market cell:
 
@@ -92,7 +93,7 @@ Focus on finding companies that compete directly in this specific market cell.""
                         valid_queries.append(query.strip())
                 
                 if valid_queries:
-                    thread_safe_print(f"✓ Generated {len(valid_queries)} search queries")
+                    thread_safe_print(f"Generated {len(valid_queries)} search queries")
                     return valid_queries
                 else:
                     raise ValueError("No valid queries generated")
@@ -101,7 +102,7 @@ Focus on finding companies that compete directly in this specific market cell.""
                 raise ValueError("No valid JSON array found in response")
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Error generating search queries: {e}")
+            thread_safe_print(f"Error generating search queries: {e}")
             # Return fallback queries
             company_name = company_context.get('company_name', 'company')
             industry = company_context.get('industry', 'industry')
@@ -128,7 +129,7 @@ Focus on finding companies that compete directly in this specific market cell.""
         )
         
         if cached_result:
-            thread_safe_print(f"✓ Using cached search result for: {search_query[:50]}...")
+            thread_safe_print(f"Using cached search result for: {search_query[:50]}...")
             return {
                 'response_text': cached_result['response_json'],
                 'grounding_metadata': json.loads(cached_result['grounding_metadata_json'])
@@ -137,7 +138,7 @@ Focus on finding companies that compete directly in this specific market cell.""
         # Rate limit before new search
         self._rate_limit_search()
         
-        thread_safe_print(f"🔍 Searching: {search_query}")
+        thread_safe_print(f"Searching: {search_query}")
         
         # Configure grounding tool
         grounding_tool = types.Tool(google_search=types.GoogleSearch())
@@ -198,11 +199,11 @@ Focus on finding companies that compete directly in this specific market cell.""
                 grounding_metadata=grounding_metadata
             )
             
-            thread_safe_print(f"✓ Search completed with {len(grounding_metadata.get('grounding_chunks', []))} sources")
+            thread_safe_print(f"Search completed with {len(grounding_metadata.get('grounding_chunks', []))} sources")
             return result
             
         except Exception as e:
-            thread_safe_print(f"⚠ Search failed: {e}")
+            thread_safe_print(f"Search failed: {e}")
             return None
     
     def extract_competitors_from_search(self, search_results: List[Dict[str, Any]], 
@@ -225,7 +226,7 @@ Focus on finding companies that compete directly in this specific market cell.""
                 all_sources.extend(sources)
         
         if not combined_text.strip():
-            thread_safe_print("⚠ No search results to process")
+            thread_safe_print("No search results to process")
             return []
         
         prompt = f"""Extract direct competitors from these search results for the specified market cell:
@@ -294,18 +295,21 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
                         comp['source_quality'] = comp.get('source_quality', 'medium')
                         
                         valid_competitors.append(comp)
+
+                # Resolve entities (subsidiaries/brands/JVs → parent) per market cell
+                valid_competitors = resolve_entities(valid_competitors, market_cell)
                 
                 # Sort by evidence score (highest first) and limit to top performers
                 valid_competitors.sort(key=lambda x: x['evidence_score'], reverse=True)
                 
-                thread_safe_print(f"✓ Extracted {len(valid_competitors)} competitors")
+                thread_safe_print(f"Extracted {len(valid_competitors)} competitors")
                 return valid_competitors[:7]  # Max 7 competitors per market cell
                 
             else:
                 raise ValueError("No valid JSON array found in response")
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Error extracting competitors: {e}")
+            thread_safe_print(f"Error extracting competitors: {e}")
             return []
     
     def discover_peers_for_market_cell(self, company_context: Dict[str, Any], 
@@ -317,7 +321,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
         Returns list of discovered competitors with database IDs.
         """
         market_cell_key = f"{market_cell['product_service']}_{market_cell['geography']}_{market_cell['customer_segment']}"
-        thread_safe_print(f"\n🔍 Discovering peers for market cell: {market_cell_key}")
+        thread_safe_print(f"\nDiscovering peers for market cell: {market_cell_key}")
         
         # Step 1: Generate search queries
         search_queries = self.generate_competitor_search_queries(company_context, market_cell)
@@ -334,14 +338,14 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
                 search_results.append(result)
         
         if not search_results:
-            thread_safe_print("⚠ No search results obtained")
+            thread_safe_print("No search results obtained")
             return []
         
         # Step 3: Extract competitors from search results
         competitors = self.extract_competitors_from_search(search_results, company_context, market_cell)
         
         if not competitors:
-            thread_safe_print("⚠ No competitors extracted from search results")
+            thread_safe_print("No competitors extracted from search results")
             return []
         
         # Step 4: Select top competitors and save to database
@@ -360,7 +364,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
             comp['competitor_id'] = competitor_id
             competitor_records.append(comp)
         
-        thread_safe_print(f"✅ Discovered {len(competitor_records)} competitors for {market_cell_key}")
+        thread_safe_print(f"Discovered {len(competitor_records)} competitors for {market_cell_key}")
         return competitor_records
     
     def discover_all_peers(self, company_id: int, max_competitors_per_cell: int = 3) -> Dict[int, List[Dict[str, Any]]]:
@@ -368,7 +372,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
         Discover competitors for all market cells of a company.
         Returns dict mapping market_cell_id to list of competitors.
         """
-        thread_safe_print(f"\n🚀 Starting peer discovery for company ID: {company_id}")
+        thread_safe_print(f"\nStarting peer discovery for company ID: {company_id}")
         
         # Get company context and market cells
         company_row = self.db.get_connection().execute(
@@ -376,14 +380,14 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
         ).fetchone()
         
         if not company_row:
-            thread_safe_print(f"⚠ Company not found: {company_id}")
+            thread_safe_print(f"Company not found: {company_id}")
             return {}
         
         company_context = json.loads(company_row['context_json'])
         market_cells = self.db.get_market_cells_for_company(company_id)
         
         if not market_cells:
-            thread_safe_print(f"⚠ No market cells found for company: {company_id}")
+            thread_safe_print(f"No market cells found for company: {company_id}")
             return {}
         
         # Discover peers for each market cell
@@ -409,5 +413,5 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
         # Clean up expired cache entries
         self.db.cleanup_expired_cache()
         
-        thread_safe_print(f"\n✅ Peer discovery complete! Found competitors for {len(all_competitors)} market cells")
+        thread_safe_print(f"\nPeer discovery complete. Found competitors for {len(all_competitors)} market cells")
         return all_competitors

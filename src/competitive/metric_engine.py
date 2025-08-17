@@ -85,7 +85,7 @@ class MetricEngine:
         Select optimal metrics for a market cell using capability framework.
         Returns list of metric definitions with capability mappings.
         """
-        thread_safe_print(f"Selecting metrics for market cell: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}")
+        thread_safe_print(f"Selecting metrics for market cell: {market_cell['product_service']} x {market_cell['geography']} x {market_cell['customer_segment']}")
         
         prompt = f"""Select optimal competitive metrics for this market cell using the capability framework:
 
@@ -155,22 +155,37 @@ Focus on metrics that executives care about and that drive business value."""
                         valid_metrics.append(metric)
                         capability_coverage.add(metric['capability_family'])
                 
-                # Check capability coverage
-                missing_capabilities = set(self.CAPABILITY_FAMILIES.keys()) - capability_coverage
+                # Check capability coverage and backfill to enforce coverage
+                missing_capabilities = list(set(self.CAPABILITY_FAMILIES.keys()) - capability_coverage)
                 if missing_capabilities:
-                    thread_safe_print(f"⚠ Missing capability coverage: {missing_capabilities}")
+                    thread_safe_print(f"Missing capability coverage: {missing_capabilities}")
+                    for family_key in missing_capabilities:
+                        samples = self.CAPABILITY_FAMILIES[family_key].get('sample_metrics', [])
+                        if samples:
+                            name = samples[0].title()
+                            valid_metrics.append({
+                                "name": name,
+                                "definition": samples[0],
+                                "capability_family": family_key,
+                                "unit_hint": "numeric",
+                                "directionality": "higher_better",
+                                "value_impact_category": "growth",
+                                "priority_score": 0.5,
+                                "search_keywords": [samples[0]],
+                                "rationale": "Backfilled to ensure capability coverage"
+                            })
                 
                 # Sort by priority score
                 valid_metrics.sort(key=lambda x: x['priority_score'], reverse=True)
                 
-                thread_safe_print(f"✓ Selected {len(valid_metrics)} metrics covering {len(capability_coverage)}/6 capabilities")
+                thread_safe_print(f"Selected {len(valid_metrics)} metrics covering {len(capability_coverage)}/6 capabilities")
                 return valid_metrics[:target_count]
                 
             else:
                 raise ValueError("No valid JSON array found in response")
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Error selecting metrics: {e}")
+            thread_safe_print(f"Error selecting metrics: {e}")
             # Return fallback metrics
             return self._get_fallback_metrics(market_cell)
     
@@ -236,7 +251,7 @@ Focus on metrics that executives care about and that drive business value."""
                 ))
                 metric_ids.append(cursor.lastrowid)
         
-        thread_safe_print(f"✓ Saved {len(metric_ids)} metrics to database")
+        thread_safe_print(f"Saved {len(metric_ids)} metrics to database")
         return metric_ids
     
     def generate_metric_search_query(self, company_context: Dict[str, Any],
@@ -291,7 +306,7 @@ Return single optimized query only, no explanation needed."""
                 return f"{competitor_name} {market_cell['geography']} {keywords} 2024"
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Error generating search query: {e}")
+            thread_safe_print(f"Error generating search query: {e}")
             # Fallback query
             keywords = ' '.join(metric.get('search_keywords', [metric['name'].lower()]))
             return f"{competitor_name} {market_cell['geography']} {keywords} 2024"
@@ -317,76 +332,86 @@ Return single optimized query only, no explanation needed."""
                 'grounding_metadata': json.loads(cached_result['grounding_metadata_json'])
             }
         
-        # Rate limit before new search
-        self._rate_limit_search()
-        
-        thread_safe_print(f"🔍 Searching {metric_name}: {search_query}")
-        
-        # Configure grounding tool
-        grounding_tool = types.Tool(google_search=types.GoogleSearch())
-        config = types.GenerateContentConfig(tools=[grounding_tool])
-        
-        try:
-            response = retry_with_backoff(
-                lambda: self.grounding_model.generate_content(
-                    contents=f"Find specific data for this metric search: {search_query}. Focus on numerical values, units, time periods, and source credibility.",
-                    config=config
+        # Try up to 3 attempts: original + 2 broadened variants
+        current_query = search_query
+        for attempt in range(3):
+            # Rate limit before new search
+            self._rate_limit_search()
+            thread_safe_print(f"Searching {metric_name}: {current_query}")
+
+            # Configure grounding tool
+            grounding_tool = types.Tool(google_search=types.GoogleSearch())
+            config = types.GenerateContentConfig(tools=[grounding_tool])
+
+            try:
+                response = retry_with_backoff(
+                    lambda: self.grounding_model.generate_content(
+                        contents=f"Find specific data for this metric search: {current_query}. Focus on numerical values, units, time periods, and source credibility.",
+                        config=config
+                    )
                 )
-            )
-            
-            # Extract grounding metadata
-            grounding_metadata = {}
-            if (hasattr(response, 'candidates') and 
-                response.candidates and 
-                hasattr(response.candidates[0], 'grounding_metadata')):
-                
-                metadata = response.candidates[0].grounding_metadata
-                grounding_metadata = {
-                    'web_search_queries': getattr(metadata, 'web_search_queries', []),
-                    'grounding_chunks': [],
-                    'grounding_supports': []
-                }
-                
-                # Extract grounding chunks (sources)
-                if hasattr(metadata, 'grounding_chunks'):
-                    for chunk in metadata.grounding_chunks:
-                        if hasattr(chunk, 'web'):
-                            grounding_metadata['grounding_chunks'].append({
-                                'uri': chunk.web.uri,
-                                'title': chunk.web.title
+
+                # Extract grounding metadata
+                grounding_metadata = {}
+                if (hasattr(response, 'candidates') and 
+                    response.candidates and 
+                    hasattr(response.candidates[0], 'grounding_metadata')):
+
+                    metadata = response.candidates[0].grounding_metadata
+                    grounding_metadata = {
+                        'web_search_queries': getattr(metadata, 'web_search_queries', []),
+                        'grounding_chunks': [],
+                        'grounding_supports': []
+                    }
+
+                    # Extract grounding chunks (sources)
+                    if hasattr(metadata, 'grounding_chunks'):
+                        for chunk in metadata.grounding_chunks:
+                            if hasattr(chunk, 'web'):
+                                grounding_metadata['grounding_chunks'].append({
+                                    'uri': chunk.web.uri,
+                                    'title': chunk.web.title
+                                })
+
+                    # Extract grounding supports (citations)
+                    if hasattr(metadata, 'grounding_supports'):
+                        for support in metadata.grounding_supports:
+                            grounding_metadata['grounding_supports'].append({
+                                'segment_text': support.segment.text,
+                                'start_index': support.segment.start_index,
+                                'end_index': support.segment.end_index,
+                                'chunk_indices': support.grounding_chunk_indices
                             })
-                
-                # Extract grounding supports (citations)
-                if hasattr(metadata, 'grounding_supports'):
-                    for support in metadata.grounding_supports:
-                        grounding_metadata['grounding_supports'].append({
-                            'segment_text': support.segment.text,
-                            'start_index': support.segment.start_index,
-                            'end_index': support.segment.end_index,
-                            'chunk_indices': support.grounding_chunk_indices
-                        })
-            
-            result = {
-                'response_text': response.text,
-                'grounding_metadata': grounding_metadata
-            }
-            
-            # Cache the result
-            self.db.cache_search_query(
-                query_text=search_query,
-                company_name=company_name,
-                market_cell=market_cell_key,
-                metric_name=metric_name,
-                response=response.text,
-                grounding_metadata=grounding_metadata
-            )
-            
-            thread_safe_print(f"✓ Search completed with {len(grounding_metadata.get('grounding_chunks', []))} sources")
-            return result
-            
-        except Exception as e:
-            thread_safe_print(f"⚠ Search failed: {e}")
-            return None
+
+                result = {
+                    'response_text': response.text,
+                    'grounding_metadata': grounding_metadata
+                }
+
+                # Cache the result
+                self.db.cache_search_query(
+                    query_text=current_query,
+                    company_name=company_name,
+                    market_cell=market_cell_key,
+                    metric_name=metric_name,
+                    response=response.text,
+                    grounding_metadata=grounding_metadata
+                )
+
+                num_sources = len(grounding_metadata.get('grounding_chunks', []))
+                thread_safe_print(f"Search completed with {num_sources} sources")
+                if num_sources == 0 and attempt < 2:
+                    # Broaden and retry
+                    current_query = self._broaden_query(current_query, attempt + 1)
+                    continue
+                return result
+
+            except Exception as e:
+                thread_safe_print(f"Search failed: {e}")
+                if attempt < 2:
+                    current_query = self._broaden_query(current_query, attempt + 1)
+                    continue
+                return None
     
     def extract_metric_data(self, search_results: Dict[str, Any], 
                            competitor_name: str, metric: Dict[str, Any]) -> Dict[str, Any]:
@@ -449,13 +474,13 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                 if search_results.get('grounding_metadata'):
                     extracted_data['grounding_chunks'] = search_results['grounding_metadata'].get('grounding_chunks', [])
                 
-                thread_safe_print(f"✓ Extracted {len(extracted_data.get('values', []))} values for {metric['name']}")
+                thread_safe_print(f"Extracted {len(extracted_data.get('values', []))} values for {metric['name']}")
                 return extracted_data
             else:
                 raise ValueError("No valid JSON found in response")
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Error extracting metric data: {e}")
+            thread_safe_print(f"Error extracting metric data: {e}")
             return {"metric_found": False, "values": [], "confidence": 0.0}
     
     def collect_metrics_for_competitor(self, company_context: Dict[str, Any],
@@ -469,12 +494,12 @@ Extract ALL numerical values found, even if multiple or conflicting."""
         market_cell_key = f"{market_cell['product_service']}_{market_cell['geography']}_{market_cell['customer_segment']}"
         competitor_name = competitor['name']
         
-        thread_safe_print(f"\n📊 Collecting metrics for {competitor_name} in {market_cell_key}")
+        thread_safe_print(f"\nCollecting metrics for {competitor_name} in {market_cell_key}")
         
         collected_data = []
         
         for metric in metrics:
-            thread_safe_print(f"  🔍 Searching: {metric['name']}")
+            thread_safe_print(f"  Searching: {metric['name']}")
             
             # Generate search query
             search_query = self.generate_metric_search_query(
@@ -510,11 +535,11 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             if extracted_data.get('metric_found'):
                 values_count = len(extracted_data.get('values', []))
                 avg_confidence = sum(v.get('confidence', 0) for v in extracted_data.get('values', [])) / max(1, values_count)
-                thread_safe_print(f"    ✓ Found {values_count} values (avg confidence: {avg_confidence:.2f})")
+                thread_safe_print(f"    Found {values_count} values (avg confidence: {avg_confidence:.2f})")
             else:
-                thread_safe_print(f"    ⚠ No data found")
+                thread_safe_print(f"    No data found")
         
-        thread_safe_print(f"✅ Collected metrics for {competitor_name}: {sum(1 for d in collected_data if d.get('metric_found'))} of {len(metrics)} found")
+        thread_safe_print(f"Collected metrics for {competitor_name}: {sum(1 for d in collected_data if d.get('metric_found'))} of {len(metrics)} found")
         return collected_data
     
     def collect_all_metrics(self, company_id: int) -> Dict[int, Dict[int, List[Dict[str, Any]]]]:
@@ -522,7 +547,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
         Collect metrics for all competitors across all market cells of a company.
         Returns nested dict: {market_cell_id: {competitor_id: [metric_data]}}
         """
-        thread_safe_print(f"\n🚀 Starting metric collection for company ID: {company_id}")
+        thread_safe_print(f"\nStarting metric collection for company ID: {company_id}")
         
         # Get company context
         company_row = self.db.get_connection().execute(
@@ -530,7 +555,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
         ).fetchone()
         
         if not company_row:
-            thread_safe_print(f"⚠ Company not found: {company_id}")
+            thread_safe_print(f"Company not found: {company_id}")
             return {}
         
         company_context = json.loads(company_row['context_json'])
@@ -538,7 +563,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
         # Get market cells
         market_cells = self.db.get_market_cells_for_company(company_id)
         if not market_cells:
-            thread_safe_print(f"⚠ No market cells found for company: {company_id}")
+            thread_safe_print(f"No market cells found for company: {company_id}")
             return {}
         
         all_metric_data = {}
@@ -552,7 +577,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                 'materiality_score': market_cell_row['materiality_score']
             }
             
-            thread_safe_print(f"\n📈 Processing market cell: {market_cell_dict['product_service']} × {market_cell_dict['geography']} × {market_cell_dict['customer_segment']}")
+            thread_safe_print(f"\nProcessing market cell: {market_cell_dict['product_service']} x {market_cell_dict['geography']} x {market_cell_dict['customer_segment']}")
             
             # Select metrics for this market cell
             metrics = self.select_metrics_for_market_cell(
@@ -562,16 +587,21 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             )
             
             if not metrics:
-                thread_safe_print(f"⚠ No metrics selected for market cell {market_cell_id}")
+                thread_safe_print(f"No metrics selected for market cell {market_cell_id}")
                 continue
             
             # Save metrics to database
             metric_ids = self.save_metrics_to_database(metrics)
             
+            # Ensure subject company competitor exists
+            try:
+                self.db.get_or_create_self_competitor(market_cell_id, company_context.get('company_name', 'Company'))
+            except Exception:
+                pass
             # Get competitors for this market cell
             competitors = self.db.get_competitors_for_market_cell(market_cell_id)
             if not competitors:
-                thread_safe_print(f"⚠ No competitors found for market cell {market_cell_id}")
+                thread_safe_print(f"No competitors found for market cell {market_cell_id}")
                 continue
             
             # Collect metrics for each competitor
@@ -599,7 +629,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
         # Clean up expired cache
         self.db.cleanup_expired_cache()
         
-        thread_safe_print(f"\n✅ Metric collection complete! Processed {len(all_metric_data)} market cells")
+        thread_safe_print(f"\nMetric collection complete. Processed {len(all_metric_data)} market cells")
         return all_metric_data
     
     def get_ecb_exchange_rates(self, date: str = None) -> Dict[str, float]:
@@ -615,8 +645,11 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             return self.fx_rates_cache
         
         try:
-            # ECB daily rates API (free, authoritative)
-            url = f"https://api.exchangerate-api.com/v4/latest/EUR"
+            # Use exchangerate.host with ECB source and optional historical date
+            if date is None:
+                url = "https://api.exchangerate.host/latest?base=EUR&source=ecb"
+            else:
+                url = f"https://api.exchangerate.host/{date}?base=EUR&source=ecb"
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             
@@ -630,11 +663,11 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             self.fx_rates_cache = rates
             self.fx_cache_date = date
             
-            thread_safe_print(f"✓ Retrieved exchange rates for {len(rates)} currencies")
+            thread_safe_print(f"Retrieved exchange rates for {len(rates)} currencies")
             return rates
             
         except Exception as e:
-            thread_safe_print(f"⚠ Error fetching exchange rates: {e}")
+            thread_safe_print(f"Error fetching exchange rates: {e}")
             # Return fallback rates (major currencies only)
             return {
                 'EUR': 1.0,
@@ -683,7 +716,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             return converted_value, fx_info
             
         except Exception as e:
-            thread_safe_print(f"⚠ Currency conversion failed: {e}")
+            thread_safe_print(f"Currency conversion failed: {e}")
             return value, f"Conversion failed, kept original {from_currency}"
     
     def normalize_period(self, value: float, period: str, target_period: str = "TTM") -> Tuple[float, str]:
@@ -714,7 +747,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             return value, f"Period alignment not possible: {period} vs {target_period}"
             
         except Exception as e:
-            thread_safe_print(f"⚠ Period normalization failed: {e}")
+            thread_safe_print(f"Period normalization failed: {e}")
             return value, f"Period normalization failed, kept original period"
     
     def classify_comparability(self, metric_name: str, value_data: Dict[str, Any], 
@@ -746,7 +779,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                 return "proxy"
                 
         except Exception as e:
-            thread_safe_print(f"⚠ Comparability classification failed: {e}")
+            thread_safe_print(f"Comparability classification failed: {e}")
             return "proxy"  # Conservative default
     
     def normalize_observation(self, metric_data: Dict[str, Any], 
@@ -819,7 +852,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                 normalized_observations.append(normalized_observation)
                 
             except Exception as e:
-                thread_safe_print(f"⚠ Error normalizing observation: {e}")
+                thread_safe_print(f"Error normalizing observation: {e}")
                 continue
         
         return normalized_observations
@@ -846,19 +879,21 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                 observation_ids.append(cursor.lastrowid)
         
         return observation_ids
+
+    # Removed domain-based trust scoring to adhere to principles-based approach
     
     def process_and_save_all_metrics(self, company_id: int) -> Dict[str, Any]:
         """
         Complete Phase 2 pipeline: collect metrics, normalize data, save to database.
         Returns summary of processed data.
         """
-        thread_safe_print(f"\n🚀 Starting Phase 2: Metric Collection & Normalization for company {company_id}")
+        thread_safe_print(f"\nStarting Phase 2: Metric Collection & Normalization for company {company_id}")
         
         # Step 1: Collect all raw metric data
         all_metric_data = self.collect_all_metrics(company_id)
         
         if not all_metric_data:
-            thread_safe_print("❌ No metric data collected")
+            thread_safe_print("No metric data collected")
             return {"success": False, "error": "No metric data collected"}
         
         # Step 2: Process and normalize each metric observation
@@ -890,7 +925,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                         metric_id = metric_name_to_id.get(metric_name)
                         
                         if not metric_id:
-                            thread_safe_print(f"⚠ Metric ID not found for: {metric_name}")
+                            thread_safe_print(f"Metric ID not found for: {metric_name}")
                             continue
                         
                         # Normalize the observations
@@ -907,15 +942,28 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                             
                             processing_summary["observations_saved"] += len(observation_ids)
                             
-                            thread_safe_print(f"✓ Saved {len(observation_ids)} observations for {metric_name}")
+                            thread_safe_print(f"Saved {len(observation_ids)} observations for {metric_name}")
+
+                            # Provenance: upsert sources from grounding and link to each observation
+                            try:
+                                grounding_chunks = metric_data.get('grounding_chunks', [])
+                                if grounding_chunks and observation_ids:
+                                    for chunk in grounding_chunks:
+                                        url = chunk.get('uri')
+                                        title = chunk.get('title')
+                                        source_id = self.db.upsert_source(url=url, title=title, trust_score=None)
+                                        for obs_id in observation_ids:
+                                            self.db.link_observation_to_source(observation_id=obs_id, source_id=source_id)
+                            except Exception as link_err:
+                                thread_safe_print(f"Error linking provenance: {link_err}")
                         
                     except Exception as e:
                         processing_summary["normalization_errors"] += 1
-                        thread_safe_print(f"⚠ Error processing metric data: {e}")
+                        thread_safe_print(f"Error processing metric data: {e}")
                         continue
         
         # Step 3: Generate processing summary
-        thread_safe_print(f"\n✅ Phase 2 Complete - Processing Summary:")
+        thread_safe_print(f"\nPhase 2 Complete - Processing Summary:")
         thread_safe_print(f"  Market Cells: {processing_summary['market_cells_processed']}")
         thread_safe_print(f"  Competitors: {processing_summary['competitors_processed']}")
         thread_safe_print(f"  Metrics Attempted: {processing_summary['metrics_attempted']}")

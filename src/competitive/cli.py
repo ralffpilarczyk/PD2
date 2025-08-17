@@ -57,7 +57,7 @@ class CompetitiveAnalysisCLI:
         self.strategy_bundler = StrategyBundler(self.db)
         self.report_generator = CompetitiveReportGenerator(self.db, str(self.output_dir))
         
-        thread_safe_print(f"Competitive Analysis CLI initialized")
+        thread_safe_print("Competitive Analysis CLI initialized")
         thread_safe_print(f"Output directory: {self.output_dir}")
         thread_safe_print(f"Database: {db_path}")
     
@@ -165,29 +165,29 @@ class CompetitiveAnalysisCLI:
         Returns analysis results or None if failed.
         """
         try:
-            thread_safe_print(f"\n🚀 Starting competitive analysis for: {company_name}")
+            thread_safe_print(f"\nStarting competitive analysis for: {company_name}")
             
             # Phase 1: Market Cell Discovery
-            thread_safe_print("\n📊 Phase 1: Company Analysis & Market Cell Discovery")
+            thread_safe_print("\nPhase 1: Company Analysis & Market Cell Discovery")
             company_context, market_cells = self.market_mapper.analyze_company_from_documents(
                 document_content=document_content,
                 company_name=company_name
             )
             
             if not market_cells:
-                thread_safe_print("❌ No market cells discovered. Analysis cannot continue.")
+                thread_safe_print("No market cells discovered. Analysis cannot continue.")
                 return None
             
             # Get company ID from database
             company_row = self.db.get_company_by_name(company_context['company_name'])
             if not company_row:
-                thread_safe_print("❌ Company not found in database after insertion.")
+                thread_safe_print("Company not found in database after insertion.")
                 return None
             
             company_id = company_row['id']
             
             # Phase 2: Peer Discovery
-            thread_safe_print(f"\n🔍 Phase 2: Peer Discovery for {len(market_cells)} market cells")
+            thread_safe_print(f"\nPhase 2: Peer Discovery for {len(market_cells)} market cells")
             all_competitors = self.peer_discovery.discover_all_peers(
                 company_id=company_id,
                 max_competitors_per_cell=max_competitors
@@ -201,34 +201,34 @@ class CompetitiveAnalysisCLI:
             json_evidence_path = ""
             
             if analysis_scope in ["phase2", "phase3"]:
-                thread_safe_print(f"\n📊 Phase 2: Metric Collection & Data Normalization")
+                thread_safe_print(f"\nPhase 2: Metric Collection & Data Normalization")
                 metrics_results = self.metric_engine.process_and_save_all_metrics(company_id)
                 
                 if metrics_results.get('success'):
                     metrics_summary = metrics_results['summary']
-                    thread_safe_print(f"✅ Phase 2 completed successfully!")
+                    thread_safe_print(f"Phase 2 completed successfully")
                 else:
-                    thread_safe_print(f"⚠ Phase 2 completed with limited data: {metrics_results.get('error', 'Unknown error')}")
+                    thread_safe_print(f"Phase 2 completed with limited data: {metrics_results.get('error', 'Unknown error')}")
                     metrics_summary = {"error": metrics_results.get('error')}
             
             # Phase 3: Competitive Analysis & Strategy Generation (if requested)
             if analysis_scope == "phase3":
-                thread_safe_print(f"\n🎯 Phase 3: Competitive Analysis & Strategy Generation")
+                thread_safe_print(f"\nPhase 3: Competitive Analysis & Strategy Generation")
                 
                 # Step 1: Competitive Scoring & Analysis
                 competitive_analyses = self.competitive_analyzer.analyze_all_market_cells(company_id)
                 
                 if competitive_analyses:
-                    thread_safe_print(f"✅ Competitive analysis completed for {len(competitive_analyses)} market cells")
+                    thread_safe_print(f"Competitive analysis completed for {len(competitive_analyses)} market cells")
                     
                     # Step 2: Strategy Bundle Generation
                     strategy_bundles = self.strategy_bundler.generate_all_strategy_bundles(company_id, competitive_analyses)
                     
                     if strategy_bundles:
-                        thread_safe_print(f"✅ Strategy bundles generated for {len(strategy_bundles)} market cells")
+                        thread_safe_print(f"Strategy bundles generated for {len(strategy_bundles)} market cells")
                     
                     # Step 3: Report Generation
-                    thread_safe_print(f"\n📄 Generating comprehensive reports...")
+                    thread_safe_print(f"\nGenerating comprehensive reports...")
                     
                     html_report_path = self.report_generator.generate_comprehensive_report(
                         company_id=company_id,
@@ -242,9 +242,9 @@ class CompetitiveAnalysisCLI:
                         strategy_bundles=strategy_bundles
                     )
                     
-                    thread_safe_print(f"✅ Phase 3 completed successfully!")
+                    thread_safe_print(f"Phase 3 completed successfully")
                 else:
-                    thread_safe_print(f"⚠ Phase 3 could not proceed - no competitive analysis data")
+                    thread_safe_print(f"Phase 3 could not proceed - no competitive analysis data")
             
             # Compile results
             results = {
@@ -271,11 +271,11 @@ class CompetitiveAnalysisCLI:
             with open(results_file, 'w', encoding='utf-8') as f:
                 json.dump(results, f, indent=2, default=str)
             
-            thread_safe_print(f"\n✅ Analysis complete! Results saved to: {results_file}")
+            thread_safe_print(f"\nAnalysis complete. Results saved to: {results_file}")
             return results
             
         except Exception as e:
-            thread_safe_print(f"❌ Analysis failed: {e}")
+            thread_safe_print(f"Analysis failed: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -374,7 +374,7 @@ class CompetitiveAnalysisCLI:
         html_path = results.get('analysis_metadata', {}).get('html_report_path')
         json_path = results.get('analysis_metadata', {}).get('json_evidence_path')
         if html_path:
-            print(f"\n📄 Reports Generated:")
+                print(f"\nReports Generated:")
             print(f"  HTML Report: {html_path}")
             if json_path:
                 print(f"  JSON Evidence Pack: {json_path}")
@@ -397,7 +397,7 @@ class CompetitiveAnalysisCLI:
     
     def run_interactive(self):
         """Run interactive CLI session"""
-        print("🔍 Competitive Analysis CLI")
+        print("Competitive Analysis CLI")
         print("=" * 40)
         
         try:
@@ -418,14 +418,14 @@ class CompetitiveAnalysisCLI:
             # Display results
             if results:
                 self.display_results_summary(results)
-                print(f"\n📁 Full results saved to: {self.output_dir}")
+                print(f"\nFull results saved to: {self.output_dir}")
             else:
-                print("\n❌ Analysis failed. Check the output above for errors.")
+                print("\nAnalysis failed. Check the output above for errors.")
                 
         except KeyboardInterrupt:
-            print("\n\n👋 Analysis interrupted by user. Goodbye!")
+            print("\n\nAnalysis interrupted by user. Goodbye!")
         except Exception as e:
-            print(f"\n❌ Unexpected error: {e}")
+            print(f"\nUnexpected error: {e}")
             import traceback
             traceback.print_exc()
 
@@ -434,7 +434,7 @@ def main():
     """Main entry point for CLI"""
     # Check for required environment variables
     if not os.environ.get("GEMINI_API_KEY"):
-        print("❌ Error: GEMINI_API_KEY environment variable not set.")
+        print("Error: GEMINI_API_KEY environment variable not set.")
         print("Please set your Gemini API key in .env file or environment.")
         sys.exit(1)
     

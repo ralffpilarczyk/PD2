@@ -42,12 +42,13 @@ class PeerDiscovery:
         self.last_search_time = time.time()
     
     def generate_competitor_search_queries(self, company_context: Dict[str, Any], 
-                                         market_cell: Dict[str, Any]) -> List[str]:
+                                         business_segment: Dict[str, Any]) -> List[str]:
         """
-        Generate intelligent, context-aware search queries for finding competitors.
-        Uses company understanding to create targeted searches.
+        Generate segment-aware search queries for finding competitors.
+        Uses actual business segment information to create targeted searches.
         """
-        thread_safe_print(f"Generating search queries for market cell: {market_cell['product_service']} x {market_cell['geography']} x {market_cell['customer_segment']}")
+        segment_name = business_segment.get('segment_name', 'Unknown Segment')
+        thread_safe_print(f"Generating search queries for segment: {segment_name}")
         
         # Check if this is a holding company with subsidiaries
         company_name = company_context.get('company_name', '')
@@ -60,16 +61,19 @@ class PeerDiscovery:
 COMPANY CONTEXT:
 {json.dumps(company_context, indent=2)}
 
-MARKET CELL: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}
+BUSINESS SEGMENT: {business_segment['segment_name']}
+Description: {business_segment.get('description', '')}
+Geographic Focus: {business_segment.get('geographic_focus', '')}
+Products/Services: {business_segment.get('products_services', '')}
 
 This appears to be a holding company. Generate 3-4 search queries that will find:
-1. The company's own operating subsidiaries in this market
+1. The company's own operating subsidiaries in this segment
 2. Direct competitors to those subsidiaries
 
-Query patterns to use:
-- "[Company name] subsidiaries [geography] [industry sector] operating companies"
-- "[Geography] [industry] operators market share [current year]"
-- "[Geography] [product/service type] providers competitors [current year]"
+Use the segment details to create specific searches:
+- Search for companies in the same segment/business area
+- Include geographic focus if specified
+- Use product/service descriptions from the segment
 
 Return JSON array of 3-4 optimized search queries:
 ["query 1", "query 2", "query 3", "query 4"]"""
@@ -79,14 +83,18 @@ Return JSON array of 3-4 optimized search queries:
 COMPANY CONTEXT:
 {json.dumps(company_context, indent=2)}
 
-MARKET CELL: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}
+BUSINESS SEGMENT: {business_segment['segment_name']}
+Description: {business_segment.get('description', '')}
+Geographic Focus: {business_segment.get('geographic_focus', '')}
+Products/Services: {business_segment.get('products_services', '')}
+Revenue Contribution: {business_segment.get('revenue_contribution', '')}
 
 Generate 2-3 highly specific search queries that will find direct competitors:
-- Include industry-specific terminology from the company context
-- Use geographic qualifiers that match the market cell
-- Include business model descriptors (B2B/B2C/enterprise/consumer)
-- Add current year for fresher results
-- Use competitive keywords extracted from company documents
+- Search for companies operating in the EXACT same segment
+- Include geographic focus from the segment details
+- Use product/service descriptions to find similar companies
+- Focus on companies of similar scale (use revenue contribution as guide)
+- Add recent time qualifiers for current competitors
 
 Examples of good query patterns:
 - "[Geography] [industry] competitors market leaders [current year]"
@@ -370,19 +378,19 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
             thread_safe_print(f"Error extracting competitors: {e}")
             return []
     
-    def discover_peers_for_market_cell(self, company_context: Dict[str, Any], 
-                                     market_cell: Dict[str, Any],
-                                     market_cell_id: int,
-                                     max_competitors: int = 3) -> List[Dict[str, Any]]:
+    def discover_peers_for_segment(self, company_context: Dict[str, Any], 
+                                  business_segment: Dict[str, Any],
+                                  segment_id: int,
+                                  max_competitors: int = 5) -> List[Dict[str, Any]]:
         """
-        Complete peer discovery pipeline for a single market cell.
+        Complete peer discovery pipeline for a single business segment.
         Returns list of discovered competitors with database IDs.
         """
-        market_cell_key = f"{market_cell['product_service']}_{market_cell['geography']}_{market_cell['customer_segment']}"
-        thread_safe_print(f"\nDiscovering peers for market cell: {market_cell_key}")
+        segment_name = business_segment.get('segment_name', 'Unknown')
+        thread_safe_print(f"\nDiscovering peers for segment: {segment_name}")
         
-        # Step 1: Generate search queries
-        search_queries = self.generate_competitor_search_queries(company_context, market_cell)
+        # Step 1: Generate segment-aware search queries
+        search_queries = self.generate_competitor_search_queries(company_context, business_segment)
         
         # Step 2: Execute grounded searches
         search_results = []
@@ -390,7 +398,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
             result = self.search_competitors_grounded(
                 search_query=query,
                 company_name=company_context['company_name'],
-                market_cell_key=market_cell_key
+                market_cell_key=segment_name
             )
             if result:
                 search_results.append(result)
@@ -400,7 +408,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
             return []
         
         # Step 3: Extract competitors from search results
-        competitors = self.extract_competitors_from_search(search_results, company_context, market_cell)
+        competitors = self.extract_competitors_from_search(search_results, company_context, business_segment)
         
         if not competitors:
             thread_safe_print("No competitors extracted from search results")
@@ -412,7 +420,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
         
         for comp in selected_competitors:
             competitor_id = self.db.insert_competitor(
-                market_cell_id=market_cell_id,
+                market_cell_id=segment_id,  # Using segment_id with current schema
                 name=comp['name'],
                 parent_company=comp['parent_company'],
                 evidence_score=comp['evidence_score'],
@@ -422,7 +430,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
             comp['competitor_id'] = competitor_id
             competitor_records.append(comp)
         
-        thread_safe_print(f"Discovered {len(competitor_records)} competitors for {market_cell_key}")
+        thread_safe_print(f"Discovered {len(competitor_records)} competitors for segment: {segment_name}")
         return competitor_records
     
     def discover_all_peers(self, company_id: int, max_competitors_per_cell: int = 3) -> Dict[int, List[Dict[str, Any]]]:
@@ -459,7 +467,7 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
                 'materiality_score': market_cell_row['materiality_score']
             }
             
-            competitors = self.discover_peers_for_market_cell(
+            competitors = self.discover_peers_for_segment(
                 company_context=company_context,
                 market_cell=market_cell_dict,
                 market_cell_id=market_cell_row['id'],

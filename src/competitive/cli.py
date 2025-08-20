@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.utils import thread_safe_print
 from src.competitive.database import CompetitiveDatabase
-from src.competitive.market_mapper import MarketMapper
+from src.competitive.segment_extractor import SegmentExtractor
 from src.competitive.peer_discovery import PeerDiscovery
 from src.competitive.metric_engine import MetricEngine
 # Removed competitive analyzer and strategy bundler - focusing on data collection only
@@ -50,7 +50,7 @@ class CompetitiveAnalysisCLI:
         self.db = CompetitiveDatabase(str(db_path))
         
         # Initialize analysis components
-        self.market_mapper = MarketMapper(self.db)
+        self.segment_extractor = SegmentExtractor(self.db)
         self.peer_discovery = PeerDiscovery(self.db)
         self.metric_engine = MetricEngine(self.db)
         # Removed analyzer and bundler - focusing on pure data collection
@@ -159,16 +159,22 @@ class CompetitiveAnalysisCLI:
             html_report_path = ""
             json_evidence_path = ""
             
-            # Phase 1: Market Cell Discovery
-            thread_safe_print("\nPhase 1: Company Analysis & Market Cell Discovery")
-            company_context, market_cells = self.market_mapper.analyze_company_from_documents(
+            # Phase 1: Business Segment Extraction
+            thread_safe_print("\nPhase 1: Company Analysis & Business Segment Extraction")
+            company_context = self.segment_extractor.extract_company_context(
                 document_content=document_content,
                 company_name=company_name
             )
+            business_segments = self.segment_extractor.extract_business_segments(company_context)
             
-            if not market_cells:
-                thread_safe_print("No market cells discovered. Analysis cannot continue.")
+            if not business_segments:
+                thread_safe_print("No business segments extracted. Analysis cannot continue.")
                 return None
+            
+            # Save company and segments to database
+            company_id = self.db.insert_company(company_context['company_name'], company_context)
+            for segment in business_segments:
+                self.db.insert_business_segment(company_id, segment)
             
             # Get company ID from database
             company_row = self.db.get_company_by_name(company_context['company_name'])
@@ -179,11 +185,36 @@ class CompetitiveAnalysisCLI:
             company_id = company_row['id']
             
             # Phase 2: Peer Discovery
-            thread_safe_print(f"\nPhase 2: Peer Discovery for {len(market_cells)} market cells")
-            all_competitors = self.peer_discovery.discover_all_peers(
-                company_id=company_id,
-                max_competitors_per_cell=max_competitors
-            )
+            thread_safe_print(f"\nPhase 2: Peer Discovery for {len(business_segments)} business segments")
+            
+            # For backward compatibility, create market_cells from segments
+            market_cells = []
+            for segment in business_segments:
+                # Create a market cell entry for backward compatibility
+                cell_id = self.db.insert_market_cell(
+                    company_id=company_id,
+                    product_service=segment.get('products_services', segment['segment_name']),
+                    geography=segment.get('geographic_focus', 'Global'),
+                    customer_segment='Mixed',  # Segments don't always specify this
+                    materiality_score=segment.get('significance_score', 0.5)
+                )
+                market_cells.append({
+                    'id': cell_id,
+                    'product_service': segment.get('products_services', segment['segment_name']),
+                    'geography': segment.get('geographic_focus', 'Global'),
+                    'customer_segment': 'Mixed',
+                    'materiality_score': segment.get('significance_score', 0.5)
+                })
+            
+            all_competitors = {}
+            for segment, cell in zip(business_segments, market_cells):
+                competitors = self.peer_discovery.discover_peers_for_segment(
+                    company_context=company_context,
+                    business_segment=segment,
+                    segment_id=cell['id'],  # Use market_cell_id for now
+                    max_competitors=max_competitors
+                )
+                all_competitors[cell['id']] = competitors
             
             # Phase 2: Metric Collection & Normalization (if requested)
             # Additional variables already initialized at top
@@ -224,8 +255,10 @@ class CompetitiveAnalysisCLI:
             # Compile results
             results = {
                 'company_context': company_context,
-                'market_cells': market_cells,
-                'competitors_by_market_cell': all_competitors,
+                'business_segments': business_segments,
+                'market_cells': market_cells,  # Keep for backward compatibility
+                'competitors_by_segment': all_competitors,
+                'competitors_by_market_cell': all_competitors,  # Keep for backward compatibility
                 'metrics_summary': metrics_summary,
                 'analysis_metadata': {
                     'timestamp': self.timestamp,
@@ -270,12 +303,24 @@ class CompetitiveAnalysisCLI:
         print(f"Business Model: {company_context.get('business_model', 'Unknown')}")
         print(f"Geography: {company_context.get('geography', 'Unknown')}")
         
-        # Market cells
-        market_cells = results['market_cells']
-        print(f"\nMarket Cells ({len(market_cells)}):")
-        for i, cell in enumerate(market_cells, 1):
-            print(f"  {i}. {cell['product_service']} × {cell['geography']} × {cell['customer_segment']}")
-            print(f"     Materiality: {cell['materiality_score']:.2f}")
+        # Business segments
+        segments = results.get('business_segments', [])
+        if segments:
+            print(f"\nBusiness Segments ({len(segments)}):")
+            for i, segment in enumerate(segments, 1):
+                print(f"  {i}. {segment['segment_name']}")
+                if segment.get('revenue_contribution'):
+                    print(f"     Revenue: {segment['revenue_contribution']}")
+                if segment.get('geographic_focus'):
+                    print(f"     Geography: {segment['geographic_focus']}")
+                print(f"     Significance: {segment.get('significance_score', 0):.2f}")
+        else:
+            # Fallback to market cells for backward compatibility
+            market_cells = results.get('market_cells', [])
+            print(f"\nMarket Cells ({len(market_cells)}):")
+            for i, cell in enumerate(market_cells, 1):
+                print(f"  {i}. {cell['product_service']} × {cell['geography']} × {cell['customer_segment']}")
+                print(f"     Materiality: {cell['materiality_score']:.2f}")
         
         # Competitors
         competitors_by_cell = results['competitors_by_market_cell']

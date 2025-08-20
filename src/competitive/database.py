@@ -49,7 +49,26 @@ class CompetitiveDatabase:
                 )
             """)
             
-            # Market cells - product x geography x customer segments
+            # Business segments - actual reported segments from financial documents
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS business_segments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER,
+                    segment_name TEXT NOT NULL,
+                    description TEXT,
+                    revenue_contribution TEXT,
+                    profit_contribution TEXT,
+                    growth_rate TEXT,
+                    key_metrics TEXT,
+                    geographic_focus TEXT,
+                    products_services TEXT,
+                    significance_score REAL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies (id)
+                )
+            """)
+            
+            # Keep market_cells table for backward compatibility (will be deprecated)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS market_cells (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -232,10 +251,43 @@ class CompetitiveDatabase:
             ))
             return cursor.lastrowid
     
+    def insert_business_segment(self, company_id: int, segment: Dict[str, Any]) -> int:
+        """Insert business segment and return segment_id"""
+        with self.get_connection() as conn:
+            cursor = conn.execute("""
+                INSERT INTO business_segments 
+                (company_id, segment_name, description, revenue_contribution, 
+                 profit_contribution, growth_rate, key_metrics, geographic_focus,
+                 products_services, significance_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                company_id,
+                segment.get('segment_name'),
+                segment.get('description'),
+                segment.get('revenue_contribution'),
+                segment.get('profit_contribution'),
+                segment.get('growth_rate'),
+                segment.get('key_metrics'),
+                segment.get('geographic_focus'),
+                segment.get('products_services'),
+                segment.get('significance_score', 0.5)
+            ))
+            return cursor.lastrowid
+    
+    def get_business_segments_for_company(self, company_id: int) -> List[sqlite3.Row]:
+        """Get all business segments for a company sorted by significance"""
+        with self.get_connection() as conn:
+            cursor = conn.execute("""
+                SELECT * FROM business_segments 
+                WHERE company_id = ? 
+                ORDER BY significance_score DESC
+            """, (company_id,))
+            return cursor.fetchall()
+    
     def insert_market_cell(self, company_id: int, product_service: str, 
                           geography: str, customer_segment: str, 
                           materiality_score: float = 0.0) -> int:
-        """Insert market cell and return market_cell_id"""
+        """Insert market cell and return market_cell_id (DEPRECATED - use insert_business_segment)"""
         with self.get_connection() as conn:
             cursor = conn.execute("""
                 INSERT INTO market_cells 

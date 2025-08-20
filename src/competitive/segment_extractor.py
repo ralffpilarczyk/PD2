@@ -156,11 +156,14 @@ CRITICAL:
 - If no clear segments found, return company's main business as single segment"""
 
         try:
+            # Use more aggressive retry for segment extraction as it's critical
             response_text = retry_with_backoff(
                 lambda: self.model.generate_content(
                     prompt,
                     generation_config={"temperature": 0.3, "max_output_tokens": 4000}
-                ).text
+                ).text,
+                max_retries=5,  # More retries for critical segment extraction
+                base_delay=2.0  # Start with longer delay
             )
             
             # Extract JSON array from response
@@ -285,16 +288,67 @@ CRITICAL:
         return sorted_segments
     
     def _fallback_segment_discovery(self, company_context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Fallback when segment extraction fails - create single segment from context"""
-        thread_safe_print("Using fallback segment discovery")
-        return [{
-            "segment_name": company_context.get('company_name', 'Core Business'),
-            "description": company_context.get('products_services', 'Main business operations'),
-            "revenue_contribution": "100%",
-            "profit_contribution": "Unknown",
-            "growth_rate": "Unknown",
-            "key_metrics": company_context.get('financial_highlights', ''),
-            "geographic_focus": ', '.join(company_context.get('primary_markets', ['Global'])[:3]),
-            "products_services": company_context.get('products_services', ''),
-            "significance_score": 1.0
-        }]
+        """Intelligent fallback using company context to infer segments"""
+        thread_safe_print("Using intelligent fallback segment discovery")
+        
+        segments = []
+        
+        # Look for subsidiary companies mentioned in context
+        subsidiaries = company_context.get('other_companies', [])
+        primary_markets = company_context.get('primary_markets', [])
+        
+        if subsidiaries:
+            # Create segments from known subsidiaries
+            thread_safe_print(f"Found {len(subsidiaries)} subsidiaries to use as segments")
+            for i, subsidiary in enumerate(subsidiaries[:8]):  # Limit to 8
+                # Try to match subsidiary with market
+                geographic_focus = 'Multiple Markets'
+                for market in primary_markets:
+                    if market.lower() in subsidiary.lower():
+                        geographic_focus = market
+                        break
+                
+                segments.append({
+                    "segment_name": subsidiary,
+                    "description": f"Operating subsidiary in {geographic_focus}",
+                    "revenue_contribution": "Not disclosed",
+                    "profit_contribution": "Not disclosed",
+                    "growth_rate": "Not disclosed",
+                    "key_metrics": "",
+                    "geographic_focus": geographic_focus,
+                    "products_services": company_context.get('products_services', ''),
+                    "significance_score": 0.5 - (i * 0.05)  # Declining score by order
+                })
+        
+        # If no subsidiaries, create geographic segments from primary markets
+        elif primary_markets:
+            thread_safe_print(f"Creating segments from {len(primary_markets)} primary markets")
+            for i, market in enumerate(primary_markets[:5]):  # Top 5 markets
+                segments.append({
+                    "segment_name": f"{market} Operations",
+                    "description": f"Business operations in {market}",
+                    "revenue_contribution": "Not disclosed",
+                    "profit_contribution": "Not disclosed", 
+                    "growth_rate": "Not disclosed",
+                    "key_metrics": "",
+                    "geographic_focus": market,
+                    "products_services": company_context.get('products_services', ''),
+                    "significance_score": 0.6 - (i * 0.1)
+                })
+        
+        # Last resort - single segment
+        if not segments:
+            thread_safe_print("Creating single default segment")
+            segments = [{
+                "segment_name": "Core Business",
+                "description": company_context.get('products_services', 'Main operations'),
+                "revenue_contribution": "100%",
+                "profit_contribution": "100%",
+                "growth_rate": "Not disclosed",
+                "key_metrics": company_context.get('financial_highlights', ''),
+                "geographic_focus": ', '.join(primary_markets[:3]) if primary_markets else 'Global',
+                "products_services": company_context.get('products_services', ''),
+                "significance_score": 1.0
+            }]
+        
+        return segments

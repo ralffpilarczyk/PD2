@@ -1012,9 +1012,17 @@ class CompetitiveReportGenerator:
         
         for market_cell in market_cells:
             market_cell_id = market_cell['id']
-            # Simplify market name - include customer segment only if not "All" or "General"
-            customer_seg = market_cell.get('customer_segment', '')
-            if customer_seg and customer_seg not in ['All', 'General', 'all', 'general', '']:
+            # Simplify market name - include customer segment only if meaningful
+            # sqlite3.Row objects support dict-like access but not .keys() method
+            try:
+                customer_seg = market_cell['customer_segment'] if market_cell['customer_segment'] else ''
+            except (KeyError, IndexError):
+                customer_seg = ''
+            
+            # Only include customer segment in name if it adds meaningful information
+            segment_is_generic = customer_seg.lower() in ['all', 'general', 'individual consumers', 'business customers', '']
+            
+            if customer_seg and not segment_is_generic:
                 market_name = f"{market_cell['product_service']} - {market_cell['geography']} ({customer_seg})"
             else:
                 market_name = f"{market_cell['product_service']} - {market_cell['geography']}"

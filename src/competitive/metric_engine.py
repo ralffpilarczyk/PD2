@@ -750,6 +750,62 @@ IMPORTANT:
         thread_safe_print(f"\nMetric collection complete. Processed {len(all_metric_data)} market cells")
         return all_metric_data
     
+    def _search_exchange_rate(self, from_currency: str, to_currency: str, date: str = None) -> Optional[float]:
+        """
+        Search for exchange rate using web search when APIs don't have the currency.
+        Returns the exchange rate or None if not found.
+        """
+        try:
+            # Rate limit before search
+            import time
+            time.sleep(2)
+            
+            # Generate search query
+            if date:
+                query = f"{from_currency} to {to_currency} exchange rate {date}"
+            else:
+                query = f"{from_currency} to {to_currency} exchange rate today"
+            
+            thread_safe_print(f"Searching for exchange rate: {query}")
+            
+            # Use grounded search via Google
+            from google import genai as genai_client
+            from google.genai import types
+            
+            client = genai_client.Client()
+            grounding_tool = types.Tool(google_search=types.GoogleSearch())
+            config = types.GenerateContentConfig(tools=[grounding_tool])
+            
+            prompt = f"""Find the current exchange rate for {from_currency} to {to_currency}.
+Return ONLY the numeric exchange rate value (e.g., 4.65).
+If the rate is not found, return 'NOT_FOUND'."""
+            
+            response = retry_with_backoff(
+                lambda: client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=config,
+                )
+            )
+            
+            # Parse the response for a numeric value
+            import re
+            text = response.text.strip()
+            
+            # Look for a number in the response
+            match = re.search(r'(\d+\.?\d*)', text)
+            if match:
+                rate = float(match.group(1))
+                thread_safe_print(f"Found exchange rate {from_currency} to {to_currency}: {rate}")
+                return rate
+            else:
+                thread_safe_print(f"Could not parse exchange rate from response: {text}")
+                return None
+                
+        except Exception as e:
+            thread_safe_print(f"Error searching for exchange rate: {e}")
+            return None
+    
     def get_ecb_exchange_rates(self, date: str = None) -> Dict[str, float]:
         """
         Get exchange rates from European Central Bank.
@@ -785,16 +841,35 @@ IMPORTANT:
             return rates
             
         except Exception as e:
-            thread_safe_print(f"Error fetching exchange rates: {e}")
-            # Return fallback rates (major currencies only)
-            return {
-                'EUR': 1.0,
-                'USD': 1.10,
-                'GBP': 0.85,
-                'JPY': 130.0,
-                'CNY': 7.8,
-                'CHF': 0.95
-            }
+            thread_safe_print(f"Error fetching ECB exchange rates: {e}")
+            # Try alternative API for broader currency coverage
+            try:
+                # Use exchangerate-api.com which supports more currencies
+                alt_url = f"https://api.exchangerate-api.com/v4/latest/USD"
+                response = requests.get(alt_url, timeout=10)
+                response.raise_for_status()
+                
+                data = response.json()
+                rates_usd_base = data.get('rates', {})
+                
+                # Convert to EUR base to match ECB format
+                if 'EUR' in rates_usd_base:
+                    eur_to_usd = rates_usd_base['EUR']
+                    rates = {}
+                    for currency, rate in rates_usd_base.items():
+                        # Convert from USD base to EUR base
+                        rates[currency] = rate / eur_to_usd
+                    
+                    self.fx_rates_cache = rates
+                    self.fx_cache_date = date
+                    thread_safe_print(f"Retrieved {len(rates)} exchange rates from alternative source")
+                    return rates
+            except Exception as alt_e:
+                thread_safe_print(f"Alternative API also failed: {alt_e}")
+            
+            # Return empty dict - will trigger web search for specific currencies as needed
+            thread_safe_print("Exchange rate APIs unavailable, will search for rates as needed")
+            return {}
     
     def normalize_currency(self, value: float, from_currency: str, 
                           to_currency: str = "USD", period: str = None) -> Tuple[float, str]:
@@ -819,6 +894,17 @@ IMPORTANT:
             
             from_rate = rates.get(from_currency.upper())
             to_rate = rates.get(to_currency.upper())
+            
+            # If rate not found, search for it using web search
+            if from_rate is None and from_currency.upper() != 'EUR':
+                from_rate = self._search_exchange_rate(from_currency, 'EUR', fx_date)
+                if from_rate:
+                    rates[from_currency.upper()] = from_rate
+            
+            if to_rate is None and to_currency.upper() != 'EUR':
+                to_rate = self._search_exchange_rate(to_currency, 'EUR', fx_date)
+                if to_rate:
+                    rates[to_currency.upper()] = to_rate
             
             if from_rate is None or to_rate is None:
                 raise ValueError(f"Exchange rate not available for {from_currency} or {to_currency}")

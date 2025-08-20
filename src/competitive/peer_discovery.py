@@ -49,7 +49,32 @@ class PeerDiscovery:
         """
         thread_safe_print(f"Generating search queries for market cell: {market_cell['product_service']} x {market_cell['geography']} x {market_cell['customer_segment']}")
         
-        prompt = f"""Based on this company context, generate targeted search queries for direct competitors in the specified market cell:
+        # Check if this is a holding company with subsidiaries
+        company_name = company_context.get('company_name', '')
+        is_holding_company = any(term in company_name.lower() for term in ['group', 'berhad', 'holdings', 'plc'])
+        
+        if is_holding_company:
+            # For holding companies, also search for subsidiaries that operate in this market
+            prompt = f"""Based on this company context, generate search queries for BOTH subsidiaries AND competitors:
+
+COMPANY CONTEXT:
+{json.dumps(company_context, indent=2)}
+
+MARKET CELL: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}
+
+This appears to be a holding company. Generate 3-4 search queries that will find:
+1. The company's own operating subsidiaries in this market
+2. Direct competitors to those subsidiaries
+
+Query patterns to use:
+- "[Company name] subsidiaries [geography] [industry sector] operating companies"
+- "[Geography] [industry] operators market share [current year]"
+- "[Geography] [product/service type] providers competitors [current year]"
+
+Return JSON array of 3-4 optimized search queries:
+["query 1", "query 2", "query 3", "query 4"]"""
+        else:
+            prompt = f"""Based on this company context, generate targeted search queries for direct competitors in the specified market cell:
 
 COMPANY CONTEXT:
 {json.dumps(company_context, indent=2)}
@@ -60,18 +85,13 @@ Generate 2-3 highly specific search queries that will find direct competitors:
 - Include industry-specific terminology from the company context
 - Use geographic qualifiers that match the market cell
 - Include business model descriptors (B2B/B2C/enterprise/consumer)
-- Prefer recency without fixed years (use terms like "latest", "recent quarter", "this year", "TTM")
+- Add current year for fresher results
 - Use competitive keywords extracted from company documents
 
-Examples of good queries:
-- "Singapore digital banking fintech competitors DBS UOB latest"
-- "European B2B payment processing competitors Stripe Adyen"
-- "Southeast Asia e-commerce logistics competitors Shopee Lazada"
-
-Examples of poor queries:
-- "competitors" (too generic)
-- "global technology companies" (too broad)
-- "fintech" (no geographic or segment focus)
+Examples of good query patterns:
+- "[Geography] [industry] competitors market leaders [current year]"
+- "[Geography] [service type] market share top players [current year]"
+- "[Geography] [industry] operators comparison [current year]"
 
 Return JSON array of 2-3 optimized search queries:
 ["query 1", "query 2", "query 3"]
@@ -111,9 +131,9 @@ Focus on finding companies that compete directly in this specific market cell.""
             geography = market_cell.get('geography', 'market')
             
             return [
-                f"{company_name} competitors {geography} {industry} 2024",
-                f"{industry} companies {geography} competition 2024",
-                f"leading {industry} players {geography} market share"
+                f"{company_name} competitors {geography} {industry} latest",
+                f"{industry} companies {geography} competition latest",
+                f"leading {industry} players {geography} market share recent"
             ]
     
     def search_competitors_grounded(self, search_query: str, company_name: str,
@@ -230,10 +250,51 @@ Focus on finding companies that compete directly in this specific market cell.""
             thread_safe_print("No search results to process")
             return []
         
-        prompt = f"""Extract direct competitors from these search results for the specified market cell:
+        # Check if analyzing a holding company
+        company_name = company_context.get('company_name', 'Unknown')
+        is_holding_company = any(term in company_name.lower() for term in ['group', 'berhad', 'holdings', 'plc'])
+        
+        if is_holding_company:
+            # For holding companies, include subsidiaries
+            prompt = f"""Extract BOTH the company's subsidiaries AND their competitors from search results:
+
+PARENT COMPANY: {company_name}
+Industry: {company_context.get('industry', 'Unknown')}
+
+MARKET CELL: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}
+
+SEARCH RESULTS:
+{combined_text}
+
+Instructions:
+1. First identify any subsidiary of {company_name} operating in {market_cell['geography']}
+2. Then identify direct competitors to that subsidiary
+
+Return JSON array - PUT THE SUBSIDIARY FIRST if found:
+[
+    {{
+        "name": "Operating Subsidiary Name",
+        "parent_company": "{company_name}",
+        "evidence_score": 1.0,
+        "presence_evidence": "Description of subsidiary relationship and market presence",
+        "market_position": "market position based on evidence",
+        "source_quality": "high/medium/low"
+    }},
+    {{
+        "name": "Competitor Name",
+        "parent_company": "Parent if applicable",
+        "evidence_score": 0.85,
+        "presence_evidence": "Evidence of competition in this market",
+        "market_position": "market position",
+        "source_quality": "high/medium/low"
+    }}
+]"""
+        else:
+            # For regular companies, standard competitor extraction
+            prompt = f"""Extract direct competitors from these search results for the specified market cell:
 
 COMPANY CONTEXT:
-Company: {company_context.get('company_name', 'Unknown')}
+Company: {company_name}
 Industry: {company_context.get('industry', 'Unknown')}
 Business Model: {company_context.get('business_model', 'Unknown')}
 
@@ -258,10 +319,6 @@ Return JSON array with this exact format:
         "presence_evidence": "brief description of evidence found",
         "market_position": "market leader/challenger/niche player",
         "source_quality": "high/medium/low based on source credibility"
-    }}
-]
-
-Evidence scoring guide:
 - 0.9-1.0: Multiple high-quality sources, clear market presence evidence
 - 0.7-0.8: Good sources, solid evidence of competition
 - 0.5-0.6: Moderate evidence, some competitive mentions

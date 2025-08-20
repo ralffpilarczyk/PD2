@@ -37,6 +37,11 @@ pip install -r requirements.txt
 2. **Professional Tone**: Maintain clear, concise technical communication
 3. **Comments**: Only add comments when explicitly requested
 
+## Design Principles
+1. **Principle-Based Approaches**: Any document analysis should be designed using principle-based approaches that make wise choices, avoiding hardcoded specific criteria unless absolutely necessary and explicitly approved
+2. **Generic Solutions**: Build systems that adapt to different companies, industries, and contexts through intelligent pattern recognition rather than fixed rules
+3. **Dynamic Adaptation**: Use current context (date, industry, geography) to inform decisions rather than static assumptions
+
 ## Deep Analysis Methodology
 When analyzing company data, always apply multi-layer analytical thinking:
 

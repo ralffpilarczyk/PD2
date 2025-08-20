@@ -99,50 +99,44 @@ class MetricEngine:
     
     def select_metrics_for_market_cell(self, company_context: Dict[str, Any], 
                                      market_cell: Dict[str, Any],
-                                     target_count: int = 8) -> List[Dict[str, Any]]:
+                                     target_count: int = 10) -> List[Dict[str, Any]]:
         """
-        Select optimal metrics for a market cell using capability framework.
-        Returns list of metric definitions with capability mappings.
+        Select optimal metrics for a market cell - focusing on data collection.
+        Returns list of metric definitions for competitive data matrix.
         """
         thread_safe_print(f"Selecting metrics for market cell: {market_cell['product_service']} x {market_cell['geography']} x {market_cell['customer_segment']}")
         
-        prompt = f"""Select optimal competitive metrics for this market cell using the capability framework:
+        prompt = f"""Select exactly 10 metrics for side-by-side competitive data collection in this market:
 
 COMPANY CONTEXT:
 {json.dumps(company_context, indent=2)}
 
 MARKET CELL: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}
 
-CAPABILITY FRAMEWORK (must cover these families):
-{json.dumps(self.CAPABILITY_FAMILIES, indent=2)}
+Select 10 metrics following this distribution:
+- Competitive Position (1-2): Market share, competitive ranking
+- Scale/Operations (2-3): Subscribers/customers, coverage, network metrics, utilization
+- Financial Performance (2-3): Revenue, EBITDA, EBITDA margin, profitability
+- Efficiency Ratios (2-3): ARPU, Capex/Sales, productivity metrics, cost ratios  
+- Growth/Momentum (1-2): Net adds, growth rates, churn
 
-Select {target_count} metrics that:
-1. Cover all 6 capability families (at least 1 metric per family)
-2. Are most relevant to value creation in this specific market
-3. Are realistic to find through web search (avoid overly obscure metrics)
-4. Focus on metrics where competitive battles are won/lost
-5. Balance financial, operational, and strategic dimensions
+Choose metrics that:
+1. Are commonly reported and findable via web search
+2. Enable direct competitor comparison with numerical values
+3. Cover diverse aspects (not just financials)
+4. Are relevant to this specific market and industry
 
-Return strictly valid JSON array with this exact format (no comments, no trailing commas, double-quoted keys/strings; braces are literal, not placeholders):
+Return strictly valid JSON array with this exact format (no comments, no trailing commas):
 [
     {{
         "name": "Market Share",
-        "definition": "Percentage of total market revenue captured by the company",
-        "capability_family": "scale_footprint",
-        "unit_hint": "percentage", 
-        "directionality": "higher_better",
-        "value_impact_category": "growth",
-        "priority_score": 0.95,
-        "search_keywords": ["market share", "market position", "competitive position"],
-        "rationale": "Critical metric for understanding competitive position and scale advantages"
+        "definition": "Percentage of total market revenue or subscribers",
+        "unit_hint": "percentage",
+        "search_keywords": ["market share", "market position", "subscriber share"]
     }}
 ]
 
-Directionality options: "higher_better", "lower_better", "neutral"
-Value impact categories: "margin", "roce", "growth", "scalability"
-Priority score: 0.0-1.0 based on importance to value creation
-
-Focus on metrics that executives care about and that drive business value."""
+Focus on metrics with numerical values that can populate a data table."""
         
         try:
             response_text = retry_with_backoff(
@@ -156,49 +150,36 @@ Focus on metrics that executives care about and that drive business value."""
                 
                 # Validate and clean metrics
                 valid_metrics = []
-                capability_coverage = set()
                 
                 for metric in metrics:
                     if (isinstance(metric, dict) and 
-                        all(key in metric for key in ['name', 'definition', 'capability_family']) and
-                        metric['capability_family'] in self.CAPABILITY_FAMILIES):
+                        all(key in metric for key in ['name', 'definition'])):
                         
-                        # Ensure required fields
+                        # Ensure required fields for data collection
                         metric['unit_hint'] = metric.get('unit_hint', 'numeric')
-                        metric['directionality'] = metric.get('directionality', 'higher_better')
-                        metric['value_impact_category'] = metric.get('value_impact_category', 'growth')
-                        metric['priority_score'] = max(0.0, min(1.0, metric.get('priority_score', 0.5)))
                         metric['search_keywords'] = metric.get('search_keywords', [metric['name'].lower()])
-                        metric['rationale'] = metric.get('rationale', 'Selected for competitive analysis')
+                        
+                        # Remove analysis-oriented fields - we just want data
+                        metric.pop('capability_family', None)
+                        metric.pop('directionality', None)
+                        metric.pop('value_impact_category', None)
+                        metric.pop('priority_score', None)
+                        metric.pop('rationale', None)
                         
                         valid_metrics.append(metric)
-                        capability_coverage.add(metric['capability_family'])
                 
-                # Check capability coverage and backfill to enforce coverage
-                missing_capabilities = list(set(self.CAPABILITY_FAMILIES.keys()) - capability_coverage)
-                if missing_capabilities:
-                    thread_safe_print(f"Missing capability coverage: {missing_capabilities}")
-                    for family_key in missing_capabilities:
-                        samples = self.CAPABILITY_FAMILIES[family_key].get('sample_metrics', [])
-                        if samples:
-                            name = samples[0].title()
-                            valid_metrics.append({
-                                "name": name,
-                                "definition": samples[0],
-                                "capability_family": family_key,
-                                "unit_hint": "numeric",
-                                "directionality": "higher_better",
-                                "value_impact_category": "growth",
-                                "priority_score": 0.5,
-                                "search_keywords": [samples[0]],
-                                "rationale": "Backfilled to ensure capability coverage"
-                            })
+                # Ensure we have exactly 10 metrics
+                if len(valid_metrics) < 10:
+                    # Add common fallback metrics to reach 10
+                    fallbacks = self._get_fallback_metrics(market_cell)
+                    for fb in fallbacks:
+                        if len(valid_metrics) >= 10:
+                            break
+                        if not any(m['name'] == fb['name'] for m in valid_metrics):
+                            valid_metrics.append(fb)
                 
-                # Sort by priority score
-                valid_metrics.sort(key=lambda x: x['priority_score'], reverse=True)
-                
-                thread_safe_print(f"Selected {len(valid_metrics)} metrics covering {len(capability_coverage)}/6 capabilities")
-                return valid_metrics[:target_count]
+                thread_safe_print(f"Selected {len(valid_metrics)} metrics for data collection")
+                return valid_metrics[:10]
                 
             else:
                 raise ValueError("No valid JSON array found in response")
@@ -209,43 +190,22 @@ Focus on metrics that executives care about and that drive business value."""
             return self._get_fallback_metrics(market_cell)
     
     def _get_fallback_metrics(self, market_cell: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Generate fallback metrics if LLM selection fails"""
+        """Generate fallback metrics if LLM selection fails - 10 diverse metrics for data collection"""
         thread_safe_print("Using fallback metric selection...")
         
+        # Universal metrics that apply across industries
+        # These should be discovered based on what's actually reported in the industry
         fallback_metrics = [
-            {
-                "name": "Market Share",
-                "definition": "Percentage of total market revenue",
-                "capability_family": "scale_footprint", 
-                "unit_hint": "percentage",
-                "directionality": "higher_better",
-                "value_impact_category": "growth",
-                "priority_score": 0.95,
-                "search_keywords": ["market share", "market position"],
-                "rationale": "Fundamental competitive metric"
-            },
-            {
-                "name": "Revenue",
-                "definition": "Total revenue in the market segment", 
-                "capability_family": "scale_footprint",
-                "unit_hint": "currency",
-                "directionality": "higher_better", 
-                "value_impact_category": "growth",
-                "priority_score": 0.90,
-                "search_keywords": ["revenue", "sales"],
-                "rationale": "Scale indicator"
-            },
-            {
-                "name": "Customer Base",
-                "definition": "Number of active customers",
-                "capability_family": "customer_economics",
-                "unit_hint": "count", 
-                "directionality": "higher_better",
-                "value_impact_category": "growth",
-                "priority_score": 0.85,
-                "search_keywords": ["customers", "user base"],
-                "rationale": "Customer reach metric"
-            }
+            {"name": "Market Share", "definition": "Position in the market", "unit_hint": "percentage", "search_keywords": ["market share", "market position"]},
+            {"name": "Revenue", "definition": "Total revenue or sales", "unit_hint": "currency", "search_keywords": ["revenue", "sales", "turnover"]},
+            {"name": "Customer Base", "definition": "Number of customers or users", "unit_hint": "count", "search_keywords": ["customers", "users", "subscribers", "clients"]},
+            {"name": "Operating Margin", "definition": "Operating profit margin", "unit_hint": "percentage", "search_keywords": ["EBITDA margin", "operating margin", "EBIT margin"]},
+            {"name": "Growth Rate", "definition": "Year-over-year growth", "unit_hint": "percentage", "search_keywords": ["growth rate", "YoY growth", "annual growth"]},
+            {"name": "Unit Economics", "definition": "Per-unit revenue or cost", "unit_hint": "currency", "search_keywords": ["ARPU", "unit revenue", "per customer", "per user"]},
+            {"name": "Efficiency Ratio", "definition": "Key efficiency metric", "unit_hint": "percentage", "search_keywords": ["efficiency", "productivity", "utilization", "intensity"]},
+            {"name": "Quality Metric", "definition": "Service or product quality", "unit_hint": "varies", "search_keywords": ["quality", "satisfaction", "NPS", "coverage", "availability"]},
+            {"name": "Volume Metric", "definition": "Volume or usage measure", "unit_hint": "varies", "search_keywords": ["volume", "usage", "consumption", "transactions", "traffic"]},
+            {"name": "Financial Returns", "definition": "Return metrics", "unit_hint": "percentage", "search_keywords": ["ROE", "ROA", "ROCE", "returns"]}
         ]
         
         return fallback_metrics
@@ -263,10 +223,10 @@ Focus on metrics that executives care about and that drive business value."""
                 """, (
                     metric['name'],
                     metric['definition'], 
-                    metric['capability_family'],
-                    metric['unit_hint'],
-                    metric['directionality'],
-                    metric['value_impact_category']
+                    'data_collection',  # Default value since we're not using categories
+                    metric.get('unit_hint', 'numeric'),
+                    'neutral',  # No directionality for pure data collection
+                    'data'  # Simple category
                 ))
                 metric_ids.append(cursor.lastrowid)
         
@@ -290,18 +250,19 @@ METRIC: {metric['name']} - {metric['definition']}
 Create 1 optimized search query that will find this specific metric:
 - Use exact competitor name and market geography
 - Include metric-specific terminology
-- Prefer recency without fixed years (use terms like "latest", "recent quarter", "this year", "TTM")
+- Add CURRENT year or recent quarter for fresher results
 - Use industry-specific language from company context
 - Target high-quality sources (earnings, reports, filings)
 
-Examples of good queries (note: avoid hardcoded years):
-- "Vodafone Germany mobile subscriber numbers latest earnings"
-- "Deutsche Telekom Germany market share telecommunications latest"
-- "O2 Germany ARPU average revenue per user recent quarter"
+Examples of good query patterns:
+- "[Company] [Geography] [metric name] [recent quarter] earnings"
+- "[Company] [Geography] market share [industry] [current year]"
+- "[Company] [Geography] ARPU [recent quarter] quarterly report"
+- "[Company] [Geography] revenue [current year] annual report"
 
 Examples of poor queries:
-- "Vodafone revenue" (too broad)
-- "telecom market share" (no specific company/market)
+- "Vodafone revenue" (no time period, too broad)
+- "telecom market share 2021" (old data)
 
 Return single optimized query only, no explanation needed."""
         
@@ -322,13 +283,13 @@ Return single optimized query only, no explanation needed."""
             else:
                 # Fallback query construction
                 keywords = ' '.join(metric.get('search_keywords', [metric['name'].lower()]))
-                return f"{competitor_name} {market_cell['geography']} {keywords} 2024"
+                return f"{competitor_name} {market_cell['geography']} {keywords} latest"
                 
         except Exception as e:
             thread_safe_print(f"Error generating search query: {e}")
             # Fallback query
             keywords = ' '.join(metric.get('search_keywords', [metric['name'].lower()]))
-            return f"{competitor_name} {market_cell['geography']} {keywords} 2024"
+            return f"{competitor_name} {market_cell['geography']} {keywords} latest"
     
     def search_metric_grounded(self, search_query: str, company_name: str,
                               market_cell_key: str, metric_name: str) -> Optional[Dict[str, Any]]:
@@ -448,17 +409,20 @@ METRIC SOUGHT: {metric['name']} - {metric['definition']}
 
 Extract and structure this information as strictly valid JSON (no comments, no trailing commas):
 
+IMPORTANT: For "value" field, extract ONLY the numeric part (e.g., "45.7" not "45.7%" or "USD 45.7")
+For "units" field, specify the unit type: "percentage", "millions", "billions", "currency", "count", "GB", etc.
+
 {{
   "metric_found": true,
   "values": [
     {{
-      "value": "extracted numeric value",
-      "units": "currency/users/percent/etc",
-      "period": "Q3 2024",
-      "scope": "geographic/business scope",
+      "value": "45.7",
+      "units": "percentage",
+      "period": "recent quarter",
+      "scope": "Malaysia",
       "source_quality": "earnings_report",
       "confidence": 0.9,
-      "extraction_notes": "context about the metric"
+      "extraction_notes": "EBITDA margin from latest quarterly report"
     }}
   ],
   "source_metadata": {{
@@ -501,63 +465,199 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             thread_safe_print(f"Error extracting metric data: {e}")
             return {"metric_found": False, "values": [], "confidence": 0.0}
     
+    def generate_batch_search_query(self, company_context: Dict[str, Any],
+                                   competitor_name: str, market_cell: Dict[str, Any],
+                                   metrics: List[Dict[str, Any]]) -> str:
+        """Generate a single search query for multiple metrics at once."""
+        
+        # Build metric keywords list
+        metric_keywords = []
+        for metric in metrics[:10]:  # Limit to avoid query being too long
+            if 'market share' in metric['name'].lower():
+                metric_keywords.append('market share')
+            elif 'revenue' in metric['name'].lower():
+                metric_keywords.append('revenue')
+            elif 'ebitda' in metric['name'].lower():
+                metric_keywords.append('EBITDA margin')
+            elif 'subscriber' in metric['name'].lower():
+                metric_keywords.append('subscribers')
+            elif 'arpu' in metric['name'].lower():
+                metric_keywords.append('ARPU')
+            elif 'capex' in metric['name'].lower():
+                metric_keywords.append('capex')
+            elif 'churn' in metric['name'].lower():
+                metric_keywords.append('churn rate')
+            elif 'coverage' in metric['name'].lower():
+                metric_keywords.append('network coverage')
+            elif 'data' in metric['name'].lower():
+                metric_keywords.append('data usage')
+            else:
+                metric_keywords.append(metric['name'].lower())
+        
+        # Build query with company, geography, metrics, and time
+        geography = market_cell.get('geography', '')
+        current_year = datetime.now().year
+        current_quarter = (datetime.now().month - 1) // 3 + 1
+        
+        # Format: "Company Geography metric1 metric2 metric3 YYYY quarterly report"
+        query = f"{competitor_name} {geography} {' '.join(metric_keywords[:5])} {current_year} quarterly earnings report"
+        
+        return query
+    
+    def extract_batch_metrics(self, search_results: Dict[str, Any], 
+                             competitor_name: str, metrics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Extract multiple metrics from a single search result."""
+        
+        if not search_results:
+            return [{"metric_found": False, "values": [], "confidence": 0.0, 
+                    "metric_definition": m} for m in metrics]
+        
+        prompt = f"""Extract ALL the following competitive metrics from this search result:
+
+SEARCH RESULTS: {search_results['response_text']}
+COMPETITOR: {competitor_name}
+
+METRICS TO FIND:
+{json.dumps([{"name": m['name'], "definition": m['definition']} for m in metrics], indent=2)}
+
+For EACH metric listed above, extract and structure the data. Return a JSON array with one object per metric.
+Each object should have this structure:
+
+[
+  {{
+    "metric_name": "Market Share",
+    "metric_found": true,
+    "values": [
+      {{
+        "value": "32.5",
+        "units": "percentage",
+        "period": "recent quarter",
+        "scope": "Malaysia",
+        "confidence": 0.9,
+        "extraction_notes": "From quarterly earnings report"
+      }}
+    ]
+  }},
+  {{
+    "metric_name": "Revenue",
+    "metric_found": true,
+    "values": [
+      {{
+        "value": "2610000000",
+        "units": "currency",
+        "period": "latest fiscal year",
+        "scope": "Malaysia",
+        "confidence": 0.85,
+        "extraction_notes": "Annual revenue in MYR"
+      }}
+    ]
+  }}
+]
+
+IMPORTANT: 
+- Extract ONLY numeric values in the "value" field
+- Include an entry for EVERY metric requested, even if not found (metric_found: false)
+- Return strictly valid JSON array"""
+        
+        try:
+            response_text = retry_with_backoff(
+                lambda: self.analysis_model.generate_content(prompt).text
+            )
+            
+            # Extract JSON array
+            json_match = re.search(r'\[[\s\S]*\]', response_text)
+            if json_match:
+                extracted_metrics = json.loads(json_match.group())
+                
+                # Map extracted data back to metric definitions
+                results = []
+                for metric_def in metrics:
+                    # Find matching extraction
+                    found = False
+                    for extracted in extracted_metrics:
+                        if extracted.get('metric_name', '').lower() == metric_def['name'].lower():
+                            extracted['metric_definition'] = metric_def
+                            extracted['metric_found'] = extracted.get('metric_found', False)
+                            if search_results.get('grounding_metadata'):
+                                extracted['grounding_chunks'] = search_results['grounding_metadata'].get('grounding_chunks', [])
+                            results.append(extracted)
+                            found = True
+                            break
+                    
+                    if not found:
+                        # Metric not found in extraction
+                        results.append({
+                            "metric_name": metric_def['name'],
+                            "metric_found": False,
+                            "values": [],
+                            "confidence": 0.0,
+                            "metric_definition": metric_def
+                        })
+                
+                return results
+            else:
+                raise ValueError("No valid JSON array found")
+                
+        except Exception as e:
+            thread_safe_print(f"Error extracting batch metrics: {e}")
+            return [{"metric_found": False, "values": [], "confidence": 0.0, 
+                    "metric_definition": m} for m in metrics]
+    
     def collect_metrics_for_competitor(self, company_context: Dict[str, Any],
                                      market_cell: Dict[str, Any],
                                      competitor: Dict[str, Any],
                                      metrics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Collect all metrics for a single competitor in a market cell.
+        Collect all metrics for a single competitor using batch search.
         Returns list of collected metric data.
         """
         market_cell_key = f"{market_cell['product_service']}_{market_cell['geography']}_{market_cell['customer_segment']}"
         competitor_name = competitor['name']
         
-        thread_safe_print(f"\nCollecting metrics for {competitor_name} in {market_cell_key}")
+        thread_safe_print(f"\nCollecting metrics for {competitor_name} in {market_cell_key} (batch mode)")
         
+        # Generate single batch query for all metrics
+        batch_query = self.generate_batch_search_query(
+            company_context=company_context,
+            competitor_name=competitor_name,
+            market_cell=market_cell,
+            metrics=metrics
+        )
+        
+        thread_safe_print(f"  Batch search: {batch_query[:100]}...")
+        
+        # Execute single search for all metrics
+        search_results = self.search_metric_grounded(
+            search_query=batch_query,
+            company_name=company_context['company_name'],
+            market_cell_key=market_cell_key,
+            metric_name="batch_metrics"
+        )
+        
+        # Extract all metrics from the single search result
+        extracted_metrics = self.extract_batch_metrics(
+            search_results=search_results,
+            competitor_name=competitor_name,
+            metrics=metrics
+        )
+        
+        # Process each extracted metric
         collected_data = []
-        
-        for metric in metrics:
-            thread_safe_print(f"  Searching: {metric['name']}")
+        for extracted in extracted_metrics:
+            extracted['competitor_info'] = competitor
+            extracted['search_query'] = batch_query
+            collected_data.append(extracted)
             
-            # Generate search query
-            search_query = self.generate_metric_search_query(
-                company_context=company_context,
-                competitor_name=competitor_name,
-                market_cell=market_cell,
-                metric=metric
-            )
-            
-            # Execute search
-            search_results = self.search_metric_grounded(
-                search_query=search_query,
-                company_name=company_context['company_name'],
-                market_cell_key=market_cell_key,
-                metric_name=metric['name']
-            )
-            
-            # Extract data
-            extracted_data = self.extract_metric_data(
-                search_results=search_results,
-                competitor_name=competitor_name,
-                metric=metric
-            )
-            
-            # Add metadata
-            extracted_data['metric_definition'] = metric
-            extracted_data['competitor_info'] = competitor
-            extracted_data['search_query'] = search_query
-            
-            collected_data.append(extracted_data)
-            
-            # Log result
-            if extracted_data.get('metric_found'):
-                values_count = len(extracted_data.get('values', []))
-                avg_confidence = sum(v.get('confidence', 0) for v in extracted_data.get('values', [])) / max(1, values_count)
-                thread_safe_print(f"    Found {values_count} values (avg confidence: {avg_confidence:.2f})")
+            if extracted.get('metric_found'):
+                metric_name = extracted.get('metric_name', 'Unknown')
+                values_count = len(extracted.get('values', []))
+                thread_safe_print(f"    ✓ {metric_name}: {values_count} values found")
             else:
-                thread_safe_print(f"    No data found")
+                metric_name = extracted.get('metric_name', 'Unknown')
+                thread_safe_print(f"    ✗ {metric_name}: Not found")
         
-        thread_safe_print(f"Collected metrics for {competitor_name}: {sum(1 for d in collected_data if d.get('metric_found'))} of {len(metrics)} found")
+        found_count = sum(1 for d in collected_data if d.get('metric_found'))
+        thread_safe_print(f"  Batch complete: {found_count} of {len(metrics)} metrics found")
         return collected_data
     
     def collect_all_metrics(self, company_id: int) -> Dict[int, Dict[int, List[Dict[str, Any]]]]:
@@ -601,7 +701,7 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             metrics = self.select_metrics_for_market_cell(
                 company_context=company_context,
                 market_cell=market_cell_dict,
-                target_count=8
+                target_count=10
             )
             
             if not metrics:
@@ -779,9 +879,16 @@ Extract ALL numerical values found, even if multiple or conflicting."""
             metric_similarity = metric_name.lower() in target_metric['name'].lower() or \
                               target_metric['name'].lower() in metric_name.lower()
             
-            # Check period alignment
-            period_aligned = any(period_indicator in value_data.get('period', '').lower() 
-                               for period_indicator in ['ttm', '2024', '2023', 'annual', 'yearly'])
+            # Check period alignment (generic, non-year-specific examples)
+            period_text = value_data.get('period', '')
+            period_lower = period_text.lower()
+            period_aligned = (
+                'ttm' in period_lower or
+                'fy' in period_lower or
+                'annual' in period_lower or
+                'year' in period_lower or
+                bool(re.search(r'20\d{2}', period_text))
+            )
             
             # Check scope alignment
             scope_notes = value_data.get('extraction_notes', '').lower()
@@ -814,18 +921,32 @@ Extract ALL numerical values found, even if multiple or conflicting."""
         
         for value_data in metric_data['values']:
             try:
-                original_value = float(value_data.get('value', 0))
-                currency = value_data.get('units', '').upper()
+                # Parse the value properly
+                raw_value = str(value_data.get('value', '0'))
+                units = value_data.get('units', '').lower()
                 period = value_data.get('period', '')
                 
-                # Currency normalization
-                if currency in ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF']:
+                # Extract numeric value, removing any currency symbols or commas
+                numeric_str = re.sub(r'[^\d.-]', '', raw_value)
+                original_value = float(numeric_str) if numeric_str else 0
+                
+                # Determine if this is a currency value
+                currency = None
+                if any(curr in raw_value.upper() or curr in units.upper() for curr in ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'RM', 'IDR', 'BDT', 'LKR', 'KHR', 'PHP']):
+                    # Extract currency code
+                    for curr in ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'RM', 'IDR', 'BDT', 'LKR', 'KHR', 'PHP']:
+                        if curr in raw_value.upper() or curr in units.upper():
+                            currency = curr
+                            break
+                
+                # Currency normalization only if it's actually currency
+                if currency and currency != target_currency:
                     normalized_value, fx_info = self.normalize_currency(
                         original_value, currency, target_currency, period
                     )
                 else:
                     normalized_value = original_value
-                    fx_info = f"No currency conversion (units: {currency})"
+                    fx_info = "No currency conversion needed"
                 
                 # Period normalization (if metric is flow-based)
                 if metric_definition.get('value_impact_category') in ['growth', 'margin']:
@@ -856,8 +977,8 @@ Extract ALL numerical values found, even if multiple or conflicting."""
                 normalized_observation = {
                     'value': original_value,
                     'normalized_value': normalized_value,
-                    'units': currency,
-                    'normalized_currency': target_currency,
+                    'units': units,  # Keep original units (percentage, millions, etc.)
+                    'normalized_currency': currency if currency else None,
                     'period': period,
                     'scope': value_data.get('scope', ''),
                     'comparability_class': comparability,

@@ -712,11 +712,9 @@ class CompetitiveReportGenerator:
         }
         """
     
-    def generate_json_evidence_pack(self, company_id: int,
-                                  competitive_analyses: Dict[int, Dict[str, Any]],
-                                  strategy_bundles: Dict[int, List[Dict[str, Any]]] = None) -> str:
+    def generate_json_evidence_pack(self, company_id: int) -> str:
         """
-        Generate JSON evidence pack for PD2 integration.
+        Generate simplified JSON evidence pack with just data (no analysis).
         Returns path to generated JSON file.
         """
         thread_safe_print(f"Generating JSON evidence pack...")
@@ -726,20 +724,41 @@ class CompetitiveReportGenerator:
         if not company_info:
             return ""
         
+        # Get market cells and build data structure
+        market_cells = self.db.get_market_cells_for_company(company_id)
+        market_data = {}
+        
+        for market_cell in market_cells:
+            market_cell_id = market_cell['id']
+            competitors = self.db.get_competitors_for_market_cell(market_cell_id)
+            
+            # Get all observations for this market
+            with self.db.get_connection() as conn:
+                observations_query = """
+                    SELECT o.*, m.name as metric_name, c.name as competitor_name
+                    FROM observations o
+                    JOIN metrics m ON m.id = o.metric_id
+                    JOIN competitors c ON c.id = o.competitor_id
+                    WHERE o.market_cell_id = ?
+                """
+                observations = conn.execute(observations_query, (market_cell_id,)).fetchall()
+                
+                market_data[market_cell_id] = {
+                    "market_name": f"{market_cell['product_service']} - {market_cell['geography']}",
+                    "competitors": [c['name'] for c in competitors],
+                    "observations": [dict(obs) for obs in observations]
+                }
+        
         # Build evidence pack structure
         evidence_pack = {
             "metadata": {
                 "company_id": company_id,
                 "company_name": company_info.get('name'),
                 "generated_at": datetime.now().isoformat(),
-                "analysis_version": "1.0",
-                "total_market_cells": len(competitive_analyses)
+                "data_collection_version": "2.0"
             },
             "company_context": company_info.get('context', {}),
-            "competitive_analyses": competitive_analyses,
-            "strategy_bundles": strategy_bundles or {},
-            "mini_tables": self._generate_mini_tables(competitive_analyses),
-            "key_insights": self._extract_key_insights(competitive_analyses, strategy_bundles or {}),
+            "market_data": market_data,
             "data_quality": self._get_data_quality_summary()
         }
         
@@ -858,3 +877,338 @@ class CompetitiveReportGenerator:
                 }
         
         return {}
+    
+    def generate_data_collection_report(self, company_id: int) -> str:
+        """
+        Generate a pure data collection report with tables only, no narrative text.
+        Uses PD2 styling (Georgia font) and focuses on competitive data matrices.
+        Returns path to generated HTML file.
+        """
+        thread_safe_print(f"Generating data collection report...")
+        
+        # Get company information
+        company_info = self._get_company_info(company_id)
+        if not company_info:
+            thread_safe_print("Company information not found")
+            return ""
+        
+        company_name = company_info['name']
+        
+        # Build HTML directly (no markdown for better control)
+        html_parts = []
+        
+        # HTML header with PD2 styling
+        html_parts.append(f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competitive Data Collection - {company_name}</title>
+    <style>
+        body {{
+            font-family: 'Georgia', 'Times New Roman', serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: white;
+        }}
+        
+        .container {{
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }}
+        
+        h1 {{
+            font-size: 2.5em;
+            font-weight: normal;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }}
+        
+        h2 {{
+            font-size: 1.8em;
+            font-weight: normal;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }}
+        
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 0.95em;
+        }}
+        
+        th {{
+            background-color: #f5f5f5;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: normal;
+            border: 1px solid #ddd;
+        }}
+        
+        td {{
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }}
+        
+        tr.period-row {{
+            font-style: italic;
+            background-color: #fafafa;
+            font-size: 0.9em;
+        }}
+        
+        tr:hover:not(.period-row) {{
+            background-color: #f9f9f9;
+        }}
+        
+        .footnotes {{
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 0.85em;
+            color: #666;
+        }}
+        
+        .footnotes h3 {{
+            font-size: 1.2em;
+            font-weight: normal;
+            margin-bottom: 15px;
+        }}
+        
+        .footnotes ul {{
+            list-style-type: none;
+            padding-left: 0;
+        }}
+        
+        .footnotes li {{
+            margin-bottom: 5px;
+        }}
+        
+        .date {{
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Competitive Data Collection</h1>
+        <h2>{company_name}</h2>
+        <p class="date">Generated on {datetime.now().strftime('%B %d, %Y')}</p>
+""")
+        
+        # Get all market cells and their data
+        market_cells = self.db.get_market_cells_for_company(company_id)
+        
+        all_sources = set()  # Collect all unique sources for footnotes
+        
+        for market_cell in market_cells:
+            market_cell_id = market_cell['id']
+            # Simplify market name - include customer segment only if not "All" or "General"
+            customer_seg = market_cell.get('customer_segment', '')
+            if customer_seg and customer_seg not in ['All', 'General', 'all', 'general', '']:
+                market_name = f"{market_cell['product_service']} - {market_cell['geography']} ({customer_seg})"
+            else:
+                market_name = f"{market_cell['product_service']} - {market_cell['geography']}"
+            
+            # Add market section header
+            html_parts.append(f'        <h2>{market_name}</h2>')
+            
+            # Get competitors and metrics for this market
+            competitors = self.db.get_competitors_for_market_cell(market_cell_id)
+            
+            # Get observations for building the data table
+            with self.db.get_connection() as conn:
+                # Get all metrics for this market cell
+                metrics_query = """
+                    SELECT DISTINCT m.id, m.name
+                    FROM observations o
+                    JOIN metrics m ON m.id = o.metric_id
+                    WHERE o.market_cell_id = ?
+                    ORDER BY m.name
+                """
+                metrics = conn.execute(metrics_query, (market_cell_id,)).fetchall()
+                
+                if not metrics or not competitors:
+                    html_parts.append('        <p>No data available for this market.</p>')
+                    continue
+                
+                # Build the data table
+                html_parts.append('        <table>')
+                
+                # Header row with company names
+                html_parts.append('            <tr>')
+                html_parts.append('                <th>Metric</th>')
+                html_parts.append(f'                <th>{company_name}</th>')
+                for comp in competitors:
+                    if comp['name'] != company_name:  # Skip if it's the company itself
+                        html_parts.append(f'                <th>{comp["name"]}</th>')
+                html_parts.append('            </tr>')
+                
+                # Period row
+                html_parts.append('            <tr class="period-row">')
+                html_parts.append('                <td>Period</td>')
+                
+                # Get the latest period for each competitor
+                for i, comp in enumerate([{'id': None, 'name': company_name}] + [c for c in competitors if c['name'] != company_name]):
+                    period_query = """
+                        SELECT DISTINCT period
+                        FROM observations
+                        WHERE market_cell_id = ? AND competitor_id = ?
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """
+                    if comp['id'] is None:
+                        # Get company's own data (self-competitor)
+                        self_comp = conn.execute(
+                            "SELECT id FROM competitors WHERE market_cell_id = ? AND name = ?",
+                            (market_cell_id, company_name)
+                        ).fetchone()
+                        comp_id = self_comp['id'] if self_comp else None
+                    else:
+                        comp_id = comp['id']
+                    
+                    if comp_id:
+                        period_result = conn.execute(period_query, (market_cell_id, comp_id)).fetchone()
+                        period = period_result['period'] if period_result else ''
+                    else:
+                        period = ''
+                    
+                    html_parts.append(f'                <td>{period}</td>')
+                html_parts.append('            </tr>')
+                
+                # Data rows for each metric
+                for metric in metrics:
+                    html_parts.append('            <tr>')
+                    html_parts.append(f'                <td>{metric["name"]}</td>')
+                    
+                    # Get data for each competitor
+                    for comp in [{'id': None, 'name': company_name}] + [c for c in competitors if c['name'] != company_name]:
+                        if comp['id'] is None:
+                            # Get company's own data
+                            self_comp = conn.execute(
+                                "SELECT id FROM competitors WHERE market_cell_id = ? AND name = ?",
+                                (market_cell_id, company_name)
+                            ).fetchone()
+                            comp_id = self_comp['id'] if self_comp else None
+                        else:
+                            comp_id = comp['id']
+                        
+                        if comp_id:
+                            # Get the best observation for this metric/competitor
+                            obs_query = """
+                                SELECT o.normalized_value, o.units, o.currency,
+                                       o.confidence_score, o.comparability_class
+                                FROM observations o
+                                WHERE o.market_cell_id = ? 
+                                  AND o.competitor_id = ?
+                                  AND o.metric_id = ?
+                                ORDER BY 
+                                    CASE comparability_class 
+                                        WHEN 'exact' THEN 0 
+                                        WHEN 'adjusted' THEN 1 
+                                        ELSE 2 
+                                    END,
+                                    confidence_score DESC,
+                                    created_at DESC
+                                LIMIT 1
+                            """
+                            obs = conn.execute(obs_query, (market_cell_id, comp_id, metric['id'])).fetchone()
+                            
+                            if obs and obs['normalized_value'] is not None:
+                                value = obs['normalized_value']
+                                units = obs['units'] or ''
+                                currency = obs['currency'] or ''
+                                
+                                # Format the value based on metric name and units
+                                metric_name_lower = metric["name"].lower()
+                                units_lower = units.lower()
+                                
+                                # Handle percentages
+                                if ('percent' in units_lower or '%' in units_lower or 
+                                    'margin' in metric_name_lower or 'share' in metric_name_lower or
+                                    'rate' in metric_name_lower or 'coverage' in metric_name_lower):
+                                    formatted_value = f"{value:.1f}%"
+                                # Handle currency values
+                                elif currency or 'revenue' in metric_name_lower or 'arpu' in metric_name_lower:
+                                    # Determine scale
+                                    if value >= 1_000_000_000:
+                                        formatted_value = f"${value/1_000_000_000:.1f}B"
+                                    elif value >= 1_000_000:
+                                        formatted_value = f"${value/1_000_000:.1f}M"
+                                    elif value >= 1_000:
+                                        formatted_value = f"${value/1_000:.1f}K"
+                                    else:
+                                        formatted_value = f"${value:.0f}"
+                                # Handle subscriber/user counts
+                                elif 'subscriber' in metric_name_lower or 'customer' in metric_name_lower:
+                                    if value >= 1_000_000:
+                                        formatted_value = f"{value/1_000_000:.1f}M"
+                                    elif value >= 1_000:
+                                        formatted_value = f"{value/1_000:.1f}K"
+                                    else:
+                                        formatted_value = f"{value:.0f}"
+                                # Handle data usage (GB)
+                                elif 'gb' in units_lower or 'data' in metric_name_lower:
+                                    formatted_value = f"{value:.1f} GB"
+                                # Handle other numeric values
+                                elif 'million' in units_lower:
+                                    formatted_value = f"{value:.1f}M"
+                                elif 'billion' in units_lower:
+                                    formatted_value = f"{value:.1f}B"
+                                else:
+                                    formatted_value = f"{value:,.0f}"
+                                
+                                html_parts.append(f'                <td>{formatted_value}</td>')
+                                
+                                # Collect sources
+                                sources_query = """
+                                    SELECT DISTINCT s.url, s.title
+                                    FROM observation_sources os
+                                    JOIN sources s ON s.id = os.source_id
+                                    JOIN observations o ON o.id = os.observation_id
+                                    WHERE o.market_cell_id = ? AND o.competitor_id = ? AND o.metric_id = ?
+                                """
+                                sources = conn.execute(sources_query, (market_cell_id, comp_id, metric['id'])).fetchall()
+                                for source in sources:
+                                    if source['url']:
+                                        all_sources.add((source['url'], source['title'] or 'Source'))
+                            else:
+                                html_parts.append('                <td></td>')
+                        else:
+                            html_parts.append('                <td></td>')
+                    
+                    html_parts.append('            </tr>')
+                
+                html_parts.append('        </table>')
+        
+        # Add footnotes with all sources
+        html_parts.append('        <div class="footnotes">')
+        html_parts.append('            <h3>Sources</h3>')
+        html_parts.append('            <ul>')
+        
+        for i, (url, title) in enumerate(sorted(all_sources), 1):
+            html_parts.append(f'                <li>[{i}] {title}: <a href="{url}">{url}</a></li>')
+        
+        html_parts.append('            </ul>')
+        html_parts.append('        </div>')
+        
+        # Close HTML
+        html_parts.append("""    </div>
+</body>
+</html>""")
+        
+        # Write to file
+        output_file = self.output_dir / f"{company_name.replace(' ', '_')}_competitive_data.html"
+        output_file.write_text('\n'.join(html_parts), encoding='utf-8')
+        
+        thread_safe_print(f"Data collection report saved to: {output_file}")
+        return str(output_file)

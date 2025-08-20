@@ -71,6 +71,8 @@ Focus on factual information from the documents. Be specific about geographic ma
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
                 context = json.loads(json_match.group())
+                # Embed original document text for later segment inference and validation
+                context['__document_text__'] = document_content
                 
                 # Use provided company name if context extraction missed it
                 if company_name and not context.get('company_name'):
@@ -100,7 +102,8 @@ Focus on factual information from the documents. Be specific about geographic ma
                 "stage": "Unknown",
                 "financial_highlights": "Unknown",
                 "competitive_keywords": [],
-                "market_keywords": []
+                "market_keywords": [],
+                "__document_text__": document_content
             }
     
     def discover_market_cells(self, company_context: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -109,6 +112,16 @@ Focus on factual information from the documents. Be specific about geographic ma
         Returns list of market cells with materiality scores.
         """
         thread_safe_print("Discovering market cells from company context...")
+
+        # First try: infer market cells from segment reporting in documents (principles-based)
+        # Leverage the company's own reporting structure if present.
+        try:
+            segment_cells = self._infer_market_cells_from_segments(company_context)
+            if segment_cells:
+                thread_safe_print(f"Using {len(segment_cells)} market cells inferred from segment reporting")
+                return segment_cells
+        except Exception as seg_err:
+            thread_safe_print(f"Segment-based inference failed (falling back to LLM): {seg_err}")
         
         prompt = f"""Based on this company context, identify material market cells for competitive analysis:
 
@@ -170,8 +183,9 @@ Examples of poor market cells:
                         cell['materiality_score'] = max(0.0, min(1.0, cell['materiality_score']))
                         validated_cells.append(cell)
                 
-                # Apply consolidation if too many cells
-                if len(validated_cells) > 8:
+                # Don't consolidate - respect company's segment structure
+                # Only apply consolidation if not from segment reporting
+                if len(validated_cells) > 8 and not any('segment reporting' in str(cell.get('rationale', '')).lower() for cell in validated_cells):
                     validated_cells = self._consolidate_market_cells(validated_cells)
                 
                 thread_safe_print(f"Discovered {len(validated_cells)} market cells")
@@ -190,6 +204,129 @@ Examples of poor market cells:
                 "rationale": "Default market cell based on available company information",
                 "estimated_revenue_share": "Unknown"
             }]
+
+    # --- Segment-based market cell inference ---
+    def _infer_market_cells_from_segments(self, company_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Infer market cells by matching the company's own segment reporting patterns
+        inside the PD2 document context (stored in companies.context_json and used here via company_context).
+
+        Principles:
+        - Prefer company-reported segment granularity (country/opco if present; otherwise region).
+        - Only include segments with sufficient evidence (named segment + ≥2 KPI mentions nearby).
+        - Do not aggregate if the company reports with more granularity.
+        """
+        # We need the original combined document text. If absent in context, cannot proceed.
+        doc_text = company_context.get('__document_text__') or ''
+        if not doc_text or len(doc_text) < 500:
+            # No embedded document text in context; let caller fall back to LLM discovery
+            return []
+
+        # Generic country lexicon (broad but safe)
+        countries = [
+            'malaysia','indonesia','bangladesh','sri lanka','cambodia','philippines','pakistan',
+            'india','singapore','thailand','vietnam','myanmar'
+        ]
+
+        # KPI keywords to detect material segments
+        kpi_terms = [
+            'revenue','ebitda','margin','capex','subscribers','arpu','market share','net adds','customers','ttm'
+        ]
+
+        # Segment heading patterns
+        heading_patterns = [
+            r'operating\s+segments?',
+            r'segment\s+reporting',
+            r'geographical\s+information',
+            r'by\s+geograph\w+',
+            r'business\s+segments?'
+        ]
+
+        import re
+        lowered = doc_text.lower()
+
+        # Find blocks around segment headings
+        blocks: List[str] = []
+        for pat in heading_patterns:
+            for m in re.finditer(pat, lowered):
+                start = max(0, m.start() - 2000)
+                end = min(len(lowered), m.end() + 5000)
+                blocks.append(lowered[start:end])
+
+        if not blocks:
+            # As a fallback, scan entire text for country/KPI co-occurrences
+            blocks = [lowered]
+
+        # Candidate cells by evidence tally
+        from collections import defaultdict
+        candidate_scores: Dict[Tuple[str,str,str], int] = defaultdict(int)
+
+        def infer_product_service(snippet: str) -> str:
+            if any(w in snippet for w in ['tower','infrastructure','edotco','fiber','colocation']):
+                return 'Telecommunication Infrastructure'
+            if any(w in snippet for w in ['enterprise','b2b','ict','managed services','cloud','cybersecurity','iot']):
+                return 'Enterprise Connectivity & ICT Solutions'
+            if any(w in snippet for w in ['mobile','prepaid','postpaid','broadband','consumer','subscriber']):
+                return 'Mobile Communication Services & Fixed Broadband'
+            return 'Core Business'
+
+        def infer_customer_segment(snippet: str) -> str:
+            if any(w in snippet for w in ['enterprise','b2b','sme','government','corporate']):
+                return 'Business Customers'
+            return 'Individual Consumers'
+
+        # Tally evidence per (product_service, geography, customer_segment)
+        for blk in blocks:
+            for country in countries:
+                if country in blk:
+                    # Examine a local window around the country mention
+                    for m in re.finditer(country, blk):
+                        win_start = max(0, m.start() - 600)
+                        win_end = min(len(blk), m.start() + 1200)
+                        win = blk[win_start:win_end]
+                        prod = infer_product_service(win)
+                        cust = infer_customer_segment(win)
+                        score = 0
+                        for term in kpi_terms:
+                            score += len(re.findall(r'\b'+re.escape(term)+r'\b', win))
+                        if score >= 2:
+                            key = (prod, country.title(), cust)
+                            candidate_scores[key] += score
+
+        # Convert to cells with materiality proxy
+        cells: List[Dict[str, Any]] = []
+        for (prod, geo, cust), score in sorted(candidate_scores.items(), key=lambda x: x[1], reverse=True):
+            cells.append({
+                'product_service': prod,
+                'geography': geo,
+                'customer_segment': cust,
+                'materiality_score': min(1.0, 0.2 + 0.05 * score),
+                'rationale': 'Derived from company segment reporting patterns (country + KPIs)'
+            })
+
+        # De-duplicate by product+geography (prefer consumer for mobile if both present unless business score dominates)
+        dedup: Dict[Tuple[str,str], Dict[str, Any]] = {}
+        for c in cells:
+            key = (c['product_service'], c['geography'])
+            if key not in dedup:
+                dedup[key] = c
+            else:
+                # Keep higher materiality
+                if c['materiality_score'] > dedup[key]['materiality_score']:
+                    dedup[key] = c
+
+        result = list(dedup.values())
+
+        # If nothing credible found, return empty to allow LLM fallback
+        if not result:
+            return []
+        # Keep segments that clear a materiality bar (no arbitrary count cap)
+        result = [c for c in result if c.get('materiality_score', 0) >= 0.30]
+        # If still too many and scores are low, keep top 8 by score
+        result.sort(key=lambda c: c.get('materiality_score', 0), reverse=True)
+        if len(result) > 8 and result[7].get('materiality_score', 0) < 0.45:
+            result = result[:8]
+        return result
     
     def _consolidate_market_cells(self, market_cells: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -324,10 +461,14 @@ Examples of poor market cells:
             if top_small.get('materiality_score', 0) >= 0.35:
                 validated_cells.append(top_small)
 
-        # Rank by materiality and limit to top 4–5 to avoid over-segmentation
+        # Rank by materiality. Do not cap or aggregate if based on company segment reporting.
         validated_cells.sort(key=lambda c: c.get('materiality_score', 0), reverse=True)
-        if len(validated_cells) > 5:
-            validated_cells = validated_cells[:5]
+        
+        # For segment-derived cells, keep all that meet materiality threshold
+        # For LLM-derived cells, cap at 8 to prevent excessive markets
+        if len(validated_cells) > 8:
+            if not any('segment reporting' in str(c.get('rationale','')).lower() for c in validated_cells):
+                validated_cells = validated_cells[:8]
 
         # Ensure at least one market cell exists
         if not validated_cells:

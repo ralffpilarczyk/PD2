@@ -18,9 +18,9 @@ from src.competitive.database import CompetitiveDatabase
 from src.competitive.market_mapper import MarketMapper
 from src.competitive.peer_discovery import PeerDiscovery
 from src.competitive.metric_engine import MetricEngine
-from src.competitive.competitive_analyzer import CompetitiveAnalyzer
-from src.competitive.strategy_bundler import StrategyBundler
+# Removed competitive analyzer and strategy bundler - focusing on data collection only
 from src.competitive.report_generator import CompetitiveReportGenerator
+from src.competitive.pivot_exporter import PivotExporter
 
 # Import Google Generative AI
 try:
@@ -53,9 +53,9 @@ class CompetitiveAnalysisCLI:
         self.market_mapper = MarketMapper(self.db)
         self.peer_discovery = PeerDiscovery(self.db)
         self.metric_engine = MetricEngine(self.db)
-        self.competitive_analyzer = CompetitiveAnalyzer(self.db)
-        self.strategy_bundler = StrategyBundler(self.db)
+        # Removed analyzer and bundler - focusing on pure data collection
         self.report_generator = CompetitiveReportGenerator(self.db, str(self.output_dir))
+        self.pivot_exporter = PivotExporter(self.db, str(self.output_dir))
         
         thread_safe_print("Competitive Analysis CLI initialized")
         thread_safe_print(f"Output directory: {self.output_dir}")
@@ -130,31 +130,34 @@ class CompetitiveAnalysisCLI:
     def prompt_analysis_scope(self) -> str:
         """Prompt user for analysis scope"""
         print("\nWhat scope of analysis would you like?")
-        print("1. Phase 1 only: Company analysis + competitor discovery")
-        print("2. Phase 2: Phase 1 + metric collection + data normalization")
-        print("3. Phase 3 full: All phases + competitive scoring + strategy recommendations + HTML report")
-        print("Recommended: Phase 3 full (default)")
+        print("1. Discovery only: Market cells + competitor identification")
+        print("2. Full data collection: Discovery + metrics collection (recommended)")
+        print("")
         
         while True:
-            choice = input("Choose option (1-3, or press Enter for Phase 3): ").strip()
+            choice = input("Choose option (1-2, or press Enter for full): ").strip()
             
-            if not choice or choice == "3":
-                return "phase3"
-            elif choice == "2":
-                return "phase2"
+            if not choice or choice == "2":
+                return "full"
             elif choice == "1":
-                return "phase1"
+                return "discovery"
             else:
-                print("Invalid choice. Please enter 1, 2, or 3.")
+                print("Invalid choice. Please enter 1 or 2.")
     
     def analyze_company(self, company_name: str = None, document_content: str = "", 
-                       max_competitors: int = 3, analysis_scope: str = "phase2") -> Optional[dict]:
+                       max_competitors: int = 3, analysis_scope: str = "full") -> Optional[dict]:
         """
         Run complete competitive analysis for a company.
         Returns analysis results or None if failed.
         """
         try:
-            thread_safe_print(f"\nStarting competitive analysis")
+            thread_safe_print(f"\nStarting competitive data collection")
+            
+            # Initialize results variables
+            all_competitors = {}
+            metrics_summary = {}
+            html_report_path = ""
+            json_evidence_path = ""
             
             # Phase 1: Market Cell Discovery
             thread_safe_print("\nPhase 1: Company Analysis & Market Cell Discovery")
@@ -183,13 +186,10 @@ class CompetitiveAnalysisCLI:
             )
             
             # Phase 2: Metric Collection & Normalization (if requested)
-            metrics_summary = None
-            competitive_analyses = {}
-            strategy_bundles = {}
-            html_report_path = ""
-            json_evidence_path = ""
+            # Additional variables already initialized at top
             
-            if analysis_scope in ["phase2", "phase3"]:
+            # Phase 2: Metric Collection & Data Normalization  
+            if analysis_scope == "full":
                 thread_safe_print(f"\nPhase 2: Metric Collection & Data Normalization")
                 metrics_results = self.metric_engine.process_and_save_all_metrics(company_id)
                 
@@ -200,49 +200,33 @@ class CompetitiveAnalysisCLI:
                     thread_safe_print(f"Phase 2 completed with limited data: {metrics_results.get('error', 'Unknown error')}")
                     metrics_summary = {"error": metrics_results.get('error')}
             
-            # Phase 3: Competitive Analysis & Strategy Generation (if requested)
-            if analysis_scope == "phase3":
-                thread_safe_print(f"\nPhase 3: Competitive Analysis & Strategy Generation")
+            # Generate HTML report with data tables (no analysis)
+            if analysis_scope == "full" and metrics_summary:
+                thread_safe_print(f"\nGenerating data collection report...")
                 
-                # Step 1: Competitive Scoring & Analysis
-                competitive_analyses = self.competitive_analyzer.analyze_all_market_cells(company_id)
+                html_report_path = self.report_generator.generate_data_collection_report(
+                    company_id=company_id
+                )
                 
-                if competitive_analyses:
-                    thread_safe_print(f"Competitive analysis completed for {len(competitive_analyses)} market cells")
-                    
-                    # Step 2: Strategy Bundle Generation
-                    strategy_bundles = self.strategy_bundler.generate_all_strategy_bundles(company_id, competitive_analyses)
-                    
-                    if strategy_bundles:
-                        thread_safe_print(f"Strategy bundles generated for {len(strategy_bundles)} market cells")
-                    
-                    # Step 3: Report Generation
-                    thread_safe_print(f"\nGenerating comprehensive reports...")
-                    
-                    html_report_path = self.report_generator.generate_comprehensive_report(
-                        company_id=company_id,
-                        competitive_analyses=competitive_analyses,
-                        strategy_bundles=strategy_bundles
-                    )
-                    
-                    json_evidence_path = self.report_generator.generate_json_evidence_pack(
-                        company_id=company_id,
-                        competitive_analyses=competitive_analyses,
-                        strategy_bundles=strategy_bundles
-                    )
-                    
-                    thread_safe_print(f"Phase 3 completed successfully")
-                else:
-                    thread_safe_print(f"Phase 3 could not proceed - no competitive analysis data")
+                json_evidence_path = self.report_generator.generate_json_evidence_pack(
+                    company_id=company_id
+                )
+                
+                thread_safe_print(f"Data collection report generated")
             
+            # Export pivot outputs (principles-based matrix for analysts)
+            try:
+                pivots_json_path = self.pivot_exporter.export_all_market_pivots(company_id)
+            except Exception as e:
+                thread_safe_print(f"Pivot export failed: {e}")
+                pivots_json_path = ""
+
             # Compile results
             results = {
                 'company_context': company_context,
                 'market_cells': market_cells,
                 'competitors_by_market_cell': all_competitors,
                 'metrics_summary': metrics_summary,
-                'competitive_analyses': competitive_analyses,
-                'strategy_bundles': strategy_bundles,
                 'analysis_metadata': {
                     'timestamp': self.timestamp,
                     'company_id': company_id,
@@ -251,7 +235,8 @@ class CompetitiveAnalysisCLI:
                     'total_competitors_found': sum(len(comps) for comps in all_competitors.values()),
                     'output_directory': str(self.output_dir),
                     'html_report_path': html_report_path,
-                    'json_evidence_path': json_evidence_path
+                    'json_evidence_path': json_evidence_path,
+                    'market_pivots_path': pivots_json_path
                 }
             }
             

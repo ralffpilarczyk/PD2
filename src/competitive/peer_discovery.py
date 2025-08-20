@@ -237,7 +237,7 @@ Focus on finding companies that compete directly in this specific market cell.""
     
     def extract_competitors_from_search(self, search_results: List[Dict[str, Any]], 
                                       company_context: Dict[str, Any],
-                                      market_cell: Dict[str, Any]) -> List[Dict[str, Any]]:
+                                      business_segment: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Extract competitor information from grounded search results.
         Returns list of competitors with evidence scores.
@@ -269,13 +269,15 @@ Focus on finding companies that compete directly in this specific market cell.""
 PARENT COMPANY: {company_name}
 Industry: {company_context.get('industry', 'Unknown')}
 
-MARKET CELL: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}
+BUSINESS SEGMENT: {business_segment.get('segment_name', 'Unknown')}
+Geographic Focus: {business_segment.get('geographic_focus', 'Unknown')}
+Products/Services: {business_segment.get('products_services', 'Unknown')}
 
 SEARCH RESULTS:
 {combined_text}
 
 Instructions:
-1. First identify any subsidiary of {company_name} operating in {market_cell['geography']}
+1. First identify any subsidiary of {company_name} operating in {business_segment.get('geographic_focus', 'this market')}
 2. Then identify direct competitors to that subsidiary
 
 Return JSON array - PUT THE SUBSIDIARY FIRST if found:
@@ -306,12 +308,14 @@ Company: {company_name}
 Industry: {company_context.get('industry', 'Unknown')}
 Business Model: {company_context.get('business_model', 'Unknown')}
 
-MARKET CELL: {market_cell['product_service']} × {market_cell['geography']} × {market_cell['customer_segment']}
+BUSINESS SEGMENT: {business_segment.get('segment_name', 'Unknown')}
+Geographic Focus: {business_segment.get('geographic_focus', 'Unknown')}
+Products/Services: {business_segment.get('products_services', 'Unknown')}
 
 SEARCH RESULTS:
 {combined_text}
 
-Extract direct competitors that compete in this specific market cell. Apply these criteria:
+Extract direct competitors that compete in this specific business segment. Apply these criteria:
 - Must be mentioned as competitors, rivals, or market players
 - Must operate in the same geography and customer segment
 - Must offer similar products/services

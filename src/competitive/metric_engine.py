@@ -641,6 +641,62 @@ IMPORTANT:
             metrics=metrics
         )
         
+        # Check for suspicious values and retry if needed
+        suspicious_count = 0
+        for metric_data in extracted_metrics:
+            if metric_data.get('metric_found') and metric_data.get('values'):
+                for value_data in metric_data['values']:
+                    # Quick validation check
+                    metric_name = metric_data.get('metric_definition', {}).get('name', '')
+                    raw_value = str(value_data.get('value', '0'))
+                    units = value_data.get('units', '').lower()
+                    
+                    # Parse and scale value
+                    numeric_str = re.sub(r'[^\d.-]', '', raw_value)
+                    value = float(numeric_str) if numeric_str else 0
+                    if 'trillion' in units:
+                        value *= 1e12
+                    elif 'billion' in units:
+                        value *= 1e9
+                    elif 'million' in units:
+                        value *= 1e6
+                    
+                    # Principle: Use LLM judgment to detect implausible values
+                    # Quick heuristic check first to avoid excessive LLM calls
+                    # Only check values that seem extremely large
+                    if value > 1e15:  # Quick filter for obviously huge numbers
+                        suspicious_count += 1
+                        thread_safe_print(f"  WARNING: Extremely large value detected: {value:.2e} for {competitor_name}")
+                        break
+        
+        # If too many suspicious values, try a refined search
+        if suspicious_count >= 3 and not search_results.get('is_refined_search'):
+            thread_safe_print(f"  Detected {suspicious_count} suspicious values, attempting refined search...")
+            refined_query = f'"{competitor_name}" official financial results investor relations annual report latest {market_cell["geography"]}'
+            refined_results = self.search_metric_grounded(
+                search_query=refined_query,
+                company_name=company_context['company_name'],
+                market_cell_key=market_cell_key,
+                metric_name="batch_metrics_refined"
+            )
+            refined_results['is_refined_search'] = True  # Prevent infinite recursion
+            
+            # Re-extract with refined results
+            refined_metrics = self.extract_batch_metrics(
+                search_results=refined_results,
+                competitor_name=competitor_name,
+                metrics=metrics
+            )
+            
+            # Use refined metrics if they look better
+            refined_suspicious = sum(1 for m in refined_metrics 
+                                   if m.get('metric_found') and any(
+                                       float(re.sub(r'[^\d.-]', '', str(v.get('value', '0')))) > 1e12 
+                                       for v in m.get('values', [])))
+            if refined_suspicious < suspicious_count:
+                thread_safe_print(f"  Using refined search results (reduced suspicious values from {suspicious_count} to {refined_suspicious})")
+                extracted_metrics = refined_metrics
+        
         # Process each extracted metric
         collected_data = []
         for extracted in extracted_metrics:
@@ -954,6 +1010,50 @@ If the rate is not found, return 'NOT_FOUND'."""
             thread_safe_print(f"Period normalization failed: {e}")
             return value, f"Period normalization failed, kept original period"
     
+    def _validate_business_judgment(self, metric_name: str, value: float, 
+                                   currency: str, units: str) -> Optional[str]:
+        """
+        Apply principle-based validation by asking the LLM to exercise judgment.
+        No specific criteria - relies on contextual reasoning.
+        """
+        # Principle: Let the LLM determine if a value seems implausible in context
+        # Rather than hardcoding rules, we ask for wise judgment
+        
+        validation_prompt = f"""Given this metric data, assess if the value seems plausible:
+Metric: {metric_name}
+Value: {value:,.2f}
+Units: {units}
+Currency indicator: {currency if currency else 'None'}
+
+Apply these principles:
+1. Does this value make sense given what this metric represents?
+2. Could this be a data extraction or unit conversion error?
+3. Is the order of magnitude reasonable for this type of measurement?
+
+If the value seems implausible, respond with a brief reason (max 10 words).
+If the value seems plausible, respond with exactly: "PLAUSIBLE"
+
+Your response:"""
+
+        try:
+            # Use the LLM to make a judgment call
+            response = retry_with_backoff(
+                lambda: self.analysis_model.generate_content(
+                    validation_prompt,
+                    generation_config={"temperature": 0.1, "max_output_tokens": 50}
+                ).text.strip()
+            )
+            
+            if response.upper() == "PLAUSIBLE":
+                return None
+            else:
+                return response[:100]  # Limit response length
+                
+        except Exception as e:
+            # If validation fails, assume plausible to avoid blocking
+            thread_safe_print(f"Validation check failed: {e}")
+            return None
+    
     def classify_comparability(self, metric_name: str, value_data: Dict[str, Any], 
                              target_metric: Dict[str, Any]) -> str:
         """
@@ -1016,22 +1116,48 @@ If the rate is not found, return 'NOT_FOUND'."""
                 numeric_str = re.sub(r'[^\d.-]', '', raw_value)
                 original_value = float(numeric_str) if numeric_str else 0
                 
-                # Determine if this is a currency value
+                # Apply unit multipliers BEFORE currency conversion
+                # This is critical for handling "billion IDR", "trillion IDR" etc.
+                scaled_value = original_value
+                if 'trillion' in units:
+                    scaled_value = original_value * 1e12
+                elif 'billion' in units or units == 'b':
+                    scaled_value = original_value * 1e9
+                elif 'million' in units or units == 'm':
+                    scaled_value = original_value * 1e6
+                elif 'thousand' in units or units == 'k':
+                    scaled_value = original_value * 1e3
+                
+                # Principle: Detect currency by pattern recognition, not hardcoded lists
+                # Currency codes typically follow ISO 4217: 3 uppercase letters
+                # Some local abbreviations exist (e.g., RM for Malaysian Ringgit)
                 currency = None
-                if any(curr in raw_value.upper() or curr in units.upper() for curr in ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'RM', 'IDR', 'BDT', 'LKR', 'KHR', 'PHP']):
-                    # Extract currency code
-                    for curr in ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'RM', 'IDR', 'BDT', 'LKR', 'KHR', 'PHP']:
-                        if curr in raw_value.upper() or curr in units.upper():
-                            currency = curr
-                            break
+                
+                # Check if units suggest currency
+                if 'currency' in units or '$' in raw_value or '€' in raw_value or '£' in raw_value or '¥' in raw_value:
+                    # Extract potential currency codes (3 uppercase letters)
+                    currency_patterns = re.findall(r'\b[A-Z]{2,3}\b', raw_value.upper() + ' ' + units.upper())
+                    if currency_patterns:
+                        currency = currency_patterns[0]
+                        # Normalize known aliases based on ISO standards
+                        # RM is commonly used for Malaysian Ringgit (ISO: MYR)
+                        if currency == 'RM':
+                            currency = 'MYR'
+                elif any(indicator in metric_definition.get('name', '').lower() 
+                        for indicator in ['revenue', 'cost', 'profit', 'income', 'expense']):
+                    # Financial metrics likely have currency even if not explicitly marked
+                    # Try to extract any 3-letter code
+                    currency_patterns = re.findall(r'\b[A-Z]{3}\b', raw_value.upper() + ' ' + units.upper())
+                    if currency_patterns:
+                        currency = currency_patterns[0]
                 
                 # Currency normalization only if it's actually currency
                 if currency and currency != target_currency:
                     normalized_value, fx_info = self.normalize_currency(
-                        original_value, currency, target_currency, period
+                        scaled_value, currency, target_currency, period  # Use scaled_value, not original_value
                     )
                 else:
-                    normalized_value = original_value
+                    normalized_value = scaled_value  # Use scaled_value even without currency conversion
                     fx_info = "No currency conversion needed"
                 
                 # Period normalization (if metric is flow-based)
@@ -1049,15 +1175,25 @@ If the rate is not found, return 'NOT_FOUND'."""
                     metric_definition
                 )
                 
+                # Business judgment validation
+                suspicious_value = self._validate_business_judgment(
+                    metric_definition.get('name', ''),
+                    normalized_value,
+                    currency,
+                    units
+                )
+                
                 # Compile normalization notes
                 normalization_notes = {
                     'original_value': original_value,
+                    'scaled_value': scaled_value,
                     'original_currency': currency,
                     'original_period': period,
                     'fx_conversion': fx_info,
                     'period_adjustment': period_info,
                     'comparability_class': comparability,
-                    'data_quality_flags': value_data.get('data_quality_flags', [])
+                    'data_quality_flags': value_data.get('data_quality_flags', []),
+                    'suspicious_value': suspicious_value
                 }
                 
                 normalized_observation = {
@@ -1068,11 +1204,14 @@ If the rate is not found, return 'NOT_FOUND'."""
                     'period': period,
                     'scope': value_data.get('scope', ''),
                     'comparability_class': comparability,
-                    'confidence_score': value_data.get('confidence', 0.0),
+                    'confidence_score': value_data.get('confidence', 0.0) * (0.5 if suspicious_value else 1.0),  # Reduce confidence for suspicious values
                     'source_quality': value_data.get('source_quality', 'unknown'),
                     'extraction_notes': value_data.get('extraction_notes', ''),
                     'normalization_notes': json.dumps(normalization_notes)
                 }
+                
+                if suspicious_value:
+                    thread_safe_print(f"WARNING: Suspicious value detected for {metric_definition.get('name', '')}: {normalized_value} ({suspicious_value})")
                 
                 normalized_observations.append(normalized_observation)
                 

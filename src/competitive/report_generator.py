@@ -1140,6 +1140,15 @@ class CompetitiveReportGenerator:
                                 metric_name_lower = metric["name"].lower()
                                 units_lower = units.lower()
                                 
+                                # Principle: Display should indicate when values seem implausible
+                                # Use order of magnitude as a simple heuristic
+                                if abs(value) > 1e15:  # Extremely large number
+                                    thread_safe_print(f"WARNING: Extremely large value for display: {value:.2e}")
+                                    # Show the value but mark it as potentially erroneous
+                                    formatted_value = f"{value:.2e}*"
+                                    html_parts.append(f'                <td title="Value may contain data quality issues">{formatted_value}</td>')
+                                    continue
+                                
                                 # Handle percentages
                                 if ('percent' in units_lower or '%' in units_lower or 
                                     'margin' in metric_name_lower or 'share' in metric_name_lower or

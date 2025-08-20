@@ -133,13 +133,14 @@ Focus on finding companies that compete directly in this specific market cell.""
                 
         except Exception as e:
             thread_safe_print(f"Error generating search queries: {e}")
-            # Return fallback queries
+            # Return fallback queries using business_segment
             company_name = company_context.get('company_name', 'company')
             industry = company_context.get('industry', 'industry')
-            geography = market_cell.get('geography', 'market')
+            geography = business_segment.get('geographic_focus', 'market')
+            segment_name = business_segment.get('segment_name', '')
             
             return [
-                f"{company_name} competitors {geography} {industry} latest",
+                f"{segment_name} competitors {geography} {industry} latest",
                 f"{industry} companies {geography} competition latest",
                 f"leading {industry} players {geography} market share recent"
             ]
@@ -366,8 +367,8 @@ Focus on finding 3-7 direct competitors with the strongest evidence."""
                         
                         valid_competitors.append(comp)
 
-                # Resolve entities (subsidiaries/brands/JVs → parent) per market cell
-                valid_competitors = resolve_entities(valid_competitors, market_cell)
+                # Resolve entities (subsidiaries/brands/JVs → parent) per segment
+                valid_competitors = resolve_entities(valid_competitors, business_segment)
                 
                 # Sort by evidence score (highest first) and limit to top performers
                 valid_competitors.sort(key=lambda x: x['evidence_score'], reverse=True)

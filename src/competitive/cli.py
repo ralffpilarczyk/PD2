@@ -171,6 +171,16 @@ class CompetitiveAnalysisCLI:
                 thread_safe_print("No business segments extracted. Analysis cannot continue.")
                 return None
             
+            # Display discovered segments for user visibility
+            thread_safe_print(f"\nDiscovered {len(business_segments)} business segments:")
+            for i, segment in enumerate(business_segments, 1):
+                revenue = segment.get('revenue_contribution', 'N/A')
+                profit = segment.get('profit_contribution', 'N/A')
+                geography = segment.get('geographic_focus', 'N/A')
+                thread_safe_print(f"  {i}. {segment['segment_name']}")
+                thread_safe_print(f"     Revenue: {revenue}, Profit: {profit}, Geography: {geography}")
+            thread_safe_print("")  # Blank line for readability
+            
             # Save company and segments to database
             company_id = self.db.insert_company(company_context['company_name'], company_context)
             for segment in business_segments:

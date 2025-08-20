@@ -172,24 +172,15 @@ CRITICAL:
                 validated_segments = []
                 for segment in segments:
                     if 'segment_name' in segment:
-                        # Calculate significance based on revenue contribution
+                        # Calculate significance using both revenue and profit contributions
                         if 'significance_score' not in segment:
-                            # Try to parse revenue contribution
-                            revenue_str = str(segment.get('revenue_contribution', ''))
-                            if '%' in revenue_str:
-                                try:
-                                    pct = float(re.findall(r'[\d.]+', revenue_str)[0])
-                                    segment['significance_score'] = pct / 100.0
-                                except:
-                                    segment['significance_score'] = 0.5
-                            else:
-                                segment['significance_score'] = 0.5
+                            segment['significance_score'] = self._calculate_segment_significance(segment)
                         
                         segment['significance_score'] = max(0.0, min(1.0, segment['significance_score']))
                         validated_segments.append(segment)
                 
-                # Sort by significance (revenue contribution)
-                validated_segments.sort(key=lambda x: x.get('significance_score', 0), reverse=True)
+                # Sort by significance using intelligent business judgment
+                validated_segments = self._sort_segments_by_significance(validated_segments)
                 
                 # Limit to top 8 segments if too many
                 if len(validated_segments) > 8:
@@ -204,6 +195,88 @@ CRITICAL:
         except Exception as e:
             thread_safe_print(f"Error extracting business segments: {e}")
             return self._fallback_segment_discovery(company_context)
+    
+    def _calculate_segment_significance(self, segment: Dict[str, Any]) -> float:
+        """
+        Calculate segment significance using both revenue and profit contributions.
+        Applies business judgment for unconsolidated affiliates.
+        """
+        revenue_str = str(segment.get('revenue_contribution', ''))
+        profit_str = str(segment.get('profit_contribution', ''))
+        
+        # Extract percentage values
+        revenue_pct = 0.0
+        profit_pct = 0.0
+        
+        if '%' in revenue_str:
+            try:
+                revenue_pct = float(re.findall(r'[\d.]+', revenue_str)[0]) / 100.0
+            except:
+                pass
+        
+        if '%' in profit_str:
+            try:
+                profit_pct = float(re.findall(r'[\d.]+', profit_str)[0]) / 100.0
+            except:
+                pass
+        
+        # Business judgment for significance
+        if revenue_pct > 0:
+            # Consolidated entity - use revenue as primary indicator
+            return revenue_pct
+        elif profit_pct > 0:
+            # Unconsolidated affiliate - estimate significance from profit contribution
+            # Principle: If an entity contributes X% of profit, it's likely significant
+            # even without revenue consolidation
+            # Apply a multiplier to reflect that profit % understates total business importance
+            estimated_significance = profit_pct * 2.0  # Profit contribution often understates importance
+            return min(estimated_significance, 0.9)  # Cap at 0.9 to avoid overstatement
+        else:
+            # Check for keywords suggesting importance
+            segment_name = segment.get('segment_name', '').lower()
+            description = segment.get('description', '').lower()
+            
+            # Strategic segments often mentioned without percentages
+            if any(term in segment_name + description for term in 
+                   ['strategic', 'growth', 'digital', 'innovation', 'emerging']):
+                return 0.3  # Give moderate significance to strategic segments
+            
+            # Default for segments without clear metrics
+            return 0.2
+    
+    def _sort_segments_by_significance(self, segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Sort segments using intelligent business judgment.
+        Considers both revenue and profit contributions.
+        """
+        def segment_sort_key(segment):
+            score = segment.get('significance_score', 0)
+            
+            # Boost score for segments with explicit financial data
+            if segment.get('revenue_contribution') and '%' in str(segment.get('revenue_contribution')):
+                score += 0.01  # Small boost for having revenue data
+            
+            # Check if it's an unconsolidated affiliate
+            if 'unconsolidated' in segment.get('description', '').lower() or \
+               'equity' in segment.get('description', '').lower() or \
+               'associate' in segment.get('segment_name', '').lower():
+                # Don't penalize unconsolidated entities
+                if segment.get('profit_contribution') and '%' in str(segment.get('profit_contribution')):
+                    score += 0.005  # Small boost for having profit data
+            
+            return score
+        
+        # Sort with business judgment
+        sorted_segments = sorted(segments, key=segment_sort_key, reverse=True)
+        
+        # Log the sorting for transparency
+        thread_safe_print("Segments sorted by significance:")
+        for i, seg in enumerate(sorted_segments[:5], 1):  # Show top 5
+            rev = seg.get('revenue_contribution', 'N/A')
+            prof = seg.get('profit_contribution', 'N/A') 
+            thread_safe_print(f"  {i}. {seg['segment_name']}: Score={seg['significance_score']:.2f}, Rev={rev}, Profit={prof}")
+        
+        return sorted_segments
     
     def _fallback_segment_discovery(self, company_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Fallback when segment extraction fails - create single segment from context"""

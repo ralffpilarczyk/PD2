@@ -220,29 +220,35 @@ CRITICAL:
             except:
                 pass
         
-        # Business judgment for significance
-        if revenue_pct > 0:
-            # Consolidated entity - use revenue as primary indicator
+        # Business judgment for significance - principle-based approach
+        if revenue_pct > 0 and profit_pct > 0:
+            # Have both metrics - use weighted average favoring revenue
+            # Revenue is more indicative of scale, profit of strategic importance
+            return (revenue_pct * 0.7) + (profit_pct * 0.3)
+        elif revenue_pct > 0:
+            # Consolidated entity - revenue is the primary indicator
             return revenue_pct
         elif profit_pct > 0:
-            # Unconsolidated affiliate - estimate significance from profit contribution
-            # Principle: If an entity contributes X% of profit, it's likely significant
-            # even without revenue consolidation
-            # Apply a multiplier to reflect that profit % understates total business importance
-            estimated_significance = profit_pct * 2.0  # Profit contribution often understates importance
-            return min(estimated_significance, 0.9)  # Cap at 0.9 to avoid overstatement
+            # Unconsolidated affiliate - use profit as proxy for significance
+            # Don't artificially inflate; profit contribution IS the significance
+            # Just ensure it's not unfairly ranked below tiny consolidated segments
+            return profit_pct * 0.9  # Slight discount since we lack full visibility
         else:
-            # Check for keywords suggesting importance
+            # Check for other indicators of importance
             segment_name = segment.get('segment_name', '').lower()
             description = segment.get('description', '').lower()
+            
+            # Look for financial amounts even without percentages
+            if 'billion' in description or 'million' in description:
+                return 0.25
             
             # Strategic segments often mentioned without percentages
             if any(term in segment_name + description for term in 
                    ['strategic', 'growth', 'digital', 'innovation', 'emerging']):
-                return 0.3  # Give moderate significance to strategic segments
+                return 0.15  # Lower weight for unquantified strategic segments
             
             # Default for segments without clear metrics
-            return 0.2
+            return 0.1
     
     def _sort_segments_by_significance(self, segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """

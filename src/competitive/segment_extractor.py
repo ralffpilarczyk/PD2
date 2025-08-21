@@ -297,64 +297,90 @@ CRITICAL:
         subsidiaries = company_context.get('other_companies', [])
         primary_markets = company_context.get('primary_markets', [])
         
-        if subsidiaries and primary_markets:
-            # Create segments using LLM to intelligently map subsidiaries to markets
-            thread_safe_print(f"Found {len(subsidiaries)} subsidiaries - inferring their markets")
+        if subsidiaries:
+            # Use LLM to understand full business context of each subsidiary
+            thread_safe_print(f"Found {len(subsidiaries)} subsidiaries - analyzing business segments")
             
-            # Use LLM to infer market mappings
-            mapping_prompt = f"""Given these subsidiaries and markets, infer which market each subsidiary likely operates in:
+            # Ask LLM to understand all three dimensions
+            mapping_prompt = f"""Analyze these business units to understand their segments:
 
+Parent: {company_context.get('company_name', '')}
+Industry: {company_context.get('industry', '')}
+Markets: {', '.join(primary_markets) if primary_markets else 'Various'}
 Subsidiaries: {', '.join(subsidiaries[:8])}
-Available Markets: {', '.join(primary_markets)}
 
-Use contextual clues in the names and common telecom industry knowledge.
-Return a simple JSON mapping: {{"subsidiary_name": "market"}}
-Example: {{"CelcomDigi": "Malaysia", "XL Axiata": "Indonesia"}}"""
+For each subsidiary, determine:
+1. Geographic focus (where they operate)
+2. Products/Services (what they offer)
+3. Customer segments (who they serve)
+
+Use business judgment to infer the most relevant combination.
+Return JSON array with: subsidiary, geographic_focus, products_services, customer_focus"""
 
             try:
                 mapping_response = retry_with_backoff(
                     lambda: self.model.generate_content(
                         mapping_prompt,
-                        generation_config={"temperature": 0.1, "max_output_tokens": 500}
+                        generation_config={"temperature": 0.2, "max_output_tokens": 1500}
                     ).text
                 )
                 
-                # Extract JSON mapping
+                # Extract JSON array
                 import json
-                json_match = re.search(r'\{.*\}', mapping_response, re.DOTALL)
+                json_match = re.search(r'\[.*\]', mapping_response, re.DOTALL)
                 if json_match:
-                    market_mappings = json.loads(json_match.group())
+                    segment_analyses = json.loads(json_match.group())
                 else:
-                    market_mappings = {}
-            except:
-                market_mappings = {}
+                    segment_analyses = []
+            except Exception as e:
+                thread_safe_print(f"Segment analysis failed: {e}")
+                segment_analyses = []
             
-            for i, subsidiary in enumerate(subsidiaries[:8]):
-                # Get market from LLM mapping or use first primary market
-                geographic_focus = market_mappings.get(subsidiary, primary_markets[0] if primary_markets else 'Regional')
-                
-                # Infer product focus from subsidiary name patterns
-                subsidiary_lower = subsidiary.lower()
-                if any(term in subsidiary_lower for term in ['boost', 'bank', 'pay', 'wallet', 'fintech']):
-                    products = "Digital financial services and banking"
-                elif any(term in subsidiary_lower for term in ['tower', 'infra', 'edotco']):
-                    products = "Telecommunications infrastructure services"
-                elif 'merger' in subsidiary_lower or 'future' in subsidiary_lower:
-                    products = "Planned telecommunications entity"
-                else:
-                    products = "Mobile and broadband telecommunications services"
-                
-                segments.append({
-                    "segment_name": subsidiary,
-                    "description": f"Operating entity focused on {geographic_focus} market",
-                    "revenue_contribution": "Not disclosed",
-                    "profit_contribution": "Not disclosed",
-                    "growth_rate": "Not disclosed",
-                    "key_metrics": "",
-                    "geographic_focus": geographic_focus,
-                    "products_services": products,
-                    "significance_score": 0.5 - (i * 0.05)
-                })
+            # Process LLM analysis or use fallback
+            if segment_analyses:
+                for i, analysis in enumerate(segment_analyses[:8]):
+                    subsidiary_name = analysis.get('subsidiary', subsidiaries[i] if i < len(subsidiaries) else 'Unknown')
+                    geography = analysis.get('geographic_focus', 'Regional')
+                    products = analysis.get('products_services', 'Telecommunications')
+                    customers = analysis.get('customer_focus', 'Mixed')
+                    
+                    # Create intelligent description combining all dimensions
+                    if 'consumer' in customers.lower() and 'enterprise' not in customers.lower():
+                        desc = f"{products} for consumers in {geography}"
+                    elif 'enterprise' in customers.lower() and 'consumer' not in customers.lower():
+                        desc = f"{products} for enterprises in {geography}"
+                    elif 'infrastructure' in products.lower() or 'tower' in products.lower():
+                        desc = f"{products} serving operators across {geography}"
+                    else:
+                        desc = f"{products} in {geography}"
+                    
+                    segments.append({
+                        "segment_name": subsidiary_name,
+                        "description": desc,
+                        "revenue_contribution": "Not disclosed",
+                        "profit_contribution": "Not disclosed",
+                        "growth_rate": "Not disclosed",
+                        "key_metrics": "",
+                        "geographic_focus": geography,
+                        "products_services": products,
+                        "customer_focus": customers,
+                        "significance_score": 0.6 - (i * 0.05)
+                    })
+            else:
+                # Simple fallback if analysis fails
+                for i, subsidiary in enumerate(subsidiaries[:8]):
+                    segments.append({
+                        "segment_name": subsidiary,
+                        "description": "Operating subsidiary",
+                        "revenue_contribution": "Not disclosed",
+                        "profit_contribution": "Not disclosed",
+                        "growth_rate": "Not disclosed",
+                        "key_metrics": "",
+                        "geographic_focus": primary_markets[i % len(primary_markets)] if primary_markets else 'Regional',
+                        "products_services": company_context.get('products_services', ''),
+                        "customer_focus": "Mixed",
+                        "significance_score": 0.5 - (i * 0.05)
+                    })
         
         # If no subsidiaries, create geographic segments from primary markets
         elif primary_markets:

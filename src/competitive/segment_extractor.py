@@ -297,27 +297,63 @@ CRITICAL:
         subsidiaries = company_context.get('other_companies', [])
         primary_markets = company_context.get('primary_markets', [])
         
-        if subsidiaries:
-            # Create segments from known subsidiaries
-            thread_safe_print(f"Found {len(subsidiaries)} subsidiaries to use as segments")
-            for i, subsidiary in enumerate(subsidiaries[:8]):  # Limit to 8
-                # Try to match subsidiary with market
-                geographic_focus = 'Multiple Markets'
-                for market in primary_markets:
-                    if market.lower() in subsidiary.lower():
-                        geographic_focus = market
-                        break
+        if subsidiaries and primary_markets:
+            # Create segments using LLM to intelligently map subsidiaries to markets
+            thread_safe_print(f"Found {len(subsidiaries)} subsidiaries - inferring their markets")
+            
+            # Use LLM to infer market mappings
+            mapping_prompt = f"""Given these subsidiaries and markets, infer which market each subsidiary likely operates in:
+
+Subsidiaries: {', '.join(subsidiaries[:8])}
+Available Markets: {', '.join(primary_markets)}
+
+Use contextual clues in the names and common telecom industry knowledge.
+Return a simple JSON mapping: {{"subsidiary_name": "market"}}
+Example: {{"CelcomDigi": "Malaysia", "XL Axiata": "Indonesia"}}"""
+
+            try:
+                mapping_response = retry_with_backoff(
+                    lambda: self.model.generate_content(
+                        mapping_prompt,
+                        generation_config={"temperature": 0.1, "max_output_tokens": 500}
+                    ).text
+                )
+                
+                # Extract JSON mapping
+                import json
+                json_match = re.search(r'\{.*\}', mapping_response, re.DOTALL)
+                if json_match:
+                    market_mappings = json.loads(json_match.group())
+                else:
+                    market_mappings = {}
+            except:
+                market_mappings = {}
+            
+            for i, subsidiary in enumerate(subsidiaries[:8]):
+                # Get market from LLM mapping or use first primary market
+                geographic_focus = market_mappings.get(subsidiary, primary_markets[0] if primary_markets else 'Regional')
+                
+                # Infer product focus from subsidiary name patterns
+                subsidiary_lower = subsidiary.lower()
+                if any(term in subsidiary_lower for term in ['boost', 'bank', 'pay', 'wallet', 'fintech']):
+                    products = "Digital financial services and banking"
+                elif any(term in subsidiary_lower for term in ['tower', 'infra', 'edotco']):
+                    products = "Telecommunications infrastructure services"
+                elif 'merger' in subsidiary_lower or 'future' in subsidiary_lower:
+                    products = "Planned telecommunications entity"
+                else:
+                    products = "Mobile and broadband telecommunications services"
                 
                 segments.append({
                     "segment_name": subsidiary,
-                    "description": f"Operating subsidiary in {geographic_focus}",
+                    "description": f"Operating entity focused on {geographic_focus} market",
                     "revenue_contribution": "Not disclosed",
                     "profit_contribution": "Not disclosed",
                     "growth_rate": "Not disclosed",
                     "key_metrics": "",
                     "geographic_focus": geographic_focus,
-                    "products_services": company_context.get('products_services', ''),
-                    "significance_score": 0.5 - (i * 0.05)  # Declining score by order
+                    "products_services": products,
+                    "significance_score": 0.5 - (i * 0.05)
                 })
         
         # If no subsidiaries, create geographic segments from primary markets

@@ -7,33 +7,25 @@
 
 
 %%% Facts for Axiata
-fact(axiata, at, 11.796585560118988).
-fact_period(axiata, at, fy(2024)).
-fact_confidence(axiata, at, 0.85).
+fact(axiata, cash, 4860.4400000000005).
+fact_period(axiata, cash, fy(2024)).
+fact_confidence(axiata, cash, 0.95).
 
-fact(axiata, at, 11.796585560118988).
-fact_period(axiata, at, fy(2024)).
-fact_confidence(axiata, at, 0.85).
-
-fact(axiata, debt_to_assets, 8.450799445627557e-06).
-fact_period(axiata, debt_to_assets, fy(2024)).
-fact_confidence(axiata, debt_to_assets, 0.85).
-
-fact(axiata, operating_cash_flow, 0.036000000000000004).
-fact_period(axiata, operating_cash_flow, fy(2024)).
-fact_confidence(axiata, operating_cash_flow, 0.95).
+fact(axiata, debt_to_equity, 1.094264654714476).
+fact_period(axiata, debt_to_equity, fy(2024)).
+fact_confidence(axiata, debt_to_equity, 0.85).
 
 fact(axiata, revenue, 22334.617000000002).
 fact_period(axiata, revenue, fy(2024)).
 fact_confidence(axiata, revenue, 0.95).
 
-fact(axiata, total_assets, 1893.3120000000001).
-fact_period(axiata, total_assets, fy(2024)).
-fact_confidence(axiata, total_assets, 0.95).
-
-fact(axiata, total_debt, 0.016).
+fact(axiata, total_debt, 23190.985).
 fact_period(axiata, total_debt, fy(2024)).
 fact_confidence(axiata, total_debt, 0.95).
+
+fact(axiata, equity_value, 21193.214).
+fact_period(axiata, equity_value, fy(2024)).
+fact_confidence(axiata, equity_value, 0.95).
 
 
 %%% End of facts

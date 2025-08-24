@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Any
 
 # Import our modules
-from fact_extractor_v4 import FactExtractorV4 as FactExtractor
+from fact_extractor_v5 import FactExtractorV5 as FactExtractor
 from calculation_engine import CalculationEngine
 from data_availability import DataAvailabilityTracker
 from report_generator import ReportGenerator

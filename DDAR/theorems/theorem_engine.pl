@@ -11,6 +11,7 @@
 :- consult('theorems.pl').           % Unified theorem definitions & sensitivity analysis
 :- consult('precalculations.pl').    % Pre-calculation adapters
 :- consult('iterative_analysis.pl').  % Iterative cascade analysis
+:- consult('reasoning_chains.pl').   % Enhanced reasoning and chain-of-thought
 
 % ========================================
 % UTILITY PREDICATES

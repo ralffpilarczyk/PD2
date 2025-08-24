@@ -18,7 +18,9 @@ from fact_extractor import FactExtractor
 from calculation_engine import CalculationEngine
 from data_availability import DataAvailabilityTracker
 from report_generator import ReportGenerator
+from enhanced_report_generator import EnhancedReportGenerator
 from ddar_adapter import DDARAdapter
+from conclusion_engine import ConclusionEngine, TheoremContext, create_chain_visualization
 
 class DDARApplication:
     """Main DDAR application with interactive interface"""
@@ -34,7 +36,9 @@ class DDARApplication:
         self.calculator = CalculationEngine()
         self.availability_tracker = DataAvailabilityTracker()
         self.report_generator = ReportGenerator()
+        self.enhanced_report_generator = EnhancedReportGenerator()
         self.adapter = DDARAdapter()
+        self.conclusion_engine = ConclusionEngine()
         
         # Theorem conclusion mappings
         self.conclusion_mappings = {
@@ -447,6 +451,9 @@ class DDARApplication:
         print("APPLYING THEOREMS")
         print("-" * 70)
         
+        # Store facts for use in intelligent conclusions
+        self.current_facts = facts
+        
         conclusions = self.apply_unified_theorems(facts)
         
         print(f"\nGenerated {len(conclusions)} conclusions")
@@ -468,6 +475,7 @@ class DDARApplication:
     
     def apply_unified_theorems(self, facts: List[Dict]) -> List[Dict]:
         """Apply unified theorem engine with multi-pass sequential reasoning"""
+        import re
         print("\nUsing unified multi-pass theorem engine...")
         
         # Get unique companies from facts
@@ -505,11 +513,15 @@ class DDARApplication:
             f.write("    format('~`=t~50|~n', []),\n")
             f.write("    writeln(''),\n")
             
-            # Run analysis for each company and output results
+            # Run both standard and iterative analysis for each company
             for company in sorted(companies):
                 f.write(f"    analyze_company({company}, Results_{company}),\n")
                 f.write(f"    writeln('RESULTS_FOR_{company.upper()}:'),\n")
                 f.write(f"    writeln(Results_{company}),\n")
+                f.write(f"    writeln(''),\n")
+                f.write(f"    writeln('ITERATIVE_ANALYSIS_FOR_{company.upper()}:'),\n")
+                f.write(f"    analyze_company_iterative({company}, IterativeResults_{company}),\n")
+                f.write(f"    report_iterative_analysis(IterativeResults_{company}),\n")
             
             f.write("    halt.\n\n")
             f.write(":- initialization(run_unified_analysis).\n")
@@ -521,17 +533,74 @@ class DDARApplication:
             
             print("\nTheorem execution output:")
             print("-" * 40)
+            
+            # Parse and display iterative analysis progress
             if result.stdout:
-                print(result.stdout)
+                lines = result.stdout.split('\n')
+                iteration_count = 0
+                sensitivity_count = 0
+                
+                for line in lines:
+                    # Track iterations
+                    if '=== Starting Iterative Analysis' in line:
+                        print("\n" + "="*60)
+                        print("ITERATIVE OPTIMIZATION LOOP STARTING")
+                        print("="*60)
+                    elif '--- Iteration' in line:
+                        iteration_count += 1
+                        print(f"\n🔄 ITERATION {iteration_count}")
+                        print("-"*40)
+                    elif 'Found' in line and 'sensitivity analyses' in line:
+                        match = re.search(r'Found (\d+) sensitivity', line)
+                        if match:
+                            sensitivity_count = int(match.group(1))
+                            print(f"📊 Analyzing {sensitivity_count} sensitivity paths")
+                    elif 'Sensitivity for' in line:
+                        theorem = line.split('Sensitivity for')[1].strip()
+                        print(f"  ✓ {theorem}")
+                    elif 'No more improvements available' in line:
+                        print("\n⚠️  CONVERGENCE: No feasible improvements within constraints")
+                    elif 'Selected improvements:' in line:
+                        print("\n✅ Improvements selected for next iteration")
+                    elif 'RESULTS_FOR' in line:
+                        print("\n" + "="*60)
+                        print("FINAL RESULTS")
+                        print("="*60)
+                        print(line)
+                    elif result and 'result(' in line:
+                        # Show results more clearly
+                        results = re.findall(r'result\((\w+),(\w+),([^)]+)\)', line)
+                        if results:
+                            print("\nTheorems successfully applied:")
+                            for theorem, metric, value in results:
+                                try:
+                                    val = float(value)
+                                    if 'roic' in theorem:
+                                        print(f"  • {theorem}: {metric} = {val:.4%}")
+                                    elif 'fcf' in theorem:
+                                        print(f"  • {theorem}: {metric} = ${val/1000000:.1f}M")
+                                    elif 'ccc' in theorem or 'cycle' in theorem:
+                                        print(f"  • {theorem}: {metric} = {val:.1f} days")
+                                    else:
+                                        print(f"  • {theorem}: {metric} = {val:.4f}")
+                                except:
+                                    print(f"  • {theorem}: {metric} = {value}")
+                
+                print(f"\n📈 Summary: {iteration_count} iterations completed, {sensitivity_count} paths analyzed")
+            
             if result.stderr:
-                print("Errors:", result.stderr)
+                # Only show actual errors, not warnings
+                errors = [e for e in result.stderr.split('\n') if 'ERROR' in e]
+                if errors:
+                    print("\n❌ Errors:")
+                    for error in errors:
+                        print(f"  {error}")
             
             # Parse conclusions from output
             conclusions = []
             current_company = None
             
             # Look for result list in output
-            import re
             results_pattern = r'\[result\((.*?)\)\]'
             
             for line in result.stdout.split('\n'):
@@ -571,25 +640,62 @@ class DDARApplication:
                                 'interest_coverage': 'Interest Coverage'
                             }
                             
-                            # Generate conclusion based on metric and value
+                            # Generate intelligent conclusion with reasoning chain
                             try:
                                 numeric_value = float(value)
-                                conclusion_text = self.generate_conclusion(theorem_name, metric, numeric_value)
-                            except:
-                                conclusion_text = f"{metric}: {value}"
-                            
-                            conclusions.append({
-                                'theorem': theorem_name.upper(),
-                                'name': theorem_descriptions.get(theorem_name, theorem_name),
-                                'company': current_company or 'axiata',
-                                'metric': metric,
-                                'value': value,
-                                'conclusion': conclusion_text,
-                                'recommendation': self.generate_recommendation(theorem_name, metric, value),
-                                'reasoning': f"Based on {metric} calculation of {value}",
-                                'confidence': 0.90,
-                                'support_fact_ids': []
-                            })
+                                
+                                # Get all facts for this company and period
+                                company_facts = {}
+                                for fact in self.current_facts:
+                                    if fact.get('company', '').lower() == (current_company or 'axiata').lower():
+                                        try:
+                                            company_facts[fact['key']] = float(fact['value'])
+                                        except:
+                                            pass
+                                
+                                # Create context for intelligent analysis
+                                context = TheoremContext(
+                                    company=current_company or 'axiata',
+                                    theorem=theorem_name,
+                                    metric=metric,
+                                    value=numeric_value,
+                                    all_facts=company_facts,
+                                    period='latest'
+                                )
+                                
+                                # Generate comprehensive conclusion
+                                intelligent_result = self.conclusion_engine.generate_intelligent_conclusion(context)
+                                
+                                conclusions.append({
+                                    'theorem': theorem_name.upper(),
+                                    'name': theorem_descriptions.get(theorem_name, theorem_name),
+                                    'company': current_company or 'axiata',
+                                    'metric': metric,
+                                    'value': value,
+                                    'conclusion': intelligent_result['conclusion'],
+                                    'recommendation': ' '.join(intelligent_result['recommendations'][:2]),  # Top 2 recommendations
+                                    'reasoning': ' → '.join(intelligent_result['reasoning_chain'][:3]),  # Top 3 reasoning steps
+                                    'numerical_insights': intelligent_result.get('numerical_insights', []),
+                                    'implications': intelligent_result.get('implications', []),
+                                    'confidence': intelligent_result['confidence'],
+                                    'support_fact_ids': intelligent_result.get('evidence', [])
+                                })
+                            except Exception as e:
+                                print(f"Error in intelligent conclusion: {e}")
+                                # Fallback to simple conclusion
+                                conclusion_text = self.generate_conclusion(theorem_name, metric, float(value))
+                                conclusions.append({
+                                    'theorem': theorem_name.upper(),
+                                    'name': theorem_descriptions.get(theorem_name, theorem_name),
+                                    'company': current_company or 'axiata',
+                                    'metric': metric,
+                                    'value': value,
+                                    'conclusion': conclusion_text,
+                                    'recommendation': self.generate_recommendation(theorem_name, metric, value),
+                                    'reasoning': f"Based on {metric} calculation of {value}",
+                                    'confidence': 0.70,
+                                    'support_fact_ids': []
+                                })
             
             return conclusions
             
@@ -627,7 +733,8 @@ class DDARApplication:
         report_filename = f"{company_prefix}_DDAR_{timestamp}.html"
         report_path = self.output_dir / "reports" / report_filename
         
-        self.report_generator.generate_html_report(report_data, report_path)
+        # Use enhanced report generator
+        self.enhanced_report_generator.generate_html_report(report_data, report_path)
         
         print(f"\nReport generated: {report_path}")
         

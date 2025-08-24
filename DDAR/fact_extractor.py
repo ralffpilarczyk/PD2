@@ -14,31 +14,31 @@ class FactExtractor:
             # Two patterns for EBITDA - try both
             'ebitda_table': r'EBITDA.*?\|\s*([\d,]+(?:\.\d+)?)\s*\|',  # Simple EBITDA table
             'ebitda_complex': r'Earnings before interest.*?\|\s*[\d,]+\s*\|.*?\|\s*([\d,]+)\s*\|$',  # Complex table, take last column
-            # Pattern for revenue
-            'revenue': r'(?:External operating revenue|Total operating revenue)\s*\|?\s*([\d,]+)',
+            # Pattern for revenue - enhanced for bilingual
+            'revenue': r'(?:Revenue|External operating revenue|Total operating revenue|Mobile Revenue|Total Revenue)\s*\|?\s*([\d,]+)',
             # Pattern for operating costs
             'costs': r'Other operating costs\s*\|?\s*\(([\d,]+)\)',
             # Pattern for segment profit
             'profit': r'Segment profit.*?\s*\|?\s*([\d,]+)',
-            # Balance Sheet Items
-            'total_assets': r'Total assets\s*\|?\s*([\d,]+)',
-            'total_equity': r'Total equity\s*\|?\s*([\d,]+)',
-            'current_assets': r'Total current assets\s*\|?\s*([\d,]+)',
-            'current_liabilities': r'Total current liabilities\s*\|?\s*([\d,]+)',
-            'total_debt': r'(?:Total debt|Borrowings.*total)\s*\|?\s*([\d,]+)',
-            'borrowings': r'Total\s+\|\s+([\d,]+)\s+\|\s+([\d,]+)',  # Capture total borrowings (sum of current + non-current)
-            'non_current_assets': r'Total non-current assets\s*\|?\s*([\d,]+)',
-            'cash': r'(?:Total cash and cash equivalents|CASH AND CASH EQUIVALENTS AT THE END)\s*\|?\s*([\d,]+)',
-            'inventory': r'(?:Inventory|Inventories)\s*\|?\s*([\d,]+)',
-            # Income Statement Items
-            'net_income': r'(?:Net profit|Profit for the (?:financial )?(?:period|year)|Profit attributable to.*owners)\s*\|?\s*([\d,]+)',
-            'operating_income': r'(?:Operating income|Operating profit|EBIT[^D])\s*\|?\s*([\d,]+)',
-            'interest_expense': r'(?:Interest expense|Finance costs?)\s*\|?\s*\(?([\d,]+)\)?',
-            'tax_expense': r'(?:Tax expense|Income tax expense|Taxation)\s*\|?\s*\(?([\d,]+)\)?',
-            'depreciation': r'(?:Depreciation and amortisation|D&A)\s*\|?\s*([\d,]+)',
+            # Balance Sheet Items - enhanced for Indonesian/English bilingual
+            'total_assets': r'(?:Total assets|Jumlah aset|Total aset)\s*\|?\s*([\d,]+)',
+            'total_equity': r'(?:Total equity|Jumlah ekuitas|Total ekuitas)\s*\|?\s*([\d,]+)',
+            'current_assets': r'(?:Total current assets|Jumlah aset lancar)\s*\|?\s*([\d,]+)',
+            'current_liabilities': r'(?:Total current liabilities|Jumlah liabilitas jangka pendek)\s*\|?\s*([\d,]+)',
+            'total_debt': r'(?:Total debt|Borrowings.*total|Pinjaman)\s*\|?\s*([\d,]+)',
+            'borrowings': r'(?:Pinjaman|Borrowings?)\s*(?:jangka|term)?\s*\|?\s*([\d,]+)',
+            'non_current_assets': r'(?:Total non-current assets|Jumlah aset tidak lancar)\s*\|?\s*([\d,]+)',
+            'cash': r'(?:Cash and cash equivalents|Kas dan setara kas|CASH AND CASH EQUIVALENTS AT THE END)\s*\|?\s*([\d,]+)',
+            'inventory': r'(?:Inventory|Inventories|Persediaan)\s*\|?\s*([\d,]+)',
+            # Income Statement Items - enhanced
+            'net_income': r'(?:Net profit|Net income|Profit for the (?:financial )?(?:period|year)|Profit attributable|Laba bersih|PAT)\s*\|?\s*([\d,]+)',
+            'operating_income': r'(?:Operating income|Operating profit|EBIT[^D]|Laba operasi)\s*\|?\s*([\d,]+)',
+            'interest_expense': r'(?:Interest expense|Finance costs?|Beban bunga)\s*\|?\s*\(?([\d,]+)\)?',
+            'tax_expense': r'(?:Tax expense|Income tax expense|Taxation|Pajak penghasilan)\s*\|?\s*\(?([\d,]+)\)?',
+            'depreciation': r'(?:Depreciation and amortisation|D&A|Depresiasi dan amortisasi)\s*\|?\s*([\d,]+)',
             # Cash Flow Items
             'operating_cash_flow': r'(?:CASH FLOWS FROM OPERATING ACTIVITIES|Cash flows? from operating|Net cash from operating)\s*\|?\s*([\d,]+)',
-            'capex': r'(?:Purchase of PPE|Capital expenditure|Purchase of property, plant and equipment)\s*\|?\s*\(?([\d,]+)\)?',
+            'capex': r'(?:Purchase of PPE|Capital expenditure|Purchase of property, plant and equipment|Capex)\s*\|?\s*\(?([\d,]+)\)?',
             'intangible_capex': r'(?:Acquisition of intangible assets|Purchase of intangible)\s*\|?\s*\(?([\d,]+)\)?',
             'free_cash_flow': r'(?:Free cash flow|FCF)\s*\|?\s*([\d,]+)',
             # Working Capital Components  

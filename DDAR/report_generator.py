@@ -258,6 +258,70 @@ class ReportGenerator:
             overflow: hidden;
             background-color: #f9f9f9;
         }
+        
+        /* Reasoning chain styles */
+        .reasoning-chain {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .chain-step {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        .step-number {
+            background: white;
+            color: #667eea;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .step-arrow {
+            font-size: 24px;
+            margin: 0 10px;
+            color: #ffd700;
+        }
+        
+        .numerical-insight {
+            background: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 10px 15px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .implication {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 10px 15px;
+            margin: 10px 0;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
         """
     
     def _get_javascript(self) -> str:
@@ -429,14 +493,49 @@ class ReportGenerator:
                     html += f"""
                     <div class="finding">
                         <div class="finding-header">
-                            {item.get('recommendation', 'Unknown')}
+                            {item.get('conclusion', item.get('recommendation', 'Unknown'))}
                             <span class="confidence confidence-{conf_class}">{confidence:.0%}</span>
                             <span class="footnote-ref" data-footnote="footnote-{footnote_id}">[{footnote_id}]</span>
                         </div>
-                        <div>Reasoning: {item.get('reasoning', 'Not provided')}</div>
-                        <div>Evidence: {', '.join(item.get('support_fact_ids', []))}</div>
-                    </div>
                     """
+                    
+                    # Add reasoning chain if available
+                    if item.get('reasoning'):
+                        html += f"<div class='reasoning-chain'>"
+                        html += f"<strong>Chain of Thought:</strong><br/>"
+                        reasoning_steps = item.get('reasoning', '').split(' → ')
+                        for i, step in enumerate(reasoning_steps, 1):
+                            html += f"<div class='chain-step'>"
+                            html += f"<span class='step-number'>{i}</span>"
+                            html += f"<span>{step}</span>"
+                            html += "</div>"
+                        html += "</div>"
+                    
+                    # Add numerical insights if available
+                    if item.get('numerical_insights'):
+                        html += "<div class='numerical-insights'>"
+                        html += "<strong>Numerical Context:</strong>"
+                        for insight in item.get('numerical_insights', []):
+                            html += f"<div class='numerical-insight'>{insight}</div>"
+                        html += "</div>"
+                    
+                    # Add implications if available
+                    if item.get('implications'):
+                        html += "<div class='implications'>"
+                        html += "<strong>Business Implications:</strong>"
+                        for impl in item.get('implications', []):
+                            html += f"<div class='implication'>{impl}</div>"
+                        html += "</div>"
+                    
+                    # Add recommendations
+                    if item.get('recommendation'):
+                        html += f"<div><strong>Action Required:</strong> {item.get('recommendation')}</div>"
+                    
+                    # Add evidence
+                    if item.get('support_fact_ids'):
+                        html += f"<div><strong>Evidence:</strong> {', '.join(item.get('support_fact_ids', []))}</div>"
+                    
+                    html += "</div>"
         
         html += "</section>"
         return html

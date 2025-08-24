@@ -4,33 +4,33 @@ Quick test to verify DDAR modules are working
 """
 
 try:
-    from fact_extractor import FactExtractor
+    from fact_extractor import FactExtractorV5 as FactExtractor
     from calculation_engine import CalculationEngine
     from data_availability import DataAvailabilityTracker
     from report_generator import ReportGenerator
     from ddar_adapter import DDARAdapter
     
-    print("✓ All imports successful")
+    print("[OK] All imports successful")
     
     # Test instantiation
     extractor = FactExtractor()
-    print("✓ FactExtractor instantiated")
+    print("[OK] FactExtractor instantiated")
     
     calculator = CalculationEngine()
-    print("✓ CalculationEngine instantiated")
+    print("[OK] CalculationEngine instantiated")
     
     availability_tracker = DataAvailabilityTracker()
-    print("✓ DataAvailabilityTracker instantiated")
+    print("[OK] DataAvailabilityTracker instantiated")
     
     report_generator = ReportGenerator()
-    print("✓ ReportGenerator instantiated")
+    print("[OK] ReportGenerator instantiated")
     
     adapter = DDARAdapter()
-    print("✓ DDARAdapter instantiated")
+    print("[OK] DDARAdapter instantiated")
     
-    print("\n✅ DDAR system is ready to run!")
+    print("\n[SUCCESS] DDAR system is ready to run!")
     
 except ImportError as e:
-    print(f"❌ Import error: {e}")
+    print(f"[ERROR] Import error: {e}")
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"[ERROR] {e}")

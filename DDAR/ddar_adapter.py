@@ -20,7 +20,7 @@ class DDARAdapter:
             'operating_income': 'ebit',
             'net_income': 'net_income',
             'total_assets': 'total_assets',
-            'total_equity': 'equity_value',
+            'total_equity': 'total_equity',
             'total_debt': 'total_debt',
             'current_assets': 'current_assets',
             'current_liabilities': 'current_liabilities',

@@ -83,12 +83,14 @@ execute_pass_2(Company) :-
             theorem(Name, Output, _, _),
             get_fact_value(Company, Output, _),
             sensitivity_analysis(Name, Company, TargetImprovement, Analysis),
-            format('  ~w: ~w paths to improvement~n', [Name, length(Analysis)])
+            length(Analysis, NumPaths),
+            format('  ~w: ~w paths to improvement~n', [Name, NumPaths])
         ),
         AnalyzedTheorems
     ),
     
-    format('  Analyzed ~w theorems~n', [length(AnalyzedTheorems)]),
+    length(AnalyzedTheorems, NumTheorems),
+    format('  Analyzed ~w theorems~n', [NumTheorems]),
     
     % Propagate derived facts
     propagate_derived_facts.
@@ -203,7 +205,8 @@ run_analysis :-
     list_to_set(AllCompanies, Companies),
     format('~nDDAR Theorem Engine - Multi-Pass Analysis~n', []),
     format('~`=t~50|~n', []),
-    format('Found ~w companies to analyze~n', [length(Companies)]),
+    length(Companies, NumCompanies),
+    format('Found ~w companies to analyze~n', [NumCompanies]),
     analyze_companies(Companies, _),
     format('~n~n'),
     format('~`=t~50|~n', []),
@@ -215,7 +218,8 @@ run_iterative_analysis :-
     list_to_set(AllCompanies, Companies),
     format('~nDDAR Theorem Engine - Iterative Optimization~n', []),
     format('~`=t~50|~n', []),
-    format('Found ~w companies to analyze~n', [length(Companies)]),
+    length(Companies, NumCompanies),
+    format('Found ~w companies to analyze~n', [NumCompanies]),
     forall(member(Company, Companies),
         (analyze_company_iterative(Company, Analysis),
          report_iterative_analysis(Analysis))),

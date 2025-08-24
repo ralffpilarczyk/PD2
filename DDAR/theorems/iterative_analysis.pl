@@ -253,12 +253,14 @@ select_improvements(Sensitivities, History, Selected) :-
     % Extract all possible improvements
     extract_all_improvements(Sensitivities, AllImprovements),
     
-    format('Extracted ~w improvements: ~w~n', [length(AllImprovements), AllImprovements]),
+    length(AllImprovements, NumImprovements),
+    format('Extracted ~w improvements: ~w~n', [NumImprovements, AllImprovements]),
     
     % Filter out previously tried improvements
     filter_new_improvements(AllImprovements, History, NewImprovements),
     
-    format('After filtering: ~w new improvements~n', [length(NewImprovements)]),
+    length(NewImprovements, NumNewImprovements),
+    format('After filtering: ~w new improvements~n', [NumNewImprovements]),
     
     % Rank improvements by feasibility and impact
     rank_improvements(NewImprovements, RankedImprovements),

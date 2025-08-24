@@ -11,14 +11,25 @@ import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple, Any, Optional
+
+# Import configuration
+from config import (
+    SOURCE_DIR, OUTPUT_DIR, PROLOG_TIMEOUT,
+    DEFAULT_WACC, DEFAULT_TAX_RATE,
+    INDUSTRY_BENCHMARKS
+)
+from utils import (
+    extract_company_name, safe_divide, format_number,
+    format_percentage, DDARError, PrologError
+)
 
 # Import our modules
-from fact_extractor_v5 import FactExtractorV5 as FactExtractor
+from fact_extractor import FactExtractorV5 as FactExtractor
 from calculation_engine import CalculationEngine
 from data_availability import DataAvailabilityTracker
 from report_generator import ReportGenerator
-from enhanced_report_generator import EnhancedReportGenerator
+from enhanced_report_generator import EnhancedReportGeneratorV2 as EnhancedReportGenerator
 from ddar_adapter import DDARAdapter
 from conclusion_engine import ConclusionEngine, TheoremContext, create_chain_visualization
 
@@ -26,8 +37,8 @@ class DDARApplication:
     """Main DDAR application with interactive interface"""
     
     def __init__(self):
-        self.source_dir = Path("../SourceFiles")
-        self.output_dir = Path("output")
+        self.source_dir = Path(SOURCE_DIR)
+        self.output_dir = Path(OUTPUT_DIR)
         self.output_dir.mkdir(exist_ok=True)
         (self.output_dir / "reports").mkdir(exist_ok=True)
         (self.output_dir / "facts").mkdir(exist_ok=True)
@@ -404,7 +415,7 @@ class DDARApplication:
         if availability['runnable']:
             print("\nRunnable theorems:")
             for theorem in availability['runnable'][:10]:  # Show first 10
-                print(f"  ✓ {theorem}")
+                print(f"  [OK] {theorem}")
         
         if availability['missing_data']:
             print("\nTheorems missing data:")
@@ -548,20 +559,20 @@ class DDARApplication:
                         print("="*60)
                     elif '--- Iteration' in line:
                         iteration_count += 1
-                        print(f"\n🔄 ITERATION {iteration_count}")
+                        print(f"\n[ITER] ITERATION {iteration_count}")
                         print("-"*40)
                     elif 'Found' in line and 'sensitivity analyses' in line:
                         match = re.search(r'Found (\d+) sensitivity', line)
                         if match:
                             sensitivity_count = int(match.group(1))
-                            print(f"📊 Analyzing {sensitivity_count} sensitivity paths")
+                            print(f"[ANALYSIS] Analyzing {sensitivity_count} sensitivity paths")
                     elif 'Sensitivity for' in line:
                         theorem = line.split('Sensitivity for')[1].strip()
-                        print(f"  ✓ {theorem}")
+                        print(f"  [OK] {theorem}")
                     elif 'No more improvements available' in line:
-                        print("\n⚠️  CONVERGENCE: No feasible improvements within constraints")
+                        print("\n[WARN] CONVERGENCE: No feasible improvements within constraints")
                     elif 'Selected improvements:' in line:
-                        print("\n✅ Improvements selected for next iteration")
+                        print("\n[INFO] Improvements selected for next iteration")
                     elif 'RESULTS_FOR' in line:
                         print("\n" + "="*60)
                         print("FINAL RESULTS")
@@ -586,7 +597,7 @@ class DDARApplication:
                                 except:
                                     print(f"  • {theorem}: {metric} = {value}")
                 
-                print(f"\n📈 Summary: {iteration_count} iterations completed, {sensitivity_count} paths analyzed")
+                print(f"\n[SUMMARY] {iteration_count} iterations completed, {sensitivity_count} paths analyzed")
             
             if result.stderr:
                 # Only show actual errors, not warnings
@@ -655,7 +666,7 @@ class DDARApplication:
                                 
                                 # Create context for intelligent analysis
                                 context = TheoremContext(
-                                    company=current_company or 'axiata',
+                                    company=current_company or company_name,
                                     theorem=theorem_name,
                                     metric=metric,
                                     value=numeric_value,
@@ -669,7 +680,7 @@ class DDARApplication:
                                 conclusions.append({
                                     'theorem': theorem_name.upper(),
                                     'name': theorem_descriptions.get(theorem_name, theorem_name),
-                                    'company': current_company or 'axiata',
+                                    'company': current_company or company_name,
                                     'metric': metric,
                                     'value': value,
                                     'conclusion': intelligent_result['conclusion'],
@@ -687,7 +698,7 @@ class DDARApplication:
                                 conclusions.append({
                                     'theorem': theorem_name.upper(),
                                     'name': theorem_descriptions.get(theorem_name, theorem_name),
-                                    'company': current_company or 'axiata',
+                                    'company': current_company or company_name,
                                     'metric': metric,
                                     'value': value,
                                     'conclusion': conclusion_text,
@@ -696,6 +707,11 @@ class DDARApplication:
                                     'confidence': 0.70,
                                     'support_fact_ids': []
                                 })
+            
+            # If no conclusions from Prolog, generate directly from facts
+            if not conclusions and self.current_facts:
+                print("\n[INFO] Generating conclusions from financial metrics...")
+                conclusions = self._generate_fact_based_conclusions()
             
             return conclusions
             
@@ -812,6 +828,135 @@ class DDARApplication:
         else:
             return f"{metric}: {value:.4f}"
     
+    def _generate_fact_based_conclusions(self) -> List[Dict]:
+        """Generate conclusions directly from extracted facts"""
+        conclusions = []
+        
+        # Group facts by company
+        company_facts = {}
+        for fact in self.current_facts:
+            company = fact.get('company', 'unknown')
+            if company not in company_facts:
+                company_facts[company] = {}
+            company_facts[company][fact['key']] = fact
+        
+        # Analyze each company
+        for company, facts in company_facts.items():
+            # ROE Analysis
+            if 'roe' in facts:
+                roe_val = facts['roe']['value']
+                period = facts['roe'].get('period_label', 'latest')
+                
+                if roe_val > 0.15:
+                    conclusion = f"Strong ROE of {roe_val:.1%} in {period} indicates excellent value creation"
+                    severity = "positive"
+                elif roe_val > 0.08:
+                    conclusion = f"Healthy ROE of {roe_val:.1%} in {period} shows adequate returns"
+                    severity = "neutral"
+                else:
+                    conclusion = f"Weak ROE of {roe_val:.1%} in {period} suggests value destruction"
+                    severity = "negative"
+                
+                conclusions.append({
+                    'theorem': 'ROE_ANALYSIS',
+                    'name': 'Return on Equity Analysis',
+                    'company': company,
+                    'metric': 'roe',
+                    'value': str(roe_val),
+                    'conclusion': conclusion,
+                    'recommendation': 'Focus on improving operational efficiency' if roe_val < 0.08 else 'Maintain current strategy',
+                    'reasoning': f"ROE {roe_val:.1%} → Industry benchmark 10-15% → {severity} assessment",
+                    'confidence': 0.85,
+                    'support_fact_ids': [facts['roe'].get('fact_id', '')]
+                })
+            
+            # Leverage Analysis
+            if 'debt_to_equity' in facts:
+                de_val = facts['debt_to_equity']['value']
+                period = facts['debt_to_equity'].get('period_label', 'latest')
+                
+                if de_val > 2.0:
+                    conclusion = f"High leverage ({de_val:.2f}x) in {period} poses financial risk"
+                    severity = "negative"
+                elif de_val > 1.0:
+                    conclusion = f"Moderate leverage ({de_val:.2f}x) in {period} within acceptable range"
+                    severity = "neutral"
+                else:
+                    conclusion = f"Conservative leverage ({de_val:.2f}x) in {period} provides financial flexibility"
+                    severity = "positive"
+                
+                conclusions.append({
+                    'theorem': 'LEVERAGE_ANALYSIS',
+                    'name': 'Financial Leverage Assessment',
+                    'company': company,
+                    'metric': 'debt_to_equity',
+                    'value': str(de_val),
+                    'conclusion': conclusion,
+                    'recommendation': 'Consider debt reduction' if de_val > 1.5 else 'Leverage position is healthy',
+                    'reasoning': f"D/E {de_val:.2f}x → Telecom avg 1.2x → {severity} position",
+                    'confidence': 0.90,
+                    'support_fact_ids': [facts['debt_to_equity'].get('fact_id', '')]
+                })
+            
+            # Profitability Analysis
+            if 'net_margin' in facts or 'npm' in facts:
+                margin_key = 'net_margin' if 'net_margin' in facts else 'npm'
+                margin_val = facts[margin_key]['value']
+                period = facts[margin_key].get('period_label', 'latest')
+                
+                if margin_val > 0.15:
+                    conclusion = f"Excellent net margin of {margin_val:.1%} in {period} demonstrates pricing power"
+                    severity = "positive"
+                elif margin_val > 0.05:
+                    conclusion = f"Acceptable net margin of {margin_val:.1%} in {period} but room for improvement"
+                    severity = "neutral"
+                else:
+                    conclusion = f"Thin net margin of {margin_val:.1%} in {period} indicates profitability pressure"
+                    severity = "negative"
+                
+                conclusions.append({
+                    'theorem': 'MARGIN_ANALYSIS',
+                    'name': 'Profitability Margin Analysis',
+                    'company': company,
+                    'metric': 'net_margin',
+                    'value': str(margin_val),
+                    'conclusion': conclusion,
+                    'recommendation': 'Focus on cost optimization' if margin_val < 0.08 else 'Maintain pricing discipline',
+                    'reasoning': f"Net margin {margin_val:.1%} → Industry 8-12% → {severity} performance",
+                    'confidence': 0.85,
+                    'support_fact_ids': [facts[margin_key].get('fact_id', '')]
+                })
+            
+            # Interest Coverage Analysis
+            if 'interest_coverage' in facts:
+                coverage_val = facts['interest_coverage']['value']
+                period = facts['interest_coverage'].get('period_label', 'latest')
+                
+                if coverage_val > 5:
+                    conclusion = f"Strong interest coverage ({coverage_val:.1f}x) in {period} indicates low default risk"
+                    severity = "positive"
+                elif coverage_val > 2:
+                    conclusion = f"Adequate interest coverage ({coverage_val:.1f}x) in {period} but monitor debt levels"
+                    severity = "neutral"
+                else:
+                    conclusion = f"Weak interest coverage ({coverage_val:.1f}x) in {period} signals financial stress"
+                    severity = "negative"
+                
+                conclusions.append({
+                    'theorem': 'COVERAGE_ANALYSIS',
+                    'name': 'Interest Coverage Assessment',
+                    'company': company,
+                    'metric': 'interest_coverage',
+                    'value': str(coverage_val),
+                    'conclusion': conclusion,
+                    'recommendation': 'Reduce debt or improve EBIT' if coverage_val < 3 else 'Coverage is healthy',
+                    'reasoning': f"Coverage {coverage_val:.1f}x → Min safe 2.5x → {severity} assessment",
+                    'confidence': 0.88,
+                    'support_fact_ids': [facts['interest_coverage'].get('fact_id', '')]
+                })
+        
+        return conclusions
+    
     def generate_recommendation(self, theorem_name: str, metric: str, value) -> str:
         """Generate actionable recommendations based on theorem results"""
         
@@ -879,10 +1024,10 @@ class DDARApplication:
         print("\n" + "=" * 70)
         print("ANALYSIS COMPLETE")
         print("=" * 70)
-        print(f"\n✓ Files analyzed: {len(selected_files)}")
-        print(f"✓ Facts extracted: {len(data['facts'])}")
-        print(f"✓ Conclusions generated: {len(conclusions)}")
-        print(f"✓ Report saved: {report_path}")
+        print(f"\n[DONE] Files analyzed: {len(selected_files)}")
+        print(f"[DONE] Facts extracted: {len(data['facts'])}")
+        print(f"[DONE] Conclusions generated: {len(conclusions)}")
+        print(f"[DONE] Report saved: {report_path}")
         
         # Ask if user wants to open the report
         if input("\nOpen report in browser? (y/n): ").lower() == 'y':

@@ -7,6 +7,7 @@ import json
 from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
+from config import DEFAULT_WACC
 
 @dataclass
 class TheoremContext:
@@ -43,7 +44,7 @@ class ConclusionEngine:
             'ccc': {'excellent': 0, 'good': 30, 'moderate': 60, 'poor': 90, 'industry_avg': 45},
             'fcf_conversion': {'poor': 0.3, 'moderate': 0.5, 'good': 0.7, 'excellent': 0.9, 'industry_avg': 0.6},
             'cfroi': {'poor': 0.06, 'moderate': 0.10, 'good': 0.15, 'excellent': 0.20, 'industry_avg': 0.12},
-            'wacc': 0.10  # Assumed WACC for value creation assessment
+            'wacc': DEFAULT_WACC  # Default, will be overridden from facts if available
         }
         
     def generate_intelligent_conclusion(self, context: TheoremContext) -> Dict[str, Any]:
@@ -83,7 +84,7 @@ class ConclusionEngine:
         if 'roic' in context.theorem.lower():
             # ROIC reasoning chain
             roic = context.value
-            wacc = self.benchmarks.get('wacc', 0.10)
+            wacc = context.all_facts.get('wacc', self.benchmarks.get('wacc', DEFAULT_WACC))
             spread = roic - wacc
             
             # Get components if available

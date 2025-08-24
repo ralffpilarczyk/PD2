@@ -6,82 +6,82 @@
 :- discontiguous fact_confidence/3.
 
 
-%%% Facts for XL Axiata
-fact(xl_axiata, at, 1.178737536265039e-08).
-fact_period(xl_axiata, at, fy(2024)).
-fact_confidence(xl_axiata, at, 0.85).
+%%% Facts for Robi Axiata
+fact(robi_axiata, at, 0.11884929781242441).
+fact_period(robi_axiata, at, q(2025,1)).
+fact_confidence(robi_axiata, at, 0.85).
 
-fact(xl_axiata, at, 1.178737536265039e-08).
-fact_period(xl_axiata, at, fy(2024)).
-fact_confidence(xl_axiata, at, 0.85).
+fact(robi_axiata, at, 0.11884929781242441).
+fact_period(robi_axiata, at, q(2025,1)).
+fact_confidence(robi_axiata, at, 0.85).
 
-fact(xl_axiata, borrowings, 3187407.0000).
-fact_period(xl_axiata, borrowings, fy(2024)).
-fact_confidence(xl_axiata, borrowings, 0.95).
+fact(robi_axiata, ebitda, 12230.0).
+fact_period(robi_axiata, ebitda, q(2025,1)).
+fact_confidence(robi_axiata, ebitda, 0.95).
 
-fact(xl_axiata, cash, 1463736.0000).
-fact_period(xl_axiata, cash, fy(2024)).
-fact_confidence(xl_axiata, cash, 0.95).
+fact(robi_axiata, ebitda_margin, 0.4696620583717358).
+fact_period(robi_axiata, ebitda_margin, q(2025,1)).
+fact_confidence(robi_axiata, ebitda_margin, 0.85).
 
-fact(xl_axiata, cash_ratio, 0.061507903741426576).
-fact_period(xl_axiata, cash_ratio, fy(2024)).
-fact_confidence(xl_axiata, cash_ratio, 0.85).
+fact(robi_axiata, ebitda_margin, 0.4696620583717358).
+fact_period(robi_axiata, ebitda_margin, q(2025,1)).
+fact_confidence(robi_axiata, ebitda_margin, 0.85).
 
-fact(xl_axiata, current_assets, 8562510.0000).
-fact_period(xl_axiata, current_assets, fy(2024)).
-fact_confidence(xl_axiata, current_assets, 0.95).
+fact(robi_axiata, financial_leverage, 3.438550510836642).
+fact_period(robi_axiata, financial_leverage, q(2025,1)).
+fact_confidence(robi_axiata, financial_leverage, 0.85).
 
-fact(xl_axiata, current_liabilities, 23797527.0000).
-fact_period(xl_axiata, current_liabilities, fy(2024)).
-fact_confidence(xl_axiata, current_liabilities, 0.95).
+fact(robi_axiata, fl, 3.438550510836642).
+fact_period(robi_axiata, fl, q(2025,1)).
+fact_confidence(robi_axiata, fl, 0.85).
 
-fact(xl_axiata, current_ratio, 0.3598067143699427).
-fact_period(xl_axiata, current_ratio, fy(2024)).
-fact_confidence(xl_axiata, current_ratio, 0.85).
+fact(robi_axiata, net_income, 1075.0).
+fact_period(robi_axiata, net_income, q(2025,1)).
+fact_confidence(robi_axiata, net_income, 0.95).
 
-fact(xl_axiata, debt_to_assets, 0.037571162742539396).
-fact_period(xl_axiata, debt_to_assets, fy(2024)).
-fact_confidence(xl_axiata, debt_to_assets, 0.85).
+fact(robi_axiata, npm, 0.0412826420890937).
+fact_period(robi_axiata, npm, q(2025,1)).
+fact_confidence(robi_axiata, npm, 0.85).
 
-fact(xl_axiata, debt_to_equity, 0.1250290124804758).
-fact_period(xl_axiata, debt_to_equity, fy(2024)).
-fact_confidence(xl_axiata, debt_to_equity, 0.85).
+fact(robi_axiata, npm, 0.0412826420890937).
+fact_period(robi_axiata, npm, q(2025,1)).
+fact_confidence(robi_axiata, npm, 0.85).
 
-fact(xl_axiata, fl, 3.3277919381215617).
-fact_period(xl_axiata, fl, fy(2024)).
-fact_confidence(xl_axiata, fl, 0.85).
+fact(robi_axiata, ebit, 5222.0).
+fact_period(robi_axiata, ebit, q(2025,1)).
+fact_confidence(robi_axiata, ebit, 0.95).
 
-fact(xl_axiata, inventory, 200354.0000).
-fact_period(xl_axiata, inventory, fy(2024)).
-fact_confidence(xl_axiata, inventory, 0.95).
+fact(robi_axiata, operating_margin, 0.20053763440860214).
+fact_period(robi_axiata, operating_margin, q(2025,1)).
+fact_confidence(robi_axiata, operating_margin, 0.85).
 
-fact(xl_axiata, invested_capital, 27217010.0000).
-fact_period(xl_axiata, invested_capital, fy(2024)).
-fact_confidence(xl_axiata, invested_capital, 0.85).
+fact(robi_axiata, revenue, 26040.0).
+fact_period(robi_axiata, revenue, q(2025,1)).
+fact_confidence(robi_axiata, revenue, 0.95).
 
-fact(xl_axiata, non_current_assets, 76274018.0000).
-fact_period(xl_axiata, non_current_assets, fy(2024)).
-fact_confidence(xl_axiata, non_current_assets, 0.95).
+fact(robi_axiata, roa, 0.0049064130241304234).
+fact_period(robi_axiata, roa, q(2025,1)).
+fact_confidence(robi_axiata, roa, 0.85).
 
-fact(xl_axiata, revenue, 1.0000).
-fact_period(xl_axiata, revenue, fy(2024)).
-fact_confidence(xl_axiata, revenue, 0.95).
+fact(robi_axiata, roa, 0.0049064130241304234).
+fact_period(robi_axiata, roa, q(2025,1)).
+fact_confidence(robi_axiata, roa, 0.85).
 
-fact(xl_axiata, tax_expense, 523151.0000).
-fact_period(xl_axiata, tax_expense, fy(2024)).
-fact_confidence(xl_axiata, tax_expense, 0.95).
+fact(robi_axiata, roe, 0.016870949010499223).
+fact_period(robi_axiata, roe, q(2025,1)).
+fact_confidence(robi_axiata, roe, 0.85).
 
-fact(xl_axiata, total_assets, 84836528.0000).
-fact_period(xl_axiata, total_assets, fy(2024)).
-fact_confidence(xl_axiata, total_assets, 0.95).
+fact(robi_axiata, roe, 0.016870949010499223).
+fact_period(robi_axiata, roe, q(2025,1)).
+fact_confidence(robi_axiata, roe, 0.85).
 
-fact(xl_axiata, total_debt, 3187407.0000).
-fact_period(xl_axiata, total_debt, fy(2024)).
-fact_confidence(xl_axiata, total_debt, 0.95).
+fact(robi_axiata, total_assets, 219101.0).
+fact_period(robi_axiata, total_assets, q(2025,1)).
+fact_confidence(robi_axiata, total_assets, 0.95).
 
-fact(xl_axiata, equity_value, 25493339.0000).
-fact_period(xl_axiata, equity_value, fy(2024)).
-fact_confidence(xl_axiata, equity_value, 0.95).
+fact(robi_axiata, equity_value, 63719.0).
+fact_period(robi_axiata, equity_value, q(2025,1)).
+fact_confidence(robi_axiata, equity_value, 0.95).
 
 
 %%% End of facts

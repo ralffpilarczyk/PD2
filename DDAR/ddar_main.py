@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Any
 
 # Import our modules
-from fact_extractor_v2 import EnhancedFactExtractor
+from fact_extractor import FactExtractor
 from calculation_engine import CalculationEngine
 from data_availability import DataAvailabilityTracker
 from report_generator import ReportGenerator
@@ -30,7 +30,7 @@ class DDARApplication:
         (self.output_dir / "reports").mkdir(exist_ok=True)
         (self.output_dir / "facts").mkdir(exist_ok=True)
         
-        self.extractor = EnhancedFactExtractor()
+        self.extractor = FactExtractor()
         self.calculator = CalculationEngine()
         self.availability_tracker = DataAvailabilityTracker()
         self.report_generator = ReportGenerator()

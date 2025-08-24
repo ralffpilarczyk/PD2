@@ -65,7 +65,7 @@ class CalculationEngine:
     ):
         """Add a calculated fact to results"""
         
-        if value is None or value == 0:
+        if value is None:
             return
         
         fact = {

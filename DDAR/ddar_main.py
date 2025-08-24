@@ -505,9 +505,11 @@ class DDARApplication:
             f.write("    format('~`=t~50|~n', []),\n")
             f.write("    writeln(''),\n")
             
-            # Run analysis for each company
+            # Run analysis for each company and output results
             for company in sorted(companies):
-                f.write(f"    analyze_company({company}, _),\n")
+                f.write(f"    analyze_company({company}, Results_{company}),\n")
+                f.write(f"    writeln('RESULTS_FOR_{company.upper()}:'),\n")
+                f.write(f"    writeln(Results_{company}),\n")
             
             f.write("    halt.\n\n")
             f.write(":- initialization(run_unified_analysis).\n")
@@ -527,44 +529,66 @@ class DDARApplication:
             # Parse conclusions from output
             conclusions = []
             current_company = None
+            
+            # Look for result list in output
+            import re
+            results_pattern = r'\[result\((.*?)\)\]'
+            
             for line in result.stdout.split('\n'):
                 if 'Analyzing:' in line:
                     current_company = line.split('Analyzing:')[1].strip()
-                elif any(theorem in line for theorem in ['t001', 't002', 't003', 't004', 't011', 't015', 't020', 't021', 't030', 't031', 't040', 't041']):
-                    # Parse theorem results
-                    parts = line.strip().split(':')
-                    if len(parts) >= 2:
-                        theorem_id = parts[0].strip()
-                        result_str = ':'.join(parts[1:]).strip()
-                        
-                        theorem_names = {
-                            't001': 'Value Creation',
-                            't002': 'DuPont Identity',
-                            't003': 'Extended DuPont',
-                            't004': 'Sustainable Growth',
-                            't011': 'Free Cash Flow',
-                            't015': 'ROIC Decomposition',
-                            't020': 'Operating Efficiency',
-                            't021': 'Asset Efficiency',
-                            't030': 'Liquidity Assessment',
-                            't031': 'Solvency Assessment',
-                            't040': 'Margin Trend Analysis',
-                            't041': 'Economic Value Added'
-                        }
-                        
-                        if theorem_id in theorem_names:
-                            # Parse the Prolog conclusion
-                            parsed = self.parse_prolog_conclusion(result_str, theorem_names[theorem_id])
+                elif 'RESULTS_FOR_' in line:
+                    # Extract company name from RESULTS_FOR_AXIATA: format
+                    company_match = re.search(r'RESULTS_FOR_(\w+):', line)
+                    if company_match:
+                        current_company = company_match.group(1).lower()
+                
+                # Check if line contains results list
+                if 'result(' in line and '[' in line:
+                    # Parse Prolog result tuples: result(theorem_name, metric, value)
+                    result_matches = re.findall(r'result\(([^,]+),([^,]+),([^)]+)\)', line)
+                    
+                    # Use a set to avoid duplicates
+                    seen_theorems = set()
+                    
+                    for theorem_name, metric, value in result_matches:
+                        if (theorem_name, metric) not in seen_theorems:
+                            seen_theorems.add((theorem_name, metric))
+                            
+                            # Map theorem names to descriptions
+                            theorem_descriptions = {
+                                'roic_decomp': 'ROIC Decomposition Analysis',
+                                'roic_nopat': 'ROIC from NOPAT',
+                                'fcf_simple': 'Free Cash Flow Analysis',
+                                'fcf_conversion': 'FCF Conversion Efficiency',
+                                'cfroi': 'Cash Flow Return on Investment',
+                                'ccc': 'Cash Conversion Cycle',
+                                'operating_cycle': 'Operating Cycle Analysis',
+                                'dupont': 'DuPont ROE Analysis',
+                                'roa_basic': 'Return on Assets',
+                                'current_ratio': 'Current Ratio (Liquidity)',
+                                'debt_to_equity': 'Debt to Equity Ratio',
+                                'interest_coverage': 'Interest Coverage'
+                            }
+                            
+                            # Generate conclusion based on metric and value
+                            try:
+                                numeric_value = float(value)
+                                conclusion_text = self.generate_conclusion(theorem_name, metric, numeric_value)
+                            except:
+                                conclusion_text = f"{metric}: {value}"
                             
                             conclusions.append({
-                                'theorem': theorem_id.upper(),
-                                'name': theorem_names[theorem_id],
-                                'company': current_company,
-                                'conclusion': result_str,  # Keep original for debugging
-                                'recommendation': parsed['recommendation'],
-                                'reasoning': parsed['reasoning'],
+                                'theorem': theorem_name.upper(),
+                                'name': theorem_descriptions.get(theorem_name, theorem_name),
+                                'company': current_company or 'axiata',
+                                'metric': metric,
+                                'value': value,
+                                'conclusion': conclusion_text,
+                                'recommendation': self.generate_recommendation(theorem_name, metric, value),
+                                'reasoning': f"Based on {metric} calculation of {value}",
                                 'confidence': 0.90,
-                                'support_fact_ids': []  # TODO: Track actual fact IDs used
+                                'support_fact_ids': []
                             })
             
             return conclusions
@@ -615,6 +639,109 @@ class DDARApplication:
         print(f"Raw data saved: {json_path}")
         
         return str(report_path)
+    
+    def generate_conclusion(self, theorem_name: str, metric: str, value: float) -> str:
+        """Generate human-readable conclusion based on theorem results"""
+        
+        # ROIC conclusions
+        if 'roic' in theorem_name.lower():
+            if value < 0.05:
+                return f"ROIC of {value:.2%} indicates poor capital efficiency - returns below typical cost of capital"
+            elif value < 0.10:
+                return f"ROIC of {value:.2%} suggests moderate capital efficiency - may be below WACC"
+            elif value < 0.15:
+                return f"ROIC of {value:.2%} shows good capital efficiency - likely exceeding cost of capital"
+            else:
+                return f"ROIC of {value:.2%} demonstrates excellent capital efficiency and value creation"
+        
+        # FCF conclusions
+        elif 'fcf' in theorem_name.lower() and 'conversion' not in theorem_name.lower():
+            if value < 0:
+                return f"Negative FCF of {value:,.0f} indicates cash consumption - investment phase or operational issues"
+            elif value < 1000000:
+                return f"FCF of {value:,.0f} shows modest cash generation"
+            else:
+                return f"Strong FCF of {value:,.0f} provides flexibility for growth and returns"
+        
+        # FCF Conversion
+        elif 'fcf_conversion' in theorem_name.lower():
+            if value < 0.5:
+                return f"FCF conversion of {value:.1f}x indicates weak cash generation relative to EBITDA"
+            elif value < 1.0:
+                return f"FCF conversion of {value:.1f}x shows moderate cash efficiency"
+            else:
+                return f"FCF conversion of {value:.1f}x demonstrates strong cash generation efficiency"
+        
+        # CFROI
+        elif 'cfroi' in theorem_name.lower():
+            if value < 0.08:
+                return f"CFROI of {value:.1%} suggests poor cash returns on invested capital"
+            elif value < 0.15:
+                return f"CFROI of {value:.1%} indicates moderate cash generation returns"
+            else:
+                return f"CFROI of {value:.1%} shows strong cash-based returns"
+        
+        # Cash Conversion Cycle
+        elif 'ccc' in theorem_name.lower():
+            if value < 0:
+                return f"Negative CCC of {value:.1f} days - receiving cash before paying suppliers (favorable)"
+            elif value < 30:
+                return f"CCC of {value:.1f} days indicates efficient working capital management"
+            elif value < 60:
+                return f"CCC of {value:.1f} days suggests moderate working capital efficiency"
+            else:
+                return f"CCC of {value:.1f} days indicates slow cash conversion - may pressure liquidity"
+        
+        # Operating Cycle
+        elif 'operating_cycle' in theorem_name.lower():
+            if value < 30:
+                return f"Operating cycle of {value:.1f} days shows very efficient operations"
+            elif value < 60:
+                return f"Operating cycle of {value:.1f} days indicates good operational efficiency"
+            else:
+                return f"Operating cycle of {value:.1f} days suggests room for operational improvement"
+        
+        # Default
+        else:
+            return f"{metric}: {value:.4f}"
+    
+    def generate_recommendation(self, theorem_name: str, metric: str, value) -> str:
+        """Generate actionable recommendations based on theorem results"""
+        
+        try:
+            numeric_value = float(value)
+        except:
+            return "Review calculation methodology"
+        
+        # ROIC recommendations
+        if 'roic' in theorem_name.lower():
+            if numeric_value < 0.10:
+                return "Focus on improving margins or asset turnover to enhance capital returns"
+            else:
+                return "Maintain capital discipline while seeking growth opportunities"
+        
+        # FCF recommendations
+        elif 'fcf' in theorem_name.lower() and 'conversion' not in theorem_name.lower():
+            if numeric_value < 0:
+                return "Review capital allocation and working capital management"
+            else:
+                return "Consider strategic uses for excess cash generation"
+        
+        # CCC recommendations
+        elif 'ccc' in theorem_name.lower():
+            if numeric_value > 45:
+                return "Optimize receivables collection and inventory turnover"
+            else:
+                return "Maintain working capital efficiency"
+        
+        # CFROI recommendations
+        elif 'cfroi' in theorem_name.lower():
+            if numeric_value < 0.10:
+                return "Evaluate asset productivity and operational efficiency"
+            else:
+                return "Continue focus on cash generation optimization"
+        
+        return "Monitor trend and benchmark against peers"
     
     def run(self):
         """Main application flow"""

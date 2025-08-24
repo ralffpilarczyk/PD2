@@ -337,8 +337,12 @@ calculate_theorem(TheoremName, Company, Result) :-
     get_input_values(Company, InputMetrics, Values),
     evaluate_formula(Formula, InputMetrics, Values, Result),
     store_derived(Company, OutputMetric, Result),
-    % Track theorem application
-    assertz(theorem_applied(TheoremName, Company, OutputMetric, Result)).
+    % Track theorem application (avoid duplicates)
+    ( theorem_applied(TheoremName, Company, OutputMetric, _) ->
+        true  % Already recorded, skip
+    ;
+        assertz(theorem_applied(TheoremName, Company, OutputMetric, Result))
+    ).
 
 % Get values for input metrics
 get_input_values(_, [], []).

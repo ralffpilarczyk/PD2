@@ -1,0 +1,376 @@
+# Causal Rules Configuration
+# Fully authoritative - defines all causal relationships
+
+causal_rules:
+  # Market position implications
+  - antecedent: market_leader
+    consequent: pricing_power
+    confidence: 0.8
+    unless_blocked_by: [heavy_regulation, commoditization, regulation]
+    rationale: "Market leaders typically have pricing power unless constrained"
+    category: market_dynamics
+    
+  - antecedent: market_leader
+    consequent: strong_brand
+    confidence: 0.75
+    rationale: "Market leadership often correlates with brand strength"
+    category: market_dynamics
+    
+  - antecedent: weak_position
+    consequent: no_pricing_power
+    confidence: 0.9
+    rationale: "Weak market position limits pricing flexibility"
+    category: market_dynamics
+    
+  - antecedent: weak_position
+    consequent: declining_share
+    confidence: 0.7
+    rationale: "Weak positions tend to erode further"
+    category: market_dynamics
+    
+  - antecedent: declining_share
+    consequent: price_pressure
+    confidence: 0.8
+    rationale: "Share loss creates pricing pressure"
+    category: market_dynamics
+    
+  # Competitive advantage chains
+  - antecedent: strong_moat
+    consequent: pricing_power
+    confidence: 0.7
+    unless_blocked_by: [regulation, commoditization]
+    rationale: "Competitive advantages enable premium pricing"
+    category: competitive
+    
+  - antecedent: network_effects
+    consequent: strong_moat
+    confidence: 0.85
+    rationale: "Network effects create defensible positions"
+    category: competitive
+    
+  - antecedent: network_effects
+    consequent: winner_take_all
+    confidence: 0.8
+    rationale: "Networks tend toward monopoly"
+    category: competitive
+    
+  - antecedent: winner_take_all
+    consequent: market_dominance
+    confidence: 0.85
+    rationale: "Winner-take-all leads to dominance"
+    category: competitive
+    
+  - antecedent: market_dominance
+    consequent: pricing_power
+    confidence: 0.8
+    unless_blocked_by: [regulation]
+    rationale: "Dominance enables pricing control"
+    category: competitive
+    
+  - antecedent: switching_costs
+    consequent: pricing_power
+    confidence: 0.65
+    unless_blocked_by: [regulation]
+    rationale: "High switching costs reduce price sensitivity"
+    category: competitive
+    
+  - antecedent: switching_costs
+    consequent: customer_retention
+    confidence: 0.85
+    rationale: "Switching costs lock in customers"
+    category: competitive
+    
+  # Brand implications  
+  - antecedent: strong_brand
+    consequent: pricing_power
+    confidence: 0.7
+    unless_blocked_by: [commoditization, regulation]
+    rationale: "Strong brands command premium prices"
+    category: brand
+    
+  - antecedent: weak_brand
+    consequent: no_pricing_power
+    confidence: 0.8
+    rationale: "Weak brands compete on price"
+    category: brand
+    
+  - antecedent: weak_brand
+    consequent: commoditization
+    confidence: 0.75
+    rationale: "Weak brands face commoditization"
+    category: brand
+    
+  # Operational advantages
+  - antecedent: economies_of_scale
+    consequent: strong_moat
+    confidence: 0.6
+    rationale: "Scale creates cost advantages"
+    category: operational
+    
+  - antecedent: economies_of_scale
+    consequent: cost_advantage
+    confidence: 0.9
+    rationale: "Scale directly reduces unit costs"
+    category: operational
+    
+  - antecedent: no_economies_of_scale
+    consequent: weak_position
+    confidence: 0.5
+    rationale: "Lack of scale is competitively disadvantageous"
+    category: operational
+    
+  - antecedent: no_economies_of_scale
+    consequent: cost_disadvantage
+    confidence: 0.85
+    rationale: "No scale means higher costs"
+    category: operational
+    
+  # Technology leadership
+  - antecedent: technological_supremacy
+    consequent: strong_moat
+    confidence: 0.8
+    rationale: "Technology leadership creates barriers"
+    category: technology
+    
+  - antecedent: technological_supremacy
+    consequent: competitive_advantage
+    confidence: 0.85
+    rationale: "Tech supremacy is competitive advantage"
+    category: technology
+    
+  - antecedent: competitive_advantage
+    consequent: pricing_power
+    confidence: 0.8
+    unless_blocked_by: [regulation, commoditization]
+    rationale: "Advantages enable pricing"
+    category: competitive
+    
+  - antecedent: first_mover_advantage
+    consequent: market_leader
+    confidence: 0.6
+    over_time: true
+    rationale: "First movers often become leaders"
+    category: competitive
+    
+  - antecedent: quantum_supremacy
+    consequent: technological_supremacy
+    confidence: 0.95
+    rationale: "Quantum advantage is technological leadership"
+    category: technology
+    
+  # Financial implications
+  - antecedent: pricing_power
+    consequent: high_margins
+    confidence: 0.9
+    rationale: "Pricing power drives margins"
+    category: financial
+    
+  - antecedent: no_pricing_power
+    consequent: commoditization
+    confidence: 0.8
+    rationale: "No pricing power indicates commodity"
+    category: financial
+    
+  - antecedent: price_pressure
+    consequent: margin_compression
+    confidence: 0.85
+    rationale: "Price pressure squeezes margins"
+    category: financial
+    
+  - antecedent: high_margins
+    consequent: strong_cash_flow
+    confidence: 0.85
+    rationale: "High margins generate cash"
+    category: financial
+    
+  - antecedent: strong_cash_flow
+    consequent: investment_capacity
+    confidence: 0.9
+    rationale: "Cash enables investment"
+    category: financial
+    
+  - antecedent: margin_compression
+    consequent: weak_cash_flow
+    confidence: 0.8
+    rationale: "Compressed margins reduce cash"
+    category: financial
+    
+  - antecedent: cost_advantage
+    consequent: high_margins
+    confidence: 0.8
+    rationale: "Cost advantages improve margins"
+    category: financial
+    
+  - antecedent: cost_disadvantage
+    consequent: margin_compression
+    confidence: 0.75
+    rationale: "Cost disadvantages compress margins"
+    category: financial
+    
+  # Negative spirals
+  - antecedent: commoditization
+    consequent: no_pricing_power
+    confidence: 0.95
+    override_priority: high
+    rationale: "Commoditized products have no pricing power"
+    category: market_dynamics
+    
+  - antecedent: commoditization
+    consequent: low_returns
+    confidence: 0.9
+    rationale: "Commodities earn commodity returns"
+    category: financial
+    
+  # External constraints
+  - antecedent: regulation
+    consequent: no_pricing_power
+    confidence: 0.7
+    rationale: "Regulation limits pricing"
+    category: external
+    
+  - antecedent: heavy_regulation
+    consequent: no_pricing_power
+    confidence: 0.9
+    rationale: "Heavy regulation prevents pricing freedom"
+    category: external
+    
+  - antecedent: regulatory_barriers
+    consequent: high_compliance_costs
+    confidence: 0.9
+    rationale: "Regulatory barriers increase costs"
+    category: external
+    
+  - antecedent: high_compliance_costs
+    consequent: margin_compression
+    confidence: 0.75
+    rationale: "Compliance costs compress margins"
+    category: external
+    
+  # Growth implications
+  - antecedent: expansion
+    consequent: growth_opportunities
+    confidence: 0.8
+    rationale: "Expansion creates growth"
+    category: growth
+
+# Property metadata for derived facts (to enable contradiction detection)
+property_metadata:
+  market_leader:
+    dimension: position
+    polarity: positive
+    category: market_position
+  pricing_power:
+    dimension: pricing
+    polarity: positive
+    category: pricing
+  high_margins:
+    dimension: financial
+    polarity: positive
+    category: financial
+  strong_cash_flow:
+    dimension: financial
+    polarity: positive
+    category: financial
+  weak_cash_flow:
+    dimension: financial
+    polarity: negative
+    category: financial
+  strong_brand:
+    dimension: brand
+    polarity: positive
+    category: brand
+  strong_moat:
+    dimension: advantage
+    polarity: positive
+    category: competitive_advantage
+  competitive_advantage:
+    dimension: advantage
+    polarity: positive
+    category: competitive_advantage
+
+# Expected patterns (for unusual situation detection)
+expected_patterns:
+  - property1: market_leader
+    property2: strong_brand
+    confidence: 0.8
+    absence_implies: "unusual - market leader without brand recognition"
+    
+  - property1: market_leader
+    property2: pricing_power
+    confidence: 0.7
+    absence_implies: "constrained - likely regulated or commoditized"
+    
+  - property1: strong_moat
+    property2: pricing_power
+    confidence: 0.75
+    absence_implies: "paradox - competitive advantage without pricing benefit"
+    
+  - property1: first_mover_advantage
+    property2: technological_supremacy
+    confidence: 0.6
+    absence_implies: "first but not best - technology caught up"
+    
+  - property1: network_effects
+    property2: switching_costs
+    confidence: 0.7
+    absence_implies: "weak network - users can easily leave"
+    
+  - property1: economies_of_scale
+    property2: cost_advantage
+    confidence: 0.9
+    absence_implies: "scale not translating to cost benefits"
+    
+  - property1: technological_supremacy
+    property2: high_margins
+    confidence: 0.75
+    absence_implies: "technology not monetized effectively"
+
+# Blocking rules (constraints that prevent derivations)
+blocking_rules:
+  - blocker: regulation
+    blocks: [pricing_power]
+    strength: strong
+    rationale: "Regulation directly prevents pricing freedom"
+    
+  - blocker: heavy_regulation
+    blocks: [pricing_power, expansion]
+    strength: very_strong
+    rationale: "Heavy regulation constrains multiple dimensions"
+    
+  - blocker: commoditization
+    blocks: [pricing_power, strong_moat]
+    strength: strong
+    rationale: "Commoditization eliminates differentiation"
+    
+  - blocker: no_pricing_power
+    blocks: [pricing_power]
+    strength: absolute
+    rationale: "Direct contradiction"
+
+# Multi-step chains (for detecting long reasoning paths)
+reasoning_chains:
+  - name: "Technology to Market Leadership"
+    chain: [technological_supremacy, strong_moat, market_leader, pricing_power]
+    confidence_decay: 0.9
+    
+  - name: "Network Dominance"
+    chain: [network_effects, switching_costs, strong_moat, pricing_power]
+    confidence_decay: 0.85
+    
+  - name: "Brand Premium"
+    chain: [strong_brand, pricing_power, high_margins]
+    confidence_decay: 0.95
+    
+  - name: "Scale Economics"
+    chain: [economies_of_scale, cost_advantage, high_margins, strong_cash_flow]
+    confidence_decay: 0.9
+
+# Settings for causal reasoning
+settings:
+  min_confidence_to_derive: 0.5
+  cascade_blocking: true
+  confidence_decay_per_hop: 0.9
+  max_chain_length: 5
+  show_rationale: true
+  contradiction_resolution: "negative_wins"
+  reality_beats_theory: true

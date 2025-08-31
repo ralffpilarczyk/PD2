@@ -37,10 +37,22 @@ pip install -r requirements.txt
 2. **Professional Tone**: Maintain clear, concise technical communication
 3. **Comments**: Only add comments when explicitly requested
 
-## Design Principles
-1. **Principle-Based Approaches**: Any document analysis should be designed using principle-based approaches that make wise choices, avoiding hardcoded specific criteria unless absolutely necessary and explicitly approved
-2. **Generic Solutions**: Build systems that adapt to different companies, industries, and contexts through intelligent pattern recognition rather than fixed rules
-3. **Dynamic Adaptation**: Use current context (date, industry, geography) to inform decisions rather than static assumptions
+## Core Design Principles
+
+### 1. Config-first, principle-based design
+- All behavior (semantics, thresholds, strategies, limits) must be defined in configuration, not code
+- No hardcoded values, pairs, or workflow assumptions; the configuration is the single source of truth
+- The code should be generic and parameterized, able to adapt to unseen domains without changes
+
+### 2. Domain-agnostic semantics and universal resolution
+- Represent properties with semantic metadata (e.g., category, polarity, dimensions) to detect contradictions generically
+- Resolve conflicts using universal tie-breakers: observed over derived, negative over positive, shorter paths over longer, higher confidence over lower
+- Compute and propagate effective confidence (source × rule × depth), and always preserve causal chains
+
+### 3. Transparent, deterministic, and safe outputs
+- Every decision must be explainable ("why"), including blockers, policies applied, and confidence used
+- Outputs must be de-duplicated, stably ordered, and include unique counts and provenance for auditability
+- Reasoning must be bounded and efficient (depth caps, memoization, precompiled patterns), and safe (sanitized dynamic strings, graceful dependency checks)
 
 ## Deep Analysis Methodology
 When analyzing company data, always apply multi-layer analytical thinking:

@@ -1,0 +1,106 @@
+# Conflict Resolution Configuration
+# Defines how to resolve contradictory derivations
+
+resolution_hierarchy:
+  # Priority levels (lower number = higher priority)
+  # When facts conflict, higher priority wins
+  
+  1:
+    name: direct_negative_assertion
+    description: "Explicit negative statements (no_X) in the document"
+    examples: ["no_pricing_power", "no_economies_of_scale", "weak_position"]
+    
+  2:
+    name: regulatory_constraint
+    description: "Regulatory forces that constrain options"
+    sources: ["regulation", "regulatory_barriers", "compliance_requirement"]
+    
+  3:
+    name: market_reality
+    description: "Current market conditions that override theory"
+    sources: ["commoditization", "intense_competition", "price_war"]
+    
+  4:
+    name: operational_constraint
+    description: "Operational limitations"
+    sources: ["no_economies_of_scale", "high_costs", "subscale"]
+    
+  5:
+    name: structural_advantage
+    description: "Sustainable competitive advantages"
+    sources: ["strong_moat", "network_effects", "switching_costs"]
+    
+  6:
+    name: market_position
+    description: "Current market standing"
+    sources: ["market_leader", "dominant_position", "first_mover"]
+    
+  7:
+    name: theoretical_expectation
+    description: "What typically happens in theory"
+    sources: ["brand_strength", "technology_advantage"]
+
+# Strength modifiers based on derivation distance
+derivation_strength:
+  direct_observation: 1.0      # Directly stated in document
+  one_hop_derivation: 0.8     # Derived in one step
+  two_hop_derivation: 0.6     # Derived in two steps
+  multi_hop_derivation: 0.4   # Derived in 3+ steps
+
+# Specific blocking relationships
+# These override general causal rules
+blocking_relationships:
+  - blocker: heavy_regulation
+    blocks: [pricing_power, price_flexibility]
+    strength: 0.95
+    
+  - blocker: commoditization
+    blocks: [pricing_power, differentiation, premium_pricing]
+    strength: 0.9
+    
+  - blocker: intense_competition
+    blocks: [pricing_power, high_margins]
+    strength: 0.85
+    
+  - blocker: no_economies_of_scale
+    blocks: [cost_advantage, operational_efficiency]
+    strength: 0.9
+
+# Contradiction groups
+# When one is true, others in group cannot be
+mutual_exclusions:
+  pricing:
+    - pricing_power
+    - no_pricing_power
+    - limited_pricing_power
+    
+  market_position:
+    - market_leader
+    - weak_position
+    - follower_position
+    
+  scale:
+    - economies_of_scale
+    - no_economies_of_scale
+    - subscale_operations
+    
+  margins:
+    - high_margins
+    - low_margins
+    - margin_compression
+
+# Resolution strategies
+resolution_strategy:
+  default: hierarchy_based  # Use hierarchy to resolve
+  
+  alternatives:
+    - confidence_weighted   # Use confidence scores
+    - source_type_based    # Use source categories
+    - recency_based        # More recent facts win
+    
+# Conflict reporting
+reporting:
+  show_conflicts: true
+  show_resolution_reasoning: true
+  show_blocked_derivations: true
+  deduplicate_messages: true

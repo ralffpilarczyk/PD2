@@ -1,0 +1,169 @@
+# Semantic Dimensions Configuration
+# Defines semantic categories and polarities for generic contradiction detection
+
+dimensions:
+  # Market/competitive position
+  position:
+    description: "Market or competitive position"
+    positive_indicators: [leader, dominant, strong, advantaged, superior]
+    negative_indicators: [weak, vulnerable, disadvantaged, struggling, inferior]
+    properties:
+      positive:
+        - market_leader
+        - first_mover_advantage
+        - market_dominance
+      negative:
+        - weak_position
+        - declining_share
+    
+  # Operational/economic scale
+  scale:
+    description: "Size, scale, or economic efficiency"
+    positive_indicators: [scale, large, efficient, economies]
+    negative_indicators: [subscale, small, inefficient, diseconomies]
+    properties:
+      positive:
+        - economies_of_scale
+      negative:
+        - no_economies_of_scale
+    
+  # Pricing and economic power
+  pricing:
+    description: "Pricing power and flexibility"
+    positive_indicators: [pricing_power, premium, flexible]
+    negative_indicators: [no_pricing, commoditized, inflexible]
+    properties:
+      positive:
+        - pricing_power
+      negative:
+        - no_pricing_power
+        - commoditization
+        - price_pressure
+    
+  # Competitive advantage/moat
+  advantage:
+    description: "Competitive advantages and barriers"
+    positive_indicators: [moat, advantage, barrier, differentiated]
+    negative_indicators: [no_moat, disadvantage, commoditized, undifferentiated]
+    properties:
+      positive:
+        - strong_moat
+        - competitive_advantage
+        - network_effects
+        - switching_costs
+      negative:
+        - no_moat
+        - commoditization
+    
+  # Brand strength
+  brand:
+    description: "Brand recognition and value"
+    positive_indicators: [strong_brand, recognition, premium_brand]
+    negative_indicators: [weak_brand, no_recognition, commodity_brand]
+    properties:
+      positive:
+        - strong_brand
+      negative:
+        - weak_brand
+    
+  # Technology position
+  technology:
+    description: "Technological capabilities and leadership"
+    positive_indicators: [supremacy, leadership, advanced, superior]
+    negative_indicators: [lagging, inferior, outdated, behind]
+    properties:
+      positive:
+        - technological_supremacy
+        - quantum_supremacy
+      negative:
+        - technological_lag
+    
+  # Financial performance
+  financial:
+    description: "Financial metrics and performance"
+    positive_indicators: [high, strong, robust, growing]
+    negative_indicators: [low, weak, poor, declining]
+    properties:
+      positive:
+        - high_margins
+        - strong_cash_flow
+        - investment_capacity
+      negative:
+        - margin_compression
+        - weak_cash_flow
+        - low_returns
+    
+  # Operational efficiency
+  efficiency:
+    description: "Cost structure and operational efficiency"
+    positive_indicators: [advantage, efficient, optimized]
+    negative_indicators: [disadvantage, inefficient, bloated]
+    properties:
+      positive:
+        - cost_advantage
+      negative:
+        - cost_disadvantage
+        - high_compliance_costs
+
+# Pattern-based contradiction detection
+contradiction_patterns:
+  # Generic strong vs weak pattern
+  - pattern_positive: "^strong_(.+)$"
+    pattern_negative: "^weak_\\1$"
+    description: "Strong vs weak variants of same concept"
+  
+  # Generic high vs low pattern
+  - pattern_positive: "^high_(.+)$"
+    pattern_negative: "^low_\\1$"
+    description: "High vs low variants of same metric"
+  
+  # Has vs no pattern
+  - pattern_positive: "^(.+)$"
+    pattern_negative: "^no_\\1$"
+    description: "Presence vs absence of property"
+  
+  # Growing vs declining pattern
+  - pattern_positive: "^growing_(.+)$"
+    pattern_negative: "^declining_\\1$"
+    description: "Growth vs decline of same metric"
+
+# Conflict resolution principles
+resolution_principles:
+  # Priority order (lower number = higher priority)
+  1_observation_beats_derivation:
+    description: "Observed facts override derived facts"
+    weight: 10.0
+  
+  2_negative_beats_positive:
+    description: "Negative/constraint facts override positive/theoretical"
+    weight: 8.0
+  
+  3_higher_confidence:
+    description: "Higher confidence facts override lower confidence"
+    weight: 6.0
+  
+  4_shorter_path:
+    description: "Direct derivations override long chains"
+    weight: 4.0
+  
+  5_recent_beats_old:
+    description: "More recent observations override older ones"
+    weight: 2.0
+    requires_temporal: true
+
+# Confidence calculation settings
+confidence_settings:
+  # Base confidence adjustments
+  observation_boost: 1.1  # Observed facts get 10% boost
+  negation_boost: 1.05    # Explicit negations get 5% boost
+  
+  # Depth penalties
+  depth_decay_rate: 0.9   # Each hop reduces confidence by 10%
+  max_depth: 5            # Stop inference after 5 hops
+  
+  # Minimum thresholds
+  min_confidence_to_derive: 0.5
+  min_confidence_to_assert: 0.3
+  
+  # Conflict resolution
+  confidence_difference_threshold: 0.1  # Need >10% difference to override

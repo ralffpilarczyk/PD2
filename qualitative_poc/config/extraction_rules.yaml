@@ -1,92 +1,46 @@
-# Generic Extraction Rules Configuration
-# Fully authoritative configuration - all behavior defined here
+# Minimal Extraction Rules Configuration
+# Properties with patterns and confidence only
 
 properties:
-  # Market position properties
+  # Market position
   market_leader:
     patterns:
       - "market leader"
       - "leading position"
       - "dominant player"
       - "largest.*market share"
-      - "market leadership"
     type: positive
-    category: market_position
-    dimension: position
-    polarity: positive
-    strength: 0.9  # How strongly positive within dimension
     confidence: 0.9
-    suppresses_negation: true
-    context_window: 50
-    priority: 1
 
   weak_position:
     patterns:
       - "weak.*position"
       - "vulnerable"
-      - "disadvantage"
       - "struggling"
       - "losing ground"
-      - "no.*market leader"
-      - "not.*market leader"
     type: negative
-    category: market_position
-    dimension: position
-    polarity: negative
-    strength: 0.8
     confidence: 0.85
-    priority: 2  # Reality overrides aspirations
 
-  declining_share:
-    patterns:
-      - "market share.*declin"
-      - "losing.*customers"
-      - "share.*dropped"
-      - "erosion.*position"
-      - "weakened.*position"
-    type: negative
-    category: market_metrics
-    confidence: 0.9
-    priority: 2
-
-  # Pricing power properties
+  # Pricing
   pricing_power:
     patterns:
-      - "pricing power"
+      - "(?<!no )pricing power"
       - "strong pricing"
       - "premium pricing"
-      - "price increases"
-      - "pass.*costs.*customers"
       - "raise.*prices"
     type: positive
-    category: pricing
-    dimension: pricing
-    polarity: positive
-    strength: 0.8
     confidence: 0.8
-    suppresses_negation: false
-    context_window: 30
-    priority: 1
 
   no_pricing_power:
     patterns:
       - "no pricing power"
-      - "price pressure"
       - "unable.*raise prices"
       - "cannot.*raise prices"
-      - "price competition"
-      - "limited pricing"
-      - "prevent.*raising prices"
-      - "prevent.*from raising"
+      - "price pressure"
     type: negative
-    category: pricing
-    dimension: pricing
-    polarity: negative
-    strength: 0.9
-    confidence: 0.95
-    priority: 3  # Regulatory/market reality beats theory
+    confidence: 0.9
 
-  # Competitive advantage properties
+  # Competitive advantage
   strong_moat:
     patterns:
       - "competitive advantage"
@@ -94,37 +48,15 @@ properties:
       - "moat"
       - "defensible position"
     type: positive
-    category: competitive_advantage
-    dimension: advantage
-    polarity: positive
-    strength: 0.85
     confidence: 0.85
-    priority: 1
-
-  no_moat:
-    patterns:
-      - "no.*competitive advantage"
-      - "no moat"
-      - "low barriers"
-      - "commoditized"
-    type: negative
-    category: competitive_advantage
-    dimension: advantage
-    polarity: negative
-    strength: 0.8
-    confidence: 0.9
-    priority: 2
 
   network_effects:
     patterns:
       - "network effect"
       - "platform.*effect"
       - "viral growth"
-      - "user.*begets.*user"
     type: positive
-    category: competitive_advantage
     confidence: 0.85
-    priority: 1
 
   switching_costs:
     patterns:
@@ -132,11 +64,9 @@ properties:
       - "lock.*in"
       - "sticky.*customer"
     type: positive
-    category: competitive_advantage
     confidence: 0.8
-    priority: 1
 
-  # Brand properties
+  # Brand
   strong_brand:
     patterns:
       - "strong brand"
@@ -144,98 +74,43 @@ properties:
       - "brand loyalty"
       - "premium brand"
     type: positive
-    category: brand
     confidence: 0.8
-    negation: weak_brand
-    priority: 1
-
-  weak_brand:
-    patterns:
-      - "weak brand"
-      - "no.*brand recognition"
-      - "commodity brand"
-    type: negative
-    category: brand
-    confidence: 0.85
-    negates: strong_brand
-    priority: 2
 
   # Market dynamics
   commoditization:
     patterns:
       - "commoditiz"
       - "undifferentiated"
-      - "price.*only.*factor"
       - "no.*differentiation"
     type: negative
-    category: market_dynamics
     confidence: 0.9
-    blocks: [pricing_power, strong_moat]  # Commoditization blocks these
-    priority: 3
-
-  expansion:
-    patterns:
-      - "expand.*international"
-      - "international.*expansion"
-      - "geographic.*expansion"
-      - "entering.*markets"
-      - "new.*markets"
-    type: positive
-    category: growth
-    confidence: 0.75
-    priority: 1
 
   regulation:
     patterns:
       - "regulat.*prevent"
       - "government.*control"
       - "price.*cap"
-      - "compliance.*burden"
       - "regulatory.*constraint"
-    type: constraint  # New type for blocking factors
-    category: external_factors
+    type: negative
     confidence: 0.95
-    blocks: [pricing_power]  # Regulation blocks pricing power
-    priority: 3
+    negates: pricing_power  # When found, emit no_pricing_power
 
-  heavy_regulation:
-    patterns:
-      - "heavy.*regulat"
-      - "strict.*regulat"
-      - "significant.*regulat"
-      - "regulatory.*burden"
-    type: constraint
-    category: external_factors
-    confidence: 0.9
-    blocks: [pricing_power, expansion]
-    priority: 3
-
-  # Technology properties
-  first_mover_advantage:
-    patterns:
-      - "first.?mover"
-      - "pioneer"
-      - "first to market"
-    type: positive
-    category: competitive_advantage
-    dimension: position  # First movers aim for leadership position
-    polarity: positive
-    strength: 0.7
-    confidence: 0.8
-    priority: 1
-
+  # Technology
   technological_supremacy:
     patterns:
       - "technological supremacy"
       - "tech.*leader"
       - "technological advantage"
     type: positive
-    category: competitive_advantage
-    dimension: technology
-    polarity: positive
-    strength: 0.9
     confidence: 0.85
-    priority: 1
+
+  first_mover_advantage:
+    patterns:
+      - "first.?mover"
+      - "pioneer"
+      - "first to market"
+    type: positive
+    confidence: 0.8
 
   economies_of_scale:
     patterns:
@@ -243,69 +118,8 @@ properties:
       - "scale advantage"
       - "cost advantage.*scale"
     type: positive
-    category: operational
-    dimension: scale
-    polarity: positive
-    strength: 0.8
     confidence: 0.8
-    priority: 1
-
-  no_economies_of_scale:
-    patterns:
-      - "lack.*economies of scale"
-      - "no.*scale advantage"
-      - "subscale"
-    type: negative
-    category: operational
-    dimension: scale
-    polarity: negative
-    strength: 0.85
-    confidence: 0.85
-    priority: 2
-
-  quantum_supremacy:
-    patterns:
-      - "quantum supremacy"
-      - "quantum.*advantage"
-      - "quantum computing leader"
-    type: positive
-    category: technology
-    dimension: technology
-    polarity: positive
-    strength: 0.95
-    confidence: 0.9
-    priority: 1
 
 # Extraction settings
 settings:
-  # Negation detection
-  auto_detect_negations: true
-  negation_prefixes:
-    - "no "
-    - "not "
-    - "lack of "
-    - "absence of "
-    - "without "
-    - "unable to "
-    - "cannot "
-    - "prevent"
-  
-  # Context analysis
-  context_window_default: 30  # words before and after to check
-  suppression_window: 50  # larger window for suppression checks
-  
-  # Confidence thresholds
   min_confidence_to_assert: 0.5
-  high_confidence_threshold: 0.8
-  
-  # Conflict resolution
-  resolution_strategy: "priority_based"  # or "confidence_based"
-  reality_beats_theory: true  # Negative facts override positive inferences
-  
-  # Pattern matching
-  case_sensitive: false
-  word_boundaries: true  # Add \b to patterns automatically
-  
-  # Performance
-  max_patterns_per_property: 10
-  cache_compiled_patterns: true

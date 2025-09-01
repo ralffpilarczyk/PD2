@@ -37,22 +37,140 @@ pip install -r requirements.txt
 2. **Professional Tone**: Maintain clear, concise technical communication
 3. **Comments**: Only add comments when explicitly requested
 
-## Core Design Principles
+# Engineering Principles: Build Systems That Stay Correct
 
-### 1. Config-first, principle-based design
-- All behavior (semantics, thresholds, strategies, limits) must be defined in configuration, not code
-- No hardcoded values, pairs, or workflow assumptions; the configuration is the single source of truth
-- The code should be generic and parameterized, able to adapt to unseen domains without changes
+## Core Principles
 
-### 2. Domain-agnostic semantics and universal resolution
-- Represent properties with semantic metadata (e.g., category, polarity, dimensions) to detect contradictions generically
-- Resolve conflicts using universal tie-breakers: observed over derived, negative over positive, shorter paths over longer, higher confidence over lower
-- Compute and propagate effective confidence (source × rule × depth), and always preserve causal chains
+### Prime directive: Consistency over velocity
+• Never ship changes that create logical contradictions or leave the system in an ambiguous state.
+• If a requirement forces a contradiction, stop and clarify before proceeding.
 
-### 3. Transparent, deterministic, and safe outputs
-- Every decision must be explainable ("why"), including blockers, policies applied, and confidence used
-- Outputs must be de-duplicated, stably ordered, and include unique counts and provenance for auditability
-- Reasoning must be bounded and efficient (depth caps, memoization, precompiled patterns), and safe (sanitized dynamic strings, graceful dependency checks)
+### Specify → Verify → Implement
+• **Specify completely**: normal behavior, edge cases, conflict handling, and expected outputs.
+• **Verify logically**: walk through a few concrete scenarios by hand; ensure no contradictions arise.
+• **Implement once**: build the full, consistent solution rather than accreting fixes.
+
+### Gate before commit
+• Validate preconditions and conflicts before mutating state.
+• If an action doesn't meet the gate, don't "do-and-fix"; reject with a single, clear reason and move on.
+
+### Single source of truth
+• Maintain one canonical representation of state; avoid parallel or redundant forms.
+• Derive metrics and summaries from the same authoritative source (e.g., the event log), not from rescans or recomputation.
+
+### Determinism by design
+• Same inputs should yield the same ordering, counts, and outputs.
+• Sort and format outputs deterministically; eliminate non-deterministic iteration and timing-dependent behavior.
+
+### Bounded complexity
+• Constrain loops, recursion, and search space (depth, breadth, time).
+• Prefer linear-time designs over pairwise scans; avoid O(N²) patterns unless strictly necessary and justified.
+
+### Minimal surface area
+• Keep the smallest possible feature set that delivers the outcome.
+• Remove dead code and feature toggles you don't intend to use; one representation is better than three.
+
+### Invariants and integrity checks
+• Define non-negotiable invariants (e.g., "applied ≤ attempted; no negative counts; no duplicates") and assert them.
+• Fail fast on invariant violations; surface a clear error instead of producing untrustworthy outputs.
+
+### Stop and ask when unclear
+If a requirement is ambiguous, conflicts with existing behavior, or omits edge cases/expected outputs, pause and request clarification.
+
+**Template for clarification:**
+```
+I need clarification before implementing:
+1. "[Ambiguity] could mean [A] or [B]; which is intended?"
+2. "This change touches [X, Y, Z]; should they be updated for consistency?"
+3. "When [edge case] happens, should the system [option 1] or [option 2]?"
+4. "For input [example], is [output] the expected result?"
+```
+
+### Tests that matter
+Write small acceptance tests that reflect real user outcomes; include:
+• A happy path
+• A contradiction/conflict case
+• A boundary/degenerate case
+
+Ensure tests assert invariants and determinism, not just existence of output.
+
+### Conflict handling: be explicit
+• Treat explicit conflicts (e.g., mutually exclusive states) as contradictions; reject one with a clear reason.
+• Treat "tensions" (plausible co-existence) as design questions; seek clarification rather than encoding assumptions.
+
+### Observability and accountability
+• Log meaningful, single-source events (attempted, accepted, rejected with reason).
+• Build summaries from those events; avoid secondary scans that create drift or double counting.
+
+## Domain-Specific: Reasoning and Derivation Systems
+
+When working with systems that derive facts, apply rules, or build reasoning chains, these additional principles apply:
+
+### Cascade Principle
+When blocking or removing a fact, ALL downstream derivations must also be blocked/removed.
+```python
+# Example invariant:
+# If fact A is blocked, and B was derived from A, then B must also be blocked
+# If C was derived from B, then C must also be blocked (transitive)
+```
+
+### Contradiction Resolution Hierarchy
+When facts contradict each other, resolve using this precedence:
+1. **Explicit negations win**: "no_X" overrides "X"
+2. **Observed facts win**: Directly stated facts override derived facts
+3. **Shorter paths win**: Facts with shorter derivation chains override longer ones
+4. **Recent wins**: More recently observed facts override older ones
+
+### Semantic Consistency
+Facts with opposite meanings in the same category are mutually exclusive:
+• Cannot have both "market_leader" and "weak_position"
+• Cannot have both "high_margins" and "margin_compression"
+• Cannot derive both "strong_cash_flow" and "weak_cash_flow"
+
+### Before Implementing Any Reasoning Change
+1. **Trace cascade effects**: List all facts that would be affected downstream
+2. **Check for contradictions**: Identify any mutual exclusions that would be violated
+3. **Verify resolution strategy**: Ensure you know which fact wins in each conflict
+
+### Test Cases for Reasoning Systems
+Always test these scenarios:
+• **Cascade test**: If A→B→C→D and A is blocked, verify B,C,D are also blocked
+• **Contradiction test**: If both X and no_X are present, verify no_X wins
+• **Semantic test**: If deriving opposites, verify only one survives
+• **Consistency test**: Final output contains no logical contradictions
+
+### When Logical Contradictions Are Detected
+```
+This implementation would create a logical contradiction:
+- Current system state: [describe state]
+- This change would create: [describe contradiction]
+- Resolution options:
+  1. Apply precedence rules: [which fact wins and why]
+  2. Cascade removal: [what else must be removed]
+  3. Redesign required: [if precedence unclear]
+
+Which approach should I take?
+```
+
+## Red Flags Requiring Immediate Stop
+
+If you observe any of these patterns, STOP and seek clarification:
+• Implementing the same feature for the third time
+• A fix for your previous fix
+• Adding special cases after "complete" implementation
+• Discovering logical contradictions during testing (should be caught in design)
+• Circular dependencies in derivation
+• Unbounded growth in derived facts
+• Non-deterministic output from same input
+
+## The Ultimate Test
+
+Before committing any change, ask:
+1. Will this work correctly the FIRST time for ALL cases?
+2. Have I traced through edge cases manually?
+3. Does this maintain ALL system invariants?
+
+If any answer is "no" or "unsure", the specification is incomplete. Stop and clarify.
 
 ## Deep Analysis Methodology
 When analyzing company data, always apply multi-layer analytical thinking:

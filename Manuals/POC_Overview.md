@@ -1,14 +1,14 @@
-# Qualitative Reasoning POC - Comprehensive Overview
+# Qualitative Reasoning POC - Minimal Core Implementation
 
 ## Executive Summary
 
-This is a **generic, configuration-driven qualitative reasoning system** that performs pattern-based inference without numerical calculations. The system extracts facts from text documents, applies causal rules to derive new insights, resolves contradictions using universal principles, and provides comprehensive reporting of its reasoning process.
+This is a **minimal, gate-only qualitative reasoning system** that performs pattern-based inference with strict derivation controls. The system has been simplified to its essential core: extract facts, apply causal rules with gate checks, and provide transparent reporting. All complex features (dimensions, polarity, post-hoc scanning) have been removed in favor of a trustworthy, deterministic engine.
 
-### Core Philosophy
-- **Zero hardcoding** - All domain knowledge in YAML configurations
-- **Principle-based resolution** - Universal rules for conflict resolution
-- **Semantic understanding** - Properties organized by dimensions and polarity
-- **Complete transparency** - Full provenance and explanation for all decisions
+### Core Philosophy  
+- **Gate-only derivation** - Check constraints BEFORE asserting facts, not after
+- **Single representation** - One fact format throughout the system
+- **Event-based metrics** - Count from accept/reject logs, not rescanning
+- **Zero complexity** - No cascades, dimensions, or semantic metadata
 
 ## Architecture Overview
 
@@ -16,30 +16,27 @@ This is a **generic, configuration-driven qualitative reasoning system** that pe
 
 ```
 qualitative_poc/
-├── generic_controller.py      # Main orchestrator (Python)
-├── generic_extractor.py       # Text extraction engine (Python)
-├── generic_reasoner.pl        # Reasoning engine (Prolog)
+├── generic_controller.py      # Main orchestrator (minimal)
+├── generic_extractor.py       # Simple pattern matching
+├── generic_reasoner.pl        # Gate-only reasoning engine
 ├── config/
-│   ├── extraction_rules.yaml  # Property extraction patterns
-│   ├── causal_rules.yaml      # Causal relationships & metadata
-│   ├── semantic_dimensions.yaml # Semantic categories
-│   └── conflict_resolution.yaml # Resolution principles
+│   ├── extraction_rules.yaml  # Property patterns only
+│   └── causal_rules.yaml      # Simple A→B rules
 └── test_docs/                  # Test documents
 ```
 
 ### Data Flow
 
-1. **Text Input** → `generic_extractor.py` extracts facts using regex patterns
-2. **Facts** → `generic_controller.py` creates Prolog program with facts and rules
-3. **Prolog Program** → `generic_reasoner.pl` performs multi-level derivation
-4. **Reasoning** → Conflict resolution, cascade blocking, contradiction detection
-5. **Output** → Comprehensive report with derivations, blocks, and explanations
+1. **Text Input** → `generic_extractor.py` extracts facts using patterns
+2. **Facts** → `generic_controller.py` creates Prolog program 
+3. **Prolog Program** → `generic_reasoner.pl` performs gate-checked derivation
+4. **Output** → Simple report with observed, derived, and rejected facts
 
 ## Configuration System
 
 ### 1. Extraction Rules (`extraction_rules.yaml`)
 
-Defines how to extract properties from text with semantic metadata:
+Simple pattern matching for property extraction:
 
 ```yaml
 properties:
@@ -48,67 +45,37 @@ properties:
       - "market leader"
       - "leading market position"
       - "dominant player"
-    dimension: position
-    polarity: positive
-    strength: 0.9
-    negates: weak_position
-    priority: 1
+    confidence: 0.9
 ```
 
-**Key fields:**
-- `patterns`: Regex patterns to match in text
-- `dimension`: Semantic category (position, scale, financial, technology, etc.)
-- `polarity`: positive or negative within dimension
-- `strength`: Confidence when extracted (0-1)
-- `negates`: Direct negation relationship
-- `priority`: Higher priority facts override lower ones
+**Only two fields:**
+- `patterns`: Text patterns to match
+- `confidence`: Extraction confidence (0-1)
 
 ### 2. Causal Rules (`causal_rules.yaml`)
 
-Defines causal relationships and derived properties:
+Simple causal relationships:
 
 ```yaml
 causal_rules:
   - antecedent: market_leader
     consequent: pricing_power
     confidence: 0.8
-    unless_blocked_by: [regulation, commoditization]
-    rationale: "Market leaders typically have pricing power"
-    category: market_dynamics
 
-property_metadata:
-  pricing_power:
-    dimension: pricing
-    polarity: positive
-    category: pricing
+settings:
+  min_confidence_to_derive: 0.5
+  max_depth: 5
 ```
 
-**Key sections:**
-- `causal_rules`: A→B relationships with confidence and blockers
-- `property_metadata`: Dimension/polarity for derived properties
-- `expected_patterns`: Co-occurrence expectations for anomaly detection
-- `blocking_rules`: Facts that prevent certain derivations
-- `reasoning_chains`: Multi-hop derivation paths
-- `settings`: Global configuration (thresholds, decay rates)
+**Minimal structure:**
+- `causal_rules`: Simple A→B with confidence
+- `settings`: Min confidence and max derivation depth
 
-### 3. Semantic Dimensions (`semantic_dimensions.yaml`)
+**Important:** Avoid circular rules like A→B and B→A which cause infinite loops
 
-Defines semantic categories for contradiction detection:
+### 3. No Semantic Dimensions
 
-```yaml
-dimensions:
-  position:
-    description: "Market position and competitive standing"
-    properties:
-      positive:
-        - market_leader
-        - dominant_position
-      negative:
-        - weak_position
-        - struggling_position
-```
-
-Properties in the same dimension with opposite polarity are contradictory.
+The simplified system has no semantic dimensions or categories. Contradiction detection is limited to explicit negation pairs (e.g., `pricing_power` vs `no_pricing_power`).
 
 ## Core Algorithms
 
@@ -119,162 +86,126 @@ def extract(self, text, entity="company"):
     facts = []
     for prop_name, config in self.properties.items():
         if self._matches_patterns(text, config['patterns']):
-            # Check for contradictions within extracted facts
-            if not self._contradicts_existing(prop_name, facts):
-                facts.append({
-                    'property': prop_name,
-                    'confidence': config.get('strength', 0.8),
-                    'dimension': config.get('dimension'),
-                    'polarity': config.get('polarity')
-                })
-    return self._resolve_contradictions(facts)
+            facts.append({
+                'property': prop_name,
+                'confidence': config.get('confidence', 0.8)
+            })
+    return facts
 ```
 
-**Key features:**
-- Pattern matching with regex
-- Immediate contradiction detection
-- Dimension-based conflict resolution
-- Priority-based override
+**Simplified to:**
+- Pattern matching only
+- No contradiction checking
+- No conflict resolution
+- Just property and confidence
 
-### 2. Causal Derivation (`generic_reasoner.pl`)
+### 2. Gate-Only Derivation (`generic_reasoner.pl`)
 
-The Prolog engine performs iterative deepening with confidence decay:
+The Prolog engine uses gate checks BEFORE asserting facts:
 
 ```prolog
-derive_all_depths_with_conf(Entity, Seen, Depth, AllDerived) :-
-    % Get current facts
-    findall(F, has_property(Entity, F), ObservedFacts),
-    findall(F, member(derived(F, _, _), Seen), DerivedFacts),
-    append(ObservedFacts, DerivedFacts, CurrentFacts),
-    
-    % Derive new facts with confidence decay
-    findall(derived(P, because(Source), Conf),
-            (member(Source, CurrentFacts),
-             causal_rule(Source, P, RuleConf),
-             \+ member(P, CurrentFacts),
-             calculate_derived_confidence(RuleConf, Depth, Conf),
-             Conf >= MinConfidence),
-            NewDerived),
-    
-    % Continue if new derivations found
-    (NewDerived = [] -> AllDerived = Seen
-    ; append(Seen, NewDerived, NewSeen),
-      NextDepth is Depth + 1,
-      derive_all_depths_with_conf(Entity, NewSeen, NextDepth, AllDerived)).
+% Gate check: can we assert this derived fact?
+can_assert_fact(Entity, Property, Source, Confidence) :-
+    % Check 1: No duplicate
+    \+ fact(Entity, Property, _, _),
+    % Check 2: Confidence threshold
+    get_min_confidence(MinConf),
+    Confidence >= MinConf,
+    % Check 3: No negation conflict
+    \+ has_negation_conflict(Entity, Property, Source).
+
+% Derive with gate checking
+derive_at_depth(Entity, _, NewFactsAdded) :-
+    findall(Added,
+            (rule(Antecedent, Consequent, RuleConf),
+             fact(Entity, Antecedent, _, _),
+             \+ fact(Entity, Consequent, _, _),
+             (can_assert_fact(Entity, Consequent, derived, RuleConf) ->
+                 assertz(fact(Entity, Consequent, derived, RuleConf)),
+                 assertz(accept(Entity, Antecedent, Consequent, RuleConf)),
+                 Added = true
+             ;
+                 assertz(reject(Entity, Antecedent, Consequent, Reason)),
+                 Added = false
+             )),
+            Results).
 ```
 
-**Confidence calculation:**
-```
-EffectiveConfidence = RuleConfidence × (DecayRate ^ Depth)
-```
-Default decay rate: 0.9 per hop
+**Key principle:** Check constraints BEFORE asserting, not after
 
-### 3. Conflict Resolution (`resolve_with_cascade`)
+### 3. Negation Handling
 
-Three types of conflicts detected and resolved:
-
-1. **Negation conflicts**: `pricing_power` vs `no_pricing_power`
-2. **Dimension conflicts**: Properties in same dimension, opposite polarity
-3. **Observed-derived conflicts**: Observed facts override derived ones
-
-**Resolution principles:**
-1. Negative beats positive (reality over theory)
-2. Observed beats derived (evidence over inference)
-3. Higher confidence beats lower
-4. Shorter path beats longer
-
-### 4. Cascade Blocking
-
-When a fact is blocked, all downstream derivations are also blocked:
+Only explicit negation is handled:
 
 ```prolog
-find_cascade_blocks(Possible, BlockedFacts, AllBlocked) :-
-    % Find facts that depend on blocked facts
-    findall(P, 
-            (member(derived(P, because(Source), _), Possible),
-             member(Source, BlockedFacts)),
-            DependentFacts),
-    % Recursively find all downstream blocks
-    ...
+% Check if properties are negations
+is_negation(Prop1, Prop2) :-
+    atom_concat('no_', Base, Prop1),
+    Prop2 = Base.
+
+% Negative always blocks positive
+should_block(NegProp, _, _, _) :-
+    atom_concat('no_', _, NegProp), !.
+% Observed blocks derived  
+should_block(_, observed, _, derived).
 ```
 
-Example cascade:
-- `pricing_power` blocked by `no_pricing_power`
-- → `high_margins` cascade blocked (depends on pricing_power)
-- → `strong_cash_flow` cascade blocked (depends on high_margins)
-- → `investment_capacity` cascade blocked (depends on strong_cash_flow)
+**Simple rules:**
+1. `no_X` always blocks `X`
+2. Observed facts block derived facts
+3. No other conflict resolution
+
+### 4. No Cascade Blocking
+
+The simplified system has no cascade blocking. Each fact is evaluated independently with gate checks. If a fact is rejected, it simply doesn't get asserted - there's no post-hoc cascade analysis.
 
 ## Reporting System
 
 ### Output Sections
 
-1. **Direct Observations**
-   - Facts extracted from text with confidence and priority
+1. **Observed Facts**
+   - Facts extracted from text with confidence
 
-2. **Derived Insights**
-   - Facts inferred through causal rules
-   - Shows source, confidence, and rationale
+2. **Derived Facts (kept)**
+   - Facts successfully derived through gate checks
+   - Shows source and confidence
 
-3. **Valid Reasoning Chains**
-   - Multi-hop derivation paths that succeeded
-   - Format: `A → B → C → D`
+3. **Rejected Derivations**
+   - Facts that failed gate checks
+   - Shows rejection reason (duplicate, low confidence, negation)
 
-4. **Contradiction Clusters Encountered**
-   - All conflicts detected during derivation
-   - Shows both parties and conflict type
-   - Count of total conflicts resolved
+4. **Reasoning Chains** (limited)
+   - Simple direct edges from observed to derived
+   - Omitted for documents with >5 facts or >15 edges
 
-5. **Contradictions Detected (Post-Resolution)**
-   - Any remaining contradictions after resolution
-   - Should normally be empty if resolution worked
+5. **Summary Statistics**
+   - Observed count
+   - Derived count
+   - Rejected count
+   - Max derivation depth used
+   - Rule metrics from event log
 
-6. **Unusual Patterns**
-   - Expected co-occurrences that are missing
-   - Explains why (blocked, cascade blocked, not derived)
+## Key Simplifications from Previous Version
 
-7. **Blocked Derivations**
-   - Facts blocked with blocker identity and principle
-   - Example: `pricing_power blocked by no_pricing_power (negative beats positive)`
+### Gate-Only Derivation
+- **Before**: Derive everything then block in post-processing
+- **After**: Check constraints BEFORE asserting any fact
 
-8. **Cascade Blocked**
-   - Facts blocked due to upstream blocks
-   - Shows dependency chain
+### Single Fact Representation
+- **Before**: Multiple representations with metadata
+- **After**: Single format: `fact(Entity, Property, Source, Confidence)`
 
-9. **Blocked Chains**
-   - Complete derivation paths that were prevented
-   - Useful for understanding what could have been
+### Event-Based Metrics
+- **Before**: Rescan rules to count applications
+- **After**: Count from accept/reject event log
 
-10. **Summary Statistics**
-    - Fact counts: observed, derived, blocked, cascade blocked
-    - Top blocking reasons with counts
-    - Rule metrics: total, applicable, applied, blocked
+### No Complex Features
+- **Before**: Dimensions, polarity, cascades, semantic categories
+- **After**: Just facts, rules, and simple negation
 
-11. **Active Configuration**
-    - Current settings (thresholds, flags)
-    - Resolution strategy
-    - Confidence decay rate
-
-## Key Improvements from Critique
-
-### From Hardcoded to Generic
-- **Before**: Properties like "market_leader" were hardcoded in Python
-- **After**: Everything driven by YAML configurations
-
-### Complete Cascade Blocking
-- **Before**: Only first-level blocks
-- **After**: Full N-level cascade with complete downstream tracking
-
-### Proper Contradiction Detection
-- **Before**: Only checked negation pairs
-- **After**: Semantic dimensions with universal resolution principles
-
-### Accurate Reporting
-- **Before**: Inflated counts (702 cascade blocks), wrong blocker attribution
-- **After**: Deduplicated counts, correct blocker tracking, clear provenance
-
-### Early Rule Gating
-- **Before**: Derive everything then block
-- **After**: Apply confidence and blocker checks during derivation
+### Fixed Circular Rules
+- **Issue**: Rules like A→B and B→A caused infinite loops
+- **Fix**: Removed circular rule (commoditization ↔ no_pricing_power)
 
 ## Usage Example
 
@@ -325,97 +256,92 @@ Create markdown documents with various scenarios:
 
 ## Common Issues and Solutions
 
-### Issue: "Warning: Singleton variables"
-**Solution**: Use underscore for unused variables in Prolog predicates
+### Issue: Timeout with many facts
+**Cause**: Circular rules creating infinite derivation loops
+**Solution**: Remove circular rules from causal_rules.yaml
 
-### Issue: Duplicate facts in output
-**Solution**: Use `setof` instead of `findall`, check before asserting
-
-### Issue: Inflated cascade counts
-**Solution**: Deduplicate with `sort()` before counting
+### Issue: "Goal (directive) failed" warning
+**Cause**: Harmless - Prolog expects to halt but subprocess captures output
+**Solution**: Ignore this warning, it doesn't affect results
 
 ### Issue: No facts being derived
-**Solution**: Check confidence thresholds and blocker conditions
+**Solution**: Check min_confidence threshold in settings
 
-## Future Enhancements
+### Issue: Performance with large documents  
+**Solution**: Controller skips Prolog for >15 facts, shows summary only
 
-1. **Learning System**: Capture successful patterns for reuse
-2. **Explanation Generation**: Natural language explanations
-3. **Confidence Calibration**: Auto-tune confidence based on outcomes
-4. **Interactive Mode**: Allow user to query reasoning paths
-5. **Visualization**: Graph representation of derivation networks
+## Intentionally Removed Features
+
+These features were removed to create a minimal, trustworthy core:
+
+1. **Semantic Dimensions**: No categorization of properties
+2. **Cascade Blocking**: No multi-level dependency tracking  
+3. **Complex Conflict Resolution**: Only simple negation handling
+4. **Blocking Rules**: No conditional blocking based on other facts
+5. **Expected Patterns**: No anomaly detection
+6. **Priority System**: No override based on priority levels
+7. **Confidence Decay**: No reduction over derivation depth
 
 ## Critical Implementation Details
 
 ### Dynamic Predicates (Prolog)
 ```prolog
-:- dynamic has_property/2.
-:- dynamic has_property_full/4.
-:- dynamic causal_rule/3.
-:- dynamic causal_rule_full/5.
-:- dynamic blocked_fact/2.
-:- dynamic cascade_blocked/3.
-:- dynamic block_source/4.
-:- dynamic contradiction_clusters/3.
+:- dynamic fact/4.           % entity, property, source, confidence
+:- dynamic rule/3.           % antecedent, consequent, confidence  
+:- dynamic accept/4.         % entity, antecedent, consequent, confidence
+:- dynamic reject/4.         % entity, antecedent, consequent, reason
+:- dynamic edge/3.           % entity, antecedent, consequent
+:- dynamic config_setting/1. % min_confidence, max_depth
 ```
 
-### Resolution Order in `resolve_with_cascade`
-1. Identify all conflicts (negation, dimension, observed-derived)
-2. Record contradiction clusters for reporting
-3. Track block sources with principles
-4. Mark directly blocked facts
-5. Find cascade blocks recursively
-6. Filter out all blocked facts from final derivations
+### Gate Check Process
+```prolog
+can_assert_fact(Entity, Property, Source, Confidence) :-
+    \+ fact(Entity, Property, _, _),           % No duplicate
+    get_min_confidence(MinConf),
+    Confidence >= MinConf,                      % Above threshold
+    \+ has_negation_conflict(Entity, Property, Source). % No negation
+```
 
 ### Controller Pipeline (`generic_controller.py`)
 ```python
-def analyze_document(self, md_file, entity, show_rationale):
-    # 1. Extract facts from markdown
+def analyze_document(self, md_file, entity):
+    # 1. Extract facts
     facts = self.extractor.extract(content, entity)
     
-    # 2. Create temporary Prolog file
-    with tempfile.NamedTemporaryFile() as f:
-        # Load reasoning engine
-        f.write(":- consult('generic_reasoner.pl').\n")
-        
-        # Load causal rules with blockers
-        for rule in self.causal_config['causal_rules']:
-            f.write(f"load_causal_rule_full(...)")
-        
-        # Assert facts with confidence
-        for fact in facts:
-            f.write(f"assertz(has_property_full(...))")
-        
-        # Run analysis
-        f.write(f"analyze_with_config('{entity}')")
+    # 2. Skip if too complex (>15 facts)
+    if len(facts) > 15:
+        print("Document too complex - summary only")
+        return
     
-    # 3. Execute Prolog and capture output
-    result = subprocess.run(['swipl', '-q', '-s', temp_file])
+    # 3. Create Prolog program
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(":- consult('generic_reasoner.pl').\n")
+        # Load rules
+        for rule in causal_rules:
+            f.write(f"load_rule('{rule['antecedent']}', ...")
+        # Assert facts
+        for fact in facts:
+            f.write(f"assertz(fact('{entity}', ...")
+        # Run analysis
+        f.write(f"analyze('{entity}').")
+    
+    # 4. Execute with timeout
+    subprocess.run(['swipl', '-q', '-s', temp_file], timeout=60)
 ```
-
-### Confidence Decay Formula
-```
-derive_all_depths_with_conf:
-  Depth 0: confidence = rule_confidence
-  Depth 1: confidence = rule_confidence × 0.9
-  Depth 2: confidence = rule_confidence × 0.81
-  Depth N: confidence = rule_confidence × (0.9 ^ N)
-```
-
-### Block Source Tracking
-Each blocked fact records:
-- **Entity**: The entity being analyzed
-- **Blocked**: The fact that was blocked
-- **Blocker**: The fact that caused the block
-- **Principle**: The resolution principle applied
 
 ## Summary
 
-This POC demonstrates a fully generic, configuration-driven approach to qualitative reasoning that:
-- Extracts facts from unstructured text
-- Applies multi-level causal inference
-- Resolves contradictions using universal principles
-- Provides complete transparency in reasoning
-- Maintains zero hardcoding in core logic
+This minimal POC demonstrates a simplified qualitative reasoning system that:
+- Extracts facts using simple pattern matching
+- Applies gate-checked causal derivation
+- Handles explicit negation conflicts only
+- Provides transparent event-based metrics
+- Avoids all complex features that caused issues
 
-The system successfully transforms domain expertise into declarative configurations while maintaining sophisticated reasoning capabilities including cascade blocking, dimension-based contradiction detection, and comprehensive provenance tracking.
+The system trades sophistication for reliability, creating a trustworthy core that:
+- Never asserts facts that violate constraints
+- Counts metrics from event logs, not rescanning
+- Avoids circular rules that cause infinite loops
+- Maintains single representation throughout
+- Completes analysis in milliseconds for reasonable document sizes

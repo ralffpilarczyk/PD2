@@ -275,6 +275,14 @@ property_metadata:
     dimension: financial
     polarity: negative
     category: financial
+  margin_compression:
+    dimension: financial
+    polarity: negative
+    category: financial
+  low_returns:
+    dimension: financial
+    polarity: negative
+    category: financial
   strong_brand:
     dimension: brand
     polarity: positive

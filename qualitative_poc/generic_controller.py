@@ -90,13 +90,13 @@ class GenericController:
             f.write(f"    set_config(min_confidence({min_conf})),\n")
             f.write(f"    set_config(max_depth({max_depth})),\n")
             f.write(f"    analyze('{entity}').\n")
-            f.write("\n:- run, halt.\n")
             
             temp_file = f.name
         
         # Step 3: Run reasoning
         result = subprocess.run(
-            ['swipl', '-q', '-s', temp_file],
+            # Ensure Prolog runs our goal and always halts
+            ['swipl', '-q', '-s', temp_file, '-g', 'run', '-t', 'halt'],
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent,

@@ -1,6 +1,11 @@
 % Minimal reasoning engine - gate-only derivation with event logging
 % Single fact representation, no post-hoc conflict scanning
 
+% Ensure time-limited calls are available for chain printing, if present
+:- if(exists_source(library(timeout))).
+:- use_module(library(timeout)).
+:- endif.
+
 :- dynamic fact/4.           % entity, property, source, confidence
 :- dynamic rule/3.           % antecedent, consequent, confidence  
 :- dynamic accept/4.         % entity, antecedent, consequent, confidence (event log)
@@ -211,22 +216,26 @@ analyze(Entity) :-
         format('  (chains omitted - graph too large: ~w edges)~n', [EdgeCount])
     ;
         % Try to find chains with very short time limit
-        catch(
-            call_with_time_limit(1,  % 1 second limit
-                (% Simply show first few edges as chains
-                 findall(Start-End, 
-                         (edge(Entity, Start, End),
-                          fact(Entity, Start, observed, _)),
-                         DirectEdges),
-                 sort(DirectEdges, SortedEdges),
-                 % Show up to 5 direct edges
-                 take_first_n(SortedEdges, 5, TopEdges),
-                 forall(member(S-E, TopEdges),
-                        format('  - ~w → ~w~n', [S, E]))
-                )
-            ),
-            time_limit_exceeded,
-            format('  (chains timed out)~n')
+        ( current_predicate(call_with_time_limit/2) ->
+            catch(
+                call_with_time_limit(1,
+                    (% Simply show first few edges as chains
+                     findall(Start-End,
+                             (edge(Entity, Start, End),
+                              fact(Entity, Start, observed, _)),
+                             DirectEdges),
+                     sort(DirectEdges, SortedEdges),
+                     % Show up to 5 direct edges
+                     take_first_n(SortedEdges, 5, TopEdges),
+                     forall(member(S-E, TopEdges),
+                            format('  - ~w → ~w~n', [S, E]))
+                    )
+                ),
+                time_limit_exceeded,
+                format('  (chains timed out)~n')
+            )
+          ;
+            format('  (chains omitted - no time limit support)~n')
         )
     ),
     

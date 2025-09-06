@@ -1,6 +1,6 @@
 # ProfileDash 2.0
 
-ProfileDash 2.0 (PD2) is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 32 analytical sections using Google's Gemini API.
+ProfileDash 2.0 (PD2) is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 33 analytical sections using Google's Gemini API.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ ProfileDash 2.0 (PD2) is an intelligent document analysis system that processes 
 - **Multi-step Analysis Pipeline**: Progressive refinement with completeness checks and deep analysis
 - **Learning System**: Captures analytical patterns for continuous improvement
 - **Parallel Processing**: Configurable thread workers (1-5) for faster analysis
-- **32 Analytical Sections**: Comprehensive coverage from financials to ESG metrics
+- **33 Analytical Sections**: Comprehensive coverage from financials to ESG metrics
 - **Professional HTML Reports**: Clean, navigable output with markdown support
 - **Smart Caching**: Converted documents cached for faster reprocessing
 
@@ -71,11 +71,11 @@ ProfileDash 2.0 (PD2) is an intelligent document analysis system that processes 
 3. **Select documents**: File picker will open to choose PDFs
 
 4. **Choose analysis sections**:
-   - Group 1: Company Overview (sections 1-6)
-   - Group 2: Financial Analysis (sections 7-13)
-   - Group 3: Strategy & Market Position (sections 14-19)
-   - Group 4: Investment Analysis (sections 20-26)
-   - Group 5: Risk & Governance (sections 27-32)
+   - Company Profile (sections 1-13)
+   - Strategy and SWOT (sections 14-19)
+   - Sellside Positioning (sections 20-26)
+   - Buyside Due Diligence (sections 27-32)
+   - Data Book (section 33)
 
 5. **Configure parallel workers** (1-5, default 2)
 
@@ -89,7 +89,7 @@ ProfileDash 2.0 (PD2) is an intelligent document analysis system that processes 
 - **`src/core_analyzer.py`**: Multi-step analysis pipeline with progressive refinement
 - **`src/insight_memory.py`**: Learning system that captures analytical patterns
 - **`src/profile_generator.py`**: HTML report generation with markdown processing
-- **`src/profile_sections.py`**: Defines all 32 analysis sections
+- **`src/profile_sections.py`**: Defines all 33 analysis sections
 - **`src/utils.py`**: Shared utilities including rate limiting and thread safety
 - **`src/file_manager.py`**: File I/O and markdown preprocessing
 
@@ -109,7 +109,7 @@ Each section undergoes multiple refinement steps:
 - **Thread Safety**: All operations use thread-safe printing for parallel processing
 - **Memory System**: Learning insights stored with section-based organization (max 30 words, quality score 9-10)
 - **Markdown Fixes**: Automatic correction of corrupted tables from PDF conversion
-- **Section 32 Special Handling**: No word limits, pure data extraction
+- **Section 33 Special Handling**: No word limits, pure data extraction
 
 ## Output Structure
 
@@ -132,26 +132,24 @@ memory/
 quality_metrics/                 # Performance tracking data
 ```
 
-## The 32 Analytical Sections
+## The 33 Analytical Sections
 
-### Group 1: Company Overview (1-6)
+### Company Profile (Sections 1-13)
 1. Operating Footprint
-2. Corporate Structure & Ownership
-3. Management & Board
-4. Corporate History & Milestones
-5. Business Model & Value Chain
-6. Products & Services Portfolio
-
-### Group 2: Financial Analysis (7-13)
-7. Financial Performance Overview
-8. Revenue Analysis
-9. Margin & Profitability Analysis
-10. Cash Flow Analysis
-11. Balance Sheet & Capital Structure
+2. Products and Services
+3. Key Customers
+4. Key Suppliers
+5. Key Competitors
+6. Corporate Structure & Ownership
+7. Management & Board
+8. Corporate History & Milestones
+9. Financial Performance Overview
+10. Margin & Profitability Analysis
+11. Cash Flow Analysis
 12. Capital Allocation & Returns
-13. Financial Deep Discoveries
+13. Deep Dive Discoveries
 
-### Group 3: Strategy & Market Position (14-19)
+### Strategy and SWOT (Sections 14-19)
 14. Business Strategy & Priorities
 15. Competitive Strengths
 16. Weaknesses & Challenges
@@ -159,7 +157,7 @@ quality_metrics/                 # Performance tracking data
 18. Threats & Risks
 19. Market Position & Competition
 
-### Group 4: Investment Analysis (20-26)
+### Sellside Positioning (Sections 20-26)
 20. Investment Thesis
 21. Key Catalysts
 22. Bull Case Scenario
@@ -168,13 +166,16 @@ quality_metrics/                 # Performance tracking data
 25. Key Investment Risks
 26. Investment Deep Discoveries
 
-### Group 5: Risk & Governance (27-32)
+### Buyside Due Diligence (Sections 27-32)
 27. Quality of Earnings
 28. Red Flags & Controversies
 29. Corporate Governance
 30. ESG & Sustainability
 31. Regulatory & Compliance
-32. Data Tables & Key Metrics
+32. Management Track Record
+
+### Data Book (Section 33)
+33. Data Tables & Key Metrics
 
 ## Deep Analysis Methodology
 

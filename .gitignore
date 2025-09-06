@@ -70,3 +70,6 @@ test_6agents.py
 
 # Source files
 SourceFiles/
+
+# Report files
+ReportFiles/

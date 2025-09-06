@@ -302,7 +302,7 @@ sections = [
                 "b. Recent transactions and changes in ownership positions\\n"
                 "c. Share class details and voting rights\\n"
                 "d. Beneficial ownership information and related shareholder groups (e.g. founders, management team, family, etc.) and their percentage ownership\\n"
-                "e. Insider holdings\\n"
+                "e. Insider holdings and recent changes in insider ownership\\n"
                 "f. Shareholder activism history\\n"
                 "g. Voting power distribution and control implications\\n"
                 "h. Shareholder agreements and key terms\\n"
@@ -360,6 +360,21 @@ sections = [
     },
     {
         "number": 13,
+        "title": "Deep Dive Discoveries",
+        "specs": "Extract risks or contradictions not immediately apparent. Focus on identifying information that could materially impact the company's prospects.\\n"
+                "\\n"
+                "Key areas to consider:\\n"
+                "a. Heroic Assumptions: Identify up to 3 material assumptions made by management that require achievements well outside historical norms, where material means impacting the prospects of the company\\n"
+                "b. Disconnects: Identify up to 3 material disconnects between what management is saying and what the company is actually doing, where material means impacting the prospects of the company\\n"
+                "c. Buried Disclosures: Identify up to 3 material observations that are hidden away in a single place, maybe just a footnote, but which could materially impact the prospects of the company\\n"
+                "\\n"
+                "For each observation:\\n"
+                "- Present as a single clear sentence explaining the issue and why it is material to the company's prospects\\n"
+                "\\n"
+                "Always include precise footnotes with exact sources, document references, page numbers, and sections for each observation."
+    },
+    {
+        "number": 14,
         "title": "Strategic Objectives and Corporate Strategies",
         "specs": "Extract and analyze the company's strategic goals and corporate strategy.\\n"
                 "\\n"
@@ -386,7 +401,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point."
     },
     {
-        "number": 14,
+        "number": 15,
         "title": "Strategic Constraints",
         "specs": "List the 3 most important constraints for the company to achieve its strategic objectives.\\n"
                 "Focus on constraints that make it very difficult to achieve the previously defined strategic objectives.\\n"
@@ -402,10 +417,10 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point."
     },
     {
-        "number": 15,
+        "number": 16,
         "title": "Strengths",
         "specs": "Describe the 3 most relevant strengths that enable the company to compete.\\n"
-                "Focus on existing strengths (not future plans or initiatives).\\n"
+                "Focus on existing strengths (not future plans or initiatives), and existing competitive moats.\\n"
                 "Prioritize strengths by how much they enable the company to compete.\\n"
                 "Cover competitive positioning, skills, assets, capabilities, expertise, speed of execution, insights, intellectual property, and licenses.\\n"
                 "Focus on strengths most relevant to the company's most important business segments.\\n"
@@ -424,7 +439,7 @@ sections = [
  
     },
     {
-        "number": 16,
+        "number": 17,
         "title": "Weaknesses",
         "specs": "Describe the 3 most relevant weaknesses that prevent the Company from serving its customers or competing with its main competitors\\n"
                 "Focus on company-specific weaknesses versus competitors (not market threats)\\n"
@@ -442,7 +457,7 @@ sections = [
  
     },
     {
-        "number": 17,
+        "number": 18,
         "title": "Opportunities",
         "specs": "Describe 3 specific opportunities that are achievable within 12-24 months and could materially impact the Company's performance\\n"
                 "Focus only on opportunities where the Company has existing capabilities to capture value\\n"
@@ -459,7 +474,7 @@ sections = [
  
     },
     {
-        "number": 18,
+        "number": 19,
         "title": "Threats",
         "specs": "Identify and analyze the 3 most significant threats to the Company's performance within the next 12-24 months.\\n"
                 "Prioritize threats based on potential financial impact and likelihood of occurrence.\\n"
@@ -476,7 +491,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 19,
+        "number": 20,
         "title": "Sellside Positioning - Macro",
         "specs": "Describe 3 most important macro trends which support the Company's performance and prospects.\\n"
                 "Focus on economic indicators, not industry dynamics, because that's a separate question later. Positive trends only.\\n"
@@ -490,7 +505,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.", 
     },
     {
-        "number": 20,
+        "number": 21,
         "title": "Sellside Positioning - Industry",
         "specs": "Describe 3 most important industry trends which support the Company's performance and prospects.\\n"
                 "Focus on industry indicators, not macro indicators. Positive trends only.\\n"
@@ -504,7 +519,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 21,
+        "number": 22,
         "title": "Sellside Positioning - Competitive Positioning",
         "specs": "Describe the 3 most important competitive advantages that materially impact the Company's economic performance over the next 12 months.\\n"
                 "Focus on specific, measurable advantages relative to named competitors in key markets and segments.\\n"
@@ -517,7 +532,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.", 
     },
     {
-        "number": 22,
+        "number": 23,
         "title": "Sellside Positioning - Operating Performance",
         "specs": "Describe the 3 most important operating performance metrics over the last 24 months that directly impact the Company's economic wellbeing.\\n"
                 "Focus on measurable KPIs such as market share evolution, volumes sold, pricing trends, revenue per customer or unit economics that show the Company in the best possible light.\\n"
@@ -530,7 +545,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 23,
+        "number": 24,
         "title": "Sellside Positioning - Financial Performance",
         "specs": "Describe the 3 most important financial achievements of the Company over the last 24 months.\\n"
                 "Focus on metrics that demonstrate exceptional financial performance, particularly those related to cash flow generation.\\n"
@@ -543,7 +558,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 24,
+        "number": 25,
         "title": "Sellside Positioning - Management",
         "specs": "Describe 3 facts about the Company's management team and Board that highlight their strengths and capabilities.\\n"
                 "Focus on both individual executives and the management team as a whole.\\n"
@@ -556,7 +571,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 25,
+        "number": 26,
         "title": "Sellside Positioning - Potential Investor Concerns and Mitigants",
         "specs": "Describe the 5 most important potential investor concerns when considering investing in the Company.\\n"
                 "Focus on fundamental business concerns and valuation issues that could impact investor returns.\\n"
@@ -570,7 +585,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 26,
+        "number": 27,
         "title": "Buyside Due Diligence - Macro",
         "specs": "Describe the 3 most important macroeconomic trends that could materially impact the Company's economic performance over the next 12 months.\\n"
                 "Focus on downside risks, not upside opportunities. Provide a detailed analysis of potential negative impacts.\\n"
@@ -584,7 +599,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 27,
+        "number": 28,
         "title": "Buyside Due Diligence - Industry",
         "specs": "Describe the 3 most important industry trends that could materially impact the Company's economic performance over the next 12-24 months.\\n"
                 "Focus on downside risks, not upside opportunities, including technology shifts, competitive dynamics, and regulatory changes.\\n"
@@ -599,7 +614,7 @@ sections = [
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 28,
+        "number": 29,
         "title": "Buyside Due Diligence - Competitive Positioning",
         "specs": "Describe the Company's 3 most important quantifiable competitive weaknesses versus key competitors and industry benchmarks.\\n"
                  "Analyze market share trends over the past 24 months and describe whether the Company's position is deteriorating.\\n"
@@ -612,7 +627,7 @@ sections = [
                  "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 29,
+        "number": 30,
         "title": "Buyside Due Diligence - Operating Performance",
         "specs": "Describe the 3 most important operating metrics that materially impact the Company's economic performance over the last 24 months. \\n"
             "Prioritize metrics related to market share, volumes, unit pricing, revenue per user, unit margins, \\n"
@@ -631,7 +646,7 @@ sections = [
             "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 30,
+        "number": 31,
         "title": "Buyside Due Diligence - Financial Performance",
         "specs": "Describe the 3 most important financial metrics and then identify and quantify material risks to these metrics and the Company's economic well-being over the next 12-24 months. \\n"
             "Analyse the underlying drivers, trends, and potential vulnerabilities. \\n"
@@ -649,7 +664,7 @@ sections = [
             "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
-        "number": 31,
+        "number": 32,
         "title": "Buyside Due Diligence - Management",
         "specs": "Describe the key members of the management team and the Board of Directors, focusing on individual track records, experience, and potential risks.\n"
             "For each key individual (primarily C-suite and key Board members):\n"
@@ -667,8 +682,8 @@ sections = [
     },
 
     {
-        "number": 32,
-        "title": "Appendix",
+        "number": 33,
+        "title": "Appendix: Data Book",
         "specs": """
 You will be provided with a large block of text containing all tables extracted from multiple source documents, formatted in Markdown.
 Your task is to act as an expert data organizer and format this information into a single, clean, comprehensive, and logically structured HTML appendix.
@@ -696,4 +711,5 @@ Your task is to act as an expert data organizer and format this information into
 Your output must be a single, well-formed block of HTML representing the entire appendix content, starting with `<div class="section" id="section-32">` and ending with `</div>`.
         """
     }
+    
 ]

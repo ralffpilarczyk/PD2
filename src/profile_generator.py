@@ -284,17 +284,35 @@ class ProfileGenerator:
 </body>
 </html>"""
         
-        # Save HTML file
-        html_filename = f"{clean_company_name}_profile.html"
-        html_path = f"runs/run_{self.run_timestamp}/{html_filename}"
+        # Create ReportFiles directory if it doesn't exist
+        report_dir = Path("ReportFiles")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Convert run timestamp format from YYYY_MM_DD_HH_MM_SS to YYMMDD_HHMM
+        # Example: 2025_09_05_16_23_45 -> 250905_1623
+        timestamp_parts = self.run_timestamp.split('_')
+        if len(timestamp_parts) >= 5:
+            year = timestamp_parts[0][2:]  # Last 2 digits of year
+            month = timestamp_parts[1]
+            day = timestamp_parts[2]
+            hour = timestamp_parts[3]
+            minute = timestamp_parts[4]
+            compact_timestamp = f"{year}{month}{day}_{hour}{minute}"
+        else:
+            # Fallback if timestamp format is unexpected
+            compact_timestamp = datetime.now().strftime('%y%m%d_%H%M')
+        
+        # Save HTML file to ReportFiles with new naming format
+        html_filename = f"{clean_company_name}_{compact_timestamp}.html"
+        html_path = report_dir / html_filename
         
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(full_html)
         
-        thread_safe_print(f"Combined HTML profile saved: {html_path}")
+        thread_safe_print(f"HTML report saved: {html_path}")
         thread_safe_print(f"Processed {len(processed_sections)} sections")
         
-        return html_path
+        return str(html_path)
     
     def _generate_cover_page(self, processed_sections, company_name):
         """Generate cover page with table of contents"""
@@ -312,11 +330,11 @@ class ProfileGenerator:
         
         # Group sections by category (like the real system does)
         groups = {
-            "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 12],
-            "Strategy and SWOT": [s for s in processed_sections if 13 <= s[0] <= 18], 
-            "Sellside Positioning": [s for s in processed_sections if 19 <= s[0] <= 25],
-            "Buyside Due Diligence": [s for s in processed_sections if 26 <= s[0] <= 31],
-            "Data Book": [s for s in processed_sections if s[0] == 32]
+            "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 13],
+            "Strategy and SWOT": [s for s in processed_sections if 14 <= s[0] <= 19], 
+            "Sellside Positioning": [s for s in processed_sections if 20 <= s[0] <= 26],
+            "Buyside Due Diligence": [s for s in processed_sections if 27 <= s[0] <= 32],
+            "Data Book": [s for s in processed_sections if s[0] == 33]
         }
         
         cover_html = f'''

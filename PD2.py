@@ -32,10 +32,26 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Import modular components
 from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections
-from src.competitive.cli import CompetitiveAnalysisCLI
 
 # Import thread_safe_print, retry_with_backoff, and clean_markdown_tables from utils
 from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tables
+
+# Module-level worker function for PDF conversion (needed for multiprocessing)
+def _pdf_conversion_worker(pdf_path: str) -> Optional[str]:
+    """Worker function for parallel PDF conversion"""
+    # Limit BLAS threads in child processes
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("MKL_NUM_THREADS", "1")
+    try:
+        from marker.converters.pdf import PdfConverter
+        from marker.models import create_model_dict
+        from marker.output import text_from_rendered
+        converter = PdfConverter(artifact_dict=create_model_dict())
+        rendered = converter(pdf_path)
+        full_text, _, _ = text_from_rendered(rendered)
+        return full_text if isinstance(full_text, str) else (full_text or "")
+    except Exception:
+        return None
 
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
@@ -86,7 +102,6 @@ class IntelligentAnalyst:
         self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp, model_name=model_name)
         self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name)
         self.quality_tracker = QualityTracker()
-        self.competitive_evidence = None
         
         # Ensure memory file exists
         self.file_manager.ensure_memory_file_exists(self.insight_memory.get_memory_data())
@@ -97,12 +112,11 @@ class IntelligentAnalyst:
             "pre_run_memory.json"
         )
     
-    def set_competitive_evidence(self, evidence: dict):
-        """Attach competitive evidence pack to enable section injections."""
-        self.competitive_evidence = evidence or None
-    
-    def _convert_single_pdf(self, pdf_path: str, run_dir: Path, progress_tracker: dict) -> str:
-        """Convert a single PDF file to markdown"""
+    def _convert_single_pdf(self, pdf_path: str, progress_tracker: dict) -> str:
+        """Convert a single PDF file to markdown and save to SourceFiles"""
+        source_dir = Path("SourceFiles")
+        source_dir.mkdir(parents=True, exist_ok=True)
+        
         try:
             thread_safe_print(f"Converting: {Path(pdf_path).name}")
             
@@ -121,22 +135,22 @@ class IntelligentAnalyst:
             rendered = self._marker_converter(pdf_path)
             full_text, _, images = text_from_rendered(rendered)
             
-            # Create output filename with _m.md suffix
+            # Create output filename matching PDF name
             pdf_name = Path(pdf_path).stem
-            output_path = run_dir / f"{pdf_name}_m.md"
+            output_path = source_dir / f"{pdf_name}.md"
             
             # Clean markdown before saving
-            thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
+            thread_safe_print(f"Cleaning markdown tables...")
             cleaned_text = clean_markdown_tables(full_text)
             
-            # Save cleaned markdown
+            # Save cleaned markdown to SourceFiles
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(cleaned_text)
             
             # Update progress
             with progress_tracker['lock']:
                 progress_tracker['completed'] += 1
-                thread_safe_print(f"Successfully converted: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
+                thread_safe_print(f"Successfully converted and saved: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
             
             return str(output_path)
             
@@ -155,8 +169,8 @@ class IntelligentAnalyst:
                 full_text, _, images = text_from_rendered(rendered)
 
                 pdf_name = Path(pdf_path).stem
-                output_path = run_dir / f"{pdf_name}_m.md"
-                thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
+                output_path = source_dir / f"{pdf_name}.md"
+                thread_safe_print(f"Cleaning markdown tables...")
                 cleaned_text = clean_markdown_tables(full_text)
                 with open(output_path, 'w', encoding='utf-8') as f:
                     f.write(cleaned_text)
@@ -171,8 +185,8 @@ class IntelligentAnalyst:
                     from pdfminer.high_level import extract_text
                     text_content = extract_text(pdf_path)
                     pdf_name = Path(pdf_path).stem
-                    output_path = run_dir / f"{pdf_name}_m.md"
-                    thread_safe_print(f"Cleaning markdown tables in {output_path.name}...")
+                    output_path = source_dir / f"{pdf_name}.md"
+                    thread_safe_print(f"Cleaning markdown tables...")
                     cleaned_text = clean_markdown_tables(text_content or '')
                     with open(output_path, 'w', encoding='utf-8') as f:
                         f.write(cleaned_text)
@@ -187,9 +201,10 @@ class IntelligentAnalyst:
                     return None
 
     def _convert_pdfs_to_markdown(self, pdf_files: List[str]) -> List[str]:
-        """Convert PDF files to markdown using Marker with parallel processing and caching"""
+        """Convert PDF files to markdown, using SourceFiles directory as cache"""
         converted_files: List[str] = []
-        run_dir = Path(f"runs/run_{self.run_timestamp}")
+        source_dir = Path("SourceFiles")
+        source_dir.mkdir(parents=True, exist_ok=True)
 
         if not pdf_files:
             return converted_files
@@ -202,46 +217,41 @@ class IntelligentAnalyst:
             'lock': threading.Lock()
         }
 
-        thread_safe_print(f"Starting PDF conversion (with cache and process isolation)...")
+        thread_safe_print(f"\nChecking SourceFiles cache for existing conversions...")
 
-        # Helper: cache dir
-        cache_dir = Path("memory/conversion_cache")
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        def _hash_file(path: str, block_size: int = 1 << 20) -> str:
-            sha = hashlib.sha256()
-            with open(path, 'rb') as f:
-                while True:
-                    data = f.read(block_size)
-                    if not data:
-                        break
-                    sha.update(data)
-            return sha.hexdigest()
-
-        # First serve from cache where possible
+        # Check SourceFiles for existing conversions
         to_convert: List[str] = []
         for pdf_path in pdf_files:
-            try:
-                h = _hash_file(pdf_path)
-                cached_md = cache_dir / f"{h}.md"
-                if cached_md.exists():
-                    pdf_name = Path(pdf_path).stem
-                    out_path = run_dir / f"{pdf_name}_m.md"
-                    shutil.copyfile(cached_md, out_path)
-                    with progress_tracker['lock']:
-                        progress_tracker['completed'] += 1
-                        thread_safe_print(f"Cache hit: {Path(pdf_path).name} → {out_path.name} ({progress_tracker['completed']}/{progress_tracker['total']})")
-                    converted_files.append(str(out_path))
-                else:
-                    to_convert.append(pdf_path)
-            except Exception as e:
-                thread_safe_print(f"Cache check failed for {Path(pdf_path).name}: {e}")
+            pdf_name = Path(pdf_path).stem
+            # Check both naming conventions for backward compatibility
+            # New convention: exact PDF filename with .md extension
+            cached_md = source_dir / f"{pdf_name}.md"
+            # Old convention: PDF filename with _m.md suffix
+            cached_md_legacy = source_dir / f"{pdf_name}_m.md"
+            
+            # Prefer new naming, fall back to legacy
+            if cached_md.exists():
+                with progress_tracker['lock']:
+                    progress_tracker['completed'] += 1
+                    thread_safe_print(f"Using cached: {Path(pdf_path).name} → {cached_md.name} ({progress_tracker['completed']}/{progress_tracker['total']})")
+                converted_files.append(str(cached_md))
+            elif cached_md_legacy.exists():
+                with progress_tracker['lock']:
+                    progress_tracker['completed'] += 1
+                    thread_safe_print(f"Using cached (legacy): {Path(pdf_path).name} → {cached_md_legacy.name} ({progress_tracker['completed']}/{progress_tracker['total']})")
+                converted_files.append(str(cached_md_legacy))
+            else:
                 to_convert.append(pdf_path)
 
-        # Process conversion for remaining PDFs using single worker fallback (safe) if none pending
+        # Process conversion for remaining PDFs
+        cached_count = len(pdf_files) - len(to_convert)
         if not to_convert:
-            thread_safe_print(f"All PDFs served from cache")
+            thread_safe_print(f"✓ All {len(pdf_files)} PDF(s) served from SourceFiles cache - no conversion needed!")
             return converted_files
+        
+        if cached_count > 0:
+            thread_safe_print(f"✓ Reusing {cached_count} cached file(s) from SourceFiles")
+        thread_safe_print(f"→ Converting {len(to_convert)} new PDF(s) to markdown...")
 
         # Use process pool to avoid PyTorch tensor conflicts
         try:
@@ -254,46 +264,26 @@ class IntelligentAnalyst:
             thread_safe_print("Warning: Invalid MARKER_PROCESS_WORKERS value, using default of 2")
             workers_env = 2
 
-        def _worker(pdf_path: str) -> Optional[str]:
-            # Limit BLAS threads in child processes
-            os.environ.setdefault("OMP_NUM_THREADS", "1")
-            os.environ.setdefault("MKL_NUM_THREADS", "1")
-            try:
-                from marker.converters.pdf import PdfConverter
-                from marker.models import create_model_dict
-                from marker.output import text_from_rendered
-                converter = PdfConverter(artifact_dict=create_model_dict())
-                rendered = converter(pdf_path)
-                full_text, _, _ = text_from_rendered(rendered)
-                return full_text if isinstance(full_text, str) else (full_text or "")
-            except Exception:
-                return None
-
         with ProcessPoolExecutor(max_workers=workers_env) as pool:
-            future_map = {pool.submit(_worker, p): p for p in to_convert}
+            future_map = {pool.submit(_pdf_conversion_worker, p): p for p in to_convert}
             for fut in as_completed(future_map):
                 src = future_map[fut]
                 try:
                     text = fut.result()
                     pdf_name = Path(src).stem
-                    out_path = run_dir / f"{pdf_name}_m.md"
+                    # Save directly to SourceFiles with matching PDF name
+                    out_path = source_dir / f"{pdf_name}.md"
                     if text is not None:
-                        # Clean tables and write
+                        # Clean tables and write to SourceFiles
                         cleaned = clean_markdown_tables(text)
                         out_path.write_text(cleaned, encoding='utf-8')
-                        # Update cache
-                        try:
-                            h = _hash_file(src)
-                            (cache_dir / f"{h}.md").write_text(cleaned, encoding='utf-8')
-                        except Exception as ce:
-                            thread_safe_print(f"Cache write failed for {Path(src).name}: {ce}")
                         with progress_tracker['lock']:
                             progress_tracker['completed'] += 1
-                            thread_safe_print(f"Converted: {Path(src).name} ({progress_tracker['completed']}/{progress_tracker['total']})")
+                            thread_safe_print(f"Converted and saved: {Path(src).name} → {out_path.name} ({progress_tracker['completed']}/{progress_tracker['total']})")
                         converted_files.append(str(out_path))
                     else:
                         # Fallback to original single-threaded path for this file
-                        fallback_result = self._convert_single_pdf(src, run_dir, progress_tracker)
+                        fallback_result = self._convert_single_pdf(src, progress_tracker)
                         if fallback_result:
                             converted_files.append(fallback_result)
                         else:
@@ -303,7 +293,13 @@ class IntelligentAnalyst:
                 except Exception as e:
                     thread_safe_print(f"Conversion task error for {Path(src).name}: {e}")
 
-        thread_safe_print(f"PDF conversion complete: {progress_tracker['completed']} succeeded, {progress_tracker['failed']} failed")
+        thread_safe_print(f"\nPDF processing summary:")
+        thread_safe_print(f"  • Cached (reused): {cached_count}")
+        thread_safe_print(f"  • Newly converted: {progress_tracker['completed']}")
+        if progress_tracker['failed'] > 0:
+            thread_safe_print(f"  • Failed: {progress_tracker['failed']}")
+        thread_safe_print(f"  • Total processed: {len(converted_files)}")
+        thread_safe_print(f"All converted files saved to SourceFiles/ for future reuse")
 
         return converted_files
     
@@ -340,7 +336,7 @@ class IntelligentAnalyst:
             improved_draft = None
             step4_output = None
             
-            # For Section 32, the initial draft is the final output. No critiques needed.
+            # For Section 33 (Data Book), the initial draft is the final output. No critiques needed.
             if section['number'] == self.core_analyzer.SECTION_32_EXEMPT:
                 thread_safe_print(f"Section {section_num} is a data appendix. Skipping analytical and polish steps.")
                 final_output = initial_draft
@@ -361,28 +357,7 @@ class IntelligentAnalyst:
                 step4_output = self.core_analyzer.deep_analysis_and_polish(section, improved_draft)
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", step4_output)
                 
-                # Step 5 (Optional): Discovery Pipeline Augmentation
-                # Double-check Section 32 is excluded (should never reach here for Section 32, but being safe)
-                if self.core_analyzer.use_discovery_pipeline and section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
-                    thread_safe_print(f"Section {section_num} - Step 5: Running discovery pipeline augmentation...")
-                    # Load Step 3 draft for discovery analysis
-                    augmented_output = self.core_analyzer.augment_with_discovery(section, improved_draft, step4_output)
-                    self.file_manager.save_step_output(section_num, "step_5_discovery_augmented.md", augmented_output)
-                    # Adopt augmented output only if it has substance; otherwise keep Step 4
-                    final_output = augmented_output if augmented_output and len(augmented_output.strip()) >= 200 else step4_output
-                else:
-                    final_output = step4_output
-
-                # Optional: inject competitive intelligence for sections 13-18
-                if self.competitive_evidence and 13 <= section['number'] <= 18:
-                    try:
-                        mini_tables = self.competitive_evidence.get('mini_tables', [])
-                        if mini_tables:
-                            table_md = self._render_competitive_table(mini_tables[0])
-                            if table_md:
-                                final_output = f"{final_output}\n\n## Competitive Intelligence (Snapshot)\n\n{table_md}"
-                    except Exception as inj_err:
-                        thread_safe_print(f"Warning: Competitive injection failed: {inj_err}")
+                final_output = step4_output
             
             # Final failsafe: choose the last non-empty among outputs
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
@@ -401,7 +376,7 @@ class IntelligentAnalyst:
                 else:
                     final_output = final_chosen
             else:
-                # Section 32 special-case placeholder if empty
+                # Section 33 (Data Book) special-case placeholder if empty
                 if _is_empty(final_output, minimum=200):
                     thread_safe_print(f"Section {section_num} - WARNING: Appendix is empty. Inserting placeholder.")
                     final_output = "_Appendix could not be generated from the provided documents in this run._"
@@ -427,24 +402,8 @@ class IntelligentAnalyst:
             # Optionally re-raise or handle as per overall error strategy
             return f"Section {section_num} failed."
 
-    def _render_competitive_table(self, table: dict) -> str:
-        """Render a mini-table dict from evidence pack as markdown."""
-        try:
-            headers = table.get('headers', [])
-            rows = table.get('rows', [])
-            if not headers or not rows:
-                return ""
-            md = []
-            md.append("| " + " | ".join(headers) + " |")
-            md.append("|" + "---|" * len(headers))
-            for row in rows[:10]:
-                md.append("| " + " | ".join(str(c) for c in row) + " |")
-            return "\n".join(md)
-        except Exception:
-            return ""
-
     def process_all_sections(self, section_numbers: List[int] = None, max_workers: int = 3):
-        """Process multiple sections with two-phase scheduling (Section 32 deferred)."""
+        """Process multiple sections with two-phase scheduling (Section 33 Data Book deferred)."""
         if section_numbers is None:
             section_numbers = [s['number'] for s in sections]
 
@@ -500,7 +459,7 @@ class IntelligentAnalyst:
                         local[s_num] = f"Processing failed: {e}"
             return local
 
-        # Phase 1: run all sections except 32
+        # Phase 1: run all sections except 33 (Data Book)
         non32 = [n for n in section_numbers if n != self.core_analyzer.SECTION_32_EXEMPT]
         has32 = any(n == self.core_analyzer.SECTION_32_EXEMPT for n in section_numbers)
         phase1 = _run_parallel(non32)
@@ -512,23 +471,23 @@ class IntelligentAnalyst:
         self.file_manager.save_quality_metrics(quality_scores, run_number)
         self._generate_run_summary(results)
 
-        # Generate profile with Phase 1 results (and potential placeholder for 32)
+        # Generate profile with Phase 1 results (and potential placeholder for 33)
         thread_safe_print(f"\n{'='*50}")
         thread_safe_print("GENERATING FINAL PROFILE (Phase 1)")
         thread_safe_print(f"{'='*50}")
         try:
             profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-            # Include 32 in list so placeholder (if present) is picked up
+            # Include 33 in list so placeholder (if present) is picked up
             phase1_list = non32 + ([self.core_analyzer.SECTION_32_EXEMPT] if has32 else [])
             profile_generator.generate_html_profile(results, phase1_list, self.full_context, sections)
             thread_safe_print("Profile generation complete (Phase 1)!")
         except Exception as e:
             thread_safe_print(f"Warning: HTML profile generation failed: {e}")
 
-        # Phase 2: run Section 32 alone (sequential) and regenerate
+        # Phase 2: run Section 33 (Data Book) alone (sequential) and regenerate
         if has32:
             thread_safe_print(f"\n{'='*50}")
-            thread_safe_print("RUNNING APPENDIX (SECTION 32) - PHASE 2")
+            thread_safe_print("RUNNING APPENDIX (SECTION 33 DATA BOOK) - PHASE 2")
             thread_safe_print(f"{'='*50}")
             try:
                 res32 = self.analyze_section(self.core_analyzer.SECTION_32_EXEMPT)
@@ -543,7 +502,7 @@ class IntelligentAnalyst:
             except Exception as e:
                 thread_safe_print(f"Warning: HTML profile regeneration failed: {e}")
 
-        # Post-run memory review AFTER profile delivery (skip in test mode)
+        # Post-run memory review AFTER profile delivery
         if len(section_numbers) > 1:
             thread_safe_print(f"\n{'='*50}")
             thread_safe_print("CONDUCTING POST-RUN MEMORY REVIEW")
@@ -555,7 +514,7 @@ class IntelligentAnalyst:
                 thread_safe_print(f"Warning: Memory review failed: {e}")
         else:
             thread_safe_print(f"\n{'='*50}")
-            thread_safe_print("SKIPPING MEMORY REVIEW (Test Mode)")
+            thread_safe_print("SKIPPING MEMORY REVIEW (Single section)")
             thread_safe_print(f"{'='*50}")
 
         return results
@@ -702,28 +661,24 @@ Generate comprehensive methodology candidates - subsequent harsh filtering will 
 # Section Groups Configuration
 SECTION_GROUPS = {
     "Company Profile": {
-        "sections": list(range(1, 13)),  # 1-12
-        "prompt": "1. Company profile (sections 1-12) (y/n): "
+        "sections": list(range(1, 14)),  # 1-13 (now includes Deep Dive Discoveries)
+        "prompt": "1. Company profile (sections 1-13) (y/n): "
     },
     "Strategy and SWOT": {
-        "sections": list(range(13, 19)),  # 13-18
-        "prompt": "2. Strategy and SWOT (sections 13-18) (y/n): "
+        "sections": list(range(14, 20)),  # 14-19
+        "prompt": "2. Strategy and SWOT (sections 14-19) (y/n): "
     },
     "Sellside Positioning": {
-        "sections": list(range(19, 26)),  # 19-25
-        "prompt": "3. Sellside Positioning (sections 19-25) (y/n): "
+        "sections": list(range(20, 27)),  # 20-26
+        "prompt": "3. Sellside Positioning (sections 20-26) (y/n): "
     },
     "Buyside Due Diligence": {
-        "sections": list(range(26, 32)),  # 26-31
-        "prompt": "4. Buyside Due Diligence (sections 26-31) (y/n): "
+        "sections": list(range(27, 33)),  # 27-32
+        "prompt": "4. Buyside Due Diligence (sections 27-32) (y/n): "
     },
     "Data Book": {
-        "sections": [32],
-        "prompt": "5. Data Book (section 32) (y/n): "
-    },
-    "Test Mode": {
-        "sections": [1],
-        "prompt": "6. Test Mode (section 1 only) (y/n): "
+        "sections": [33],
+        "prompt": "5. Data Book (section 33) (y/n): "
     }
 }
 
@@ -855,7 +810,7 @@ if __name__ == "__main__":
         thread_safe_print("ERROR: GEMINI_API_KEY environment variable not set")
         thread_safe_print("Please set your Gemini API key in a .env file:")
         thread_safe_print("  echo 'GEMINI_API_KEY=your-key-here' > .env")
-        exit(1)
+        sys.exit(1)
     thread_safe_print("✓ Gemini API key configured")
     
     # Check 2: Verify required dependencies
@@ -904,13 +859,13 @@ if __name__ == "__main__":
     source_file_selection = select_source_files()
     if not source_file_selection:
         thread_safe_print("No files selected. Exiting.")
-        exit()
+        sys.exit(0)
     
     # Check if PDFs were selected without support
     if source_file_selection['pdf_files'] and not pdf_support:
         thread_safe_print("\nERROR: PDF files selected but Marker library not available.")
         thread_safe_print("Please install with: pip install marker-pdf")
-        exit()
+        sys.exit(1)
     
     # Available sections for validation
     available_sections = [s['number'] for s in sections]
@@ -921,7 +876,7 @@ if __name__ == "__main__":
     selected_sections = []
     selected_groups = []
     
-    # Normal selection mode - go through all groups including test mode
+    # Normal selection mode - go through all groups
     for group_name, group_info in SECTION_GROUPS.items():
         yn = prompt_yes_no(group_info["prompt"])  
         if yn:
@@ -930,18 +885,12 @@ if __name__ == "__main__":
             if valid_group_sections:
                 selected_sections.extend(valid_group_sections)
                 selected_groups.append(group_name)
-                if group_name == "Test Mode":
-                    thread_safe_print("\nTEST MODE: Only Section 1 (Operating Footprint) will be analyzed.")
-                    break
             else:
                 thread_safe_print(f"Warning: No valid sections found for {group_name}")
-        # Break out of outer loop if test mode was selected
-        if "Test Mode" in selected_groups:
-            break
     
     if not selected_sections:
         thread_safe_print("\nNo sections selected. Exiting.")
-        exit()
+        sys.exit(0)
     
     # Remove duplicates and sort
     selected_sections = sorted(list(set(selected_sections)))
@@ -972,37 +921,7 @@ if __name__ == "__main__":
         if 1 <= max_workers <= env_cap:
             break
     
-    # Step 4: Offer competitive analysis pre-run
-    run_competitive = prompt_yes_no("\nRun competitive analysis first? (y/n): ")
-    competitive_evidence = None
-    if run_competitive:
-        try:
-            thread_safe_print("\nStarting competitive analysis (standalone module)...")
-            comp_cli = CompetitiveAnalysisCLI()
-            # Use minimal mode: company name and combined document context
-            # Prompt company name to label outputs
-            company_name = input("Enter company name for competitive analysis (for labelling): ").strip() or "Company"
-            # Feed PD2 combined context to competitive module Phase 3 end-to-end
-            results = comp_cli.analyze_company(
-                company_name=company_name,
-                document_content=analyst.full_context,
-                max_competitors=3,
-                analysis_scope="phase3"
-            )
-            if results and results.get('analysis_metadata', {}).get('json_evidence_path'):
-                ev_path = results['analysis_metadata']['json_evidence_path']
-                with open(ev_path, 'r', encoding='utf-8') as f:
-                    competitive_evidence = json.load(f)
-            # Attach evidence for section injections
-            analyst.set_competitive_evidence(competitive_evidence)
-            thread_safe_print("Competitive analysis step completed")
-        except Exception as ce:
-            thread_safe_print(f"Warning: Competitive analysis failed or was skipped: {ce}")
-
-    # Step 5: Ask about discovery pipeline
-    use_discovery = prompt_yes_no("\nUse experimental discovery pipeline for deep insights? (y/n): ")
-    
-    # Step 6: Now initialize ProfileDash with source files (includes PDF conversion)
+    # Step 4: Now initialize ProfileDash with source files (includes PDF conversion)
     thread_safe_print("\n" + "="*60)
     thread_safe_print("STARTING PROCESSING")
     thread_safe_print("="*60)
@@ -1012,12 +931,7 @@ if __name__ == "__main__":
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your files and try again.")
-        exit()
-    
-    if use_discovery:
-        thread_safe_print("Discovery pipeline enabled - will use 6-stage analysis for deeper insights")
-        thread_safe_print("Note: This will make ~6 LLM calls per section instead of 1")
-        analyst.core_analyzer.use_discovery_pipeline = True
+        sys.exit(0)
     
     thread_safe_print(f"Starting analysis with {'parallel' if max_workers > 1 else 'sequential'} processing...")
     
@@ -1026,7 +940,7 @@ if __name__ == "__main__":
     thread_safe_print(f"\n{'='*60}")
     thread_safe_print("ANALYSIS COMPLETE!")
     thread_safe_print(f"{'='*60}")
-    thread_safe_print(f"Run folder: runs/run_{analyst.run_timestamp}/")
-    thread_safe_print(f"Professional HTML profile generated")
+    thread_safe_print(f"HTML Report: Check ReportFiles/ folder")
+    thread_safe_print(f"Analysis details: runs/run_{analyst.run_timestamp}/")
     thread_safe_print(f"Quality metrics and learning insights saved")
     thread_safe_print(f"Step-by-step analysis available for review") 

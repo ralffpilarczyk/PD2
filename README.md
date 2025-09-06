@@ -1,397 +1,217 @@
 # ProfileDash 2.0
 
-**An intelligent document analysis system for financial research**
+ProfileDash 2.0 (PD2) is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 32 analytical sections using Google's Gemini API.
 
-ProfileDash 2.0 (PD2) automatically processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 32 specialized analytical sections. Built for investment professionals, it uses Google's Gemini API to produce insights focused on value creation and business prospects.
+## Table of Contents
 
-## Key Features
+1. [System Requirements](#system-requirements)
+2. [Installation](#installation)
+3. [Configuration](#configuration)
+4. [Using ProfileDash 2.0](#using-profiledash-20)
+5. [Understanding the Output](#understanding-the-output)
+6. [File Organization](#file-organization)
+7. [Technical Details](#technical-details)
+8. [Troubleshooting](#troubleshooting)
+9. [License](#license)
 
-- **32 Analytical Sections**: From operating footprint to capital allocation efficiency
-- **Multi-Step Refinement**: Each section undergoes progressive analysis to ~500 words of essential insights
-- **Learning System**: Captures and reuses analytical patterns across analyses
-- **Parallel Processing**: Analyze multiple sections simultaneously
-- **Professional Output**: HTML reports with proper formatting and table of contents
+## Features
 
-## License
+- **Multi-step Analysis Pipeline**: Progressive refinement with completeness checks and deep analysis
+- **Learning System**: Captures analytical patterns for continuous improvement
+- **Parallel Processing**: Configurable thread workers (1-5) for faster analysis
+- **32 Analytical Sections**: Comprehensive coverage from financials to ESG metrics
+- **Professional HTML Reports**: Clean, navigable output with markdown support
+- **Smart Caching**: Converted documents cached for faster reprocessing
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## System Requirements
 
-## Installation Guide
+- **Python**: 3.8 or higher
+- **RAM**: 8 GB minimum (16 GB recommended)
+- **Storage**: 5 GB free space
+- **API**: Google Gemini API key (free tier available at https://makersuite.google.com/app/apikey)
 
-### Step 1: Prerequisites
+## Installation
 
-Before installing PD2, ensure you have:
-- Windows, Mac, or Linux
-- Python 3.8 or newer installed ([Download Python](https://www.python.org/downloads/))
-- A Google Gemini API key ([Get API Key](https://makersuite.google.com/app/apikey))
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/PD2.git
+   cd PD2
+   ```
 
-### Step 2: Clone the Repository
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```bash
-git clone https://github.com/ralffpilarczyk/PD2.git
-cd PD2
-```
+## Configuration
 
-### Step 3: Install Dependencies
-
-Install the required Python packages:
-```bash
-pip install -r requirements.txt
-```
-
-### Step 4: Configure API Key
-
-1. Copy the example configuration file:
+1. **Create `.env` file**:
    ```bash
    cp .env.example .env
    ```
-2. Edit `.env` and add your Gemini API key:
-   ```bash
-   GEMINI_API_KEY=your-actual-api-key-here
+
+2. **Add your Gemini API key**:
+   ```
+   GEMINI_API_KEY=your-api-key-here
    ```
 
-## Running PD2
+## Usage
 
-### Step 1: Prepare Your Documents
+1. **Place PDFs in SourceData folder**:
+   ```bash
+   mkdir -p SourceData
+   # Add your PDF files to SourceData/
+   ```
 
-Place the PDF files you want to analyze in the `SourceData/` folder.
+2. **Run the application**:
+   ```bash
+   python PD2.py
+   ```
 
-### Step 2: Start the Application
+3. **Select documents**: File picker will open to choose PDFs
 
-```bash
-python PD2.py
-```
+4. **Choose analysis sections**:
+   - Group 1: Company Overview (sections 1-6)
+   - Group 2: Financial Analysis (sections 7-13)
+   - Group 3: Strategy & Market Position (sections 14-19)
+   - Group 4: Investment Analysis (sections 20-26)
+   - Group 5: Risk & Governance (sections 27-32)
 
-### Step 3: Understanding the Menu
+5. **Configure parallel workers** (1-5, default 2)
 
-When you run PD2, you'll see the following options:
+6. **Monitor progress**: Real-time updates for each section's multi-step analysis
 
-1. **All sections (Full Profile)** - Analyzes all 32 sections
-2. **Select specific sections** - Choose which sections to analyze
-3. **Group 1: Company Overview** - Sections 1-6 (basic company information)
-4. **Group 2: Financial Analysis** - Sections 7-14 (financial performance)
-5. **Group 3: SWOT Analysis** - Sections 15-18 (strengths, weaknesses, opportunities, threats)
-6. **Group 4: Sellside Positioning** - Sections 19-25 (sell-side analyst perspective)
-7. **Group 5: Buyside Due Diligence** - Sections 26-31 (buy-side investor focus)
-8. **Single section (Test Mode)** - Analyze one section for testing
+## Architecture
 
-### Step 4: Choose Analysis Options
+### Core Components
 
-After selecting sections, you'll be asked:
+- **`PD2.py`**: Main application entry point with UI and orchestration
+- **`src/core_analyzer.py`**: Multi-step analysis pipeline with progressive refinement
+- **`src/insight_memory.py`**: Learning system that captures analytical patterns
+- **`src/profile_generator.py`**: HTML report generation with markdown processing
+- **`src/profile_sections.py`**: Defines all 32 analysis sections
+- **`src/utils.py`**: Shared utilities including rate limiting and thread safety
+- **`src/file_manager.py`**: File I/O and markdown preprocessing
 
-1. **Number of parallel workers** (1-5, default: 2)
-   - `1`: Analyze sections one at a time (slowest, most stable)
-   - `2` (recommended): Analyze 2 sections simultaneously
-   - `3-5`: Faster analysis but may hit API rate limits
+### Analysis Pipeline
 
-2. **Use experimental discovery pipeline?** (y/n)
-   - `n` (recommended): Standard analysis
-   - `y`: Advanced analysis with deeper pattern recognition (takes longer)
+Each section undergoes multiple refinement steps:
 
-### Step 5: Wait for Analysis
-
-The system will process each section through multiple refinement steps. You'll see progress messages like:
-```
-ANALYZING SECTION 1: Operating Footprint
-Section 1 - Step 1: Creating initial draft...
-Section 1 - Step 2: Checking for missing content...
-```
-
-### Step 6: View Results
-
-Once complete, find your analysis in:
-- **HTML Report**: `runs/run_[timestamp]/[Company]_profile.html`
-- **Individual Sections**: `runs/run_[timestamp]/section_[number]/`
-
-## Workflow Details
-
-### Base Workflow (Discovery Pipeline OFF) - 5 LLM calls per section
-
-#### Step 1: Initial Draft
-**LLM Call #1** (`create_initial_draft`)
-- **Input:**
-  - Section requirements/specs
-  - Relevant memory (analytical methodologies from previous runs)
-  - Full document context (`full_context`)
-- **Temperature:** 0.6 (medium)
-- **Word Target:** ~1000 words
-- **Key Instruction:** "Provide brief but insightful analysis connecting the data points. Look for non-obvious patterns and implications."
-- **Special Handling:** Section 32 uses specialized data-only prompt
-- **Output:** Initial draft with facts and insightful analysis
-- **Saved as:** `step_1_initial_draft.md`
-
-#### Step 2: Completeness Check
-**LLM Call #2** (`completeness_check`)
-- **Input:**
-  - Section requirements/specs
-  - Full document context (`full_context`)
-  - Current draft from Step 1
-- **Temperature:** 0.2 (low)
-- **Output:** ADD list of missing data items (max 5 suggestions)
-- **Saved as:** `step_2_completeness_check.txt`
-- **Note:** Skipped for Section 32
-
-#### Step 3: Apply Completeness
-**LLM Call #3** (`apply_completeness_only`)
-- **Input:**
-  - Current draft from Step 1
-  - ADD list from Step 2
-  - Full document context (to look up the missing data)
-- **Temperature:** 0.6 (medium)
-- **Output:** Enhanced draft with added data (~1000+ words)
-- **Saved as:** `step_3_improved_draft.md`
-- **Note:** Skipped for Section 32
-
-#### Step 4: Deep Analysis and Polish
-**LLM Call #4** (`original_deep_analysis`)
-- **Input:**
-  - Enhanced draft from Step 3
-  - Section requirements/specs
-- **Temperature:** 0.6 (medium)
-- **Word Target:** Maximum 500 words
-- **Focus:** Condense to essential elements while preserving:
-  - Tables (especially for financial sections)
-  - Section-relevant content
-  - Value creation insights
-- **Output:** Polished, condensed analysis
-- **Saved as:** `step_4_final_section.md`
-- **Note:** Skipped for Section 32
-
-#### Step 6: Learning Extraction
-**LLM Call #5** (`extract_learning`)
-- **Input:** Final output from Step 4
-- **Temperature:** 0.2 (low)
-- **Output:** JSON with analytical methodologies
-- **Saved as:** `step_6_learning.json`
-- **Note:** Skipped for Section 32
-
-**Total LLM Calls: 5 per section (1 for Section 32)**
-
-### Enhanced Workflow (Discovery Pipeline ON) - 13 LLM calls per section
-
-#### Steps 1-4: Same as Base Workflow
-- Initial Draft → Completeness Check → Apply Additions → Deep Analysis
-- Results in `step_4_final_section.md`
-
-#### Step 5: Discovery Pipeline Augmentation
-Runs 6-stage discovery pipeline on Step 3 draft, then augments Step 4 output
-
-##### Stage 1: Extract All Data
-**LLM Call #5** (`_extract_all_data`)
-- **Input:** Step 3 improved draft
-- **Temperature:** 0.2 (low)
-- **Output:** Claims and quantifiable facts
-- **Saved as:** `discovery_pipeline/stage_1_extracted_data.txt`
-
-##### Stage 2: Calculate Material Relationships
-**LLM Call #6** (`_calculate_material_relationships`)
-- **Input:** Extracted data from Stage 1
-- **Temperature:** 0.6 (medium)
-- **Focus:** Relationships with >10% changes, claim validation
-- **Output:** Calculated relationships and claim-fact matches
-- **Saved as:** `discovery_pipeline/stage_2_relationships.txt`
-
-##### Stage 3: Identify Anomalies
-**LLM Call #7** (`_identify_anomalies`)
-- **Input:** Relationships from Stage 2
-- **Temperature:** 0.6 (medium)
-- **Focus:** Top 2-3 patterns affecting value creation
-- **Output:** Anomalies with value impact assessment
-- **Saved as:** `discovery_pipeline/stage_3_anomalies.txt`
-
-##### Stage 4: Investigate Anomalies
-**LLM Call #8** (`_investigate_anomalies`)
-- **Input:** 
-  - Anomalies from Stage 3
-  - Original Step 3 draft
-- **Temperature:** 0.6 (medium)
-- **Output:** Root causes and business implications
-- **Saved as:** `discovery_pipeline/stage_4_investigations.txt`
-
-##### Stage 5: Assess Impact
-**LLM Call #9** (`_assess_impact`)
-- **Input:**
-  - Investigations from Stage 4
-  - Section context
-- **Temperature:** 0.6 (medium)
-- **Output:** Quantified business impact assessments
-- **Saved as:** `discovery_pipeline/stage_5_impacts.txt`
-
-##### Stage 6: Generate Discovery Insight
-**LLM Call #10** (`_generate_insight_comprehensive`)
-- **Input:**
-  - All previous discovery stages
-  - Section requirements
-- **Temperature:** 0.6 (medium)
-- **Word Target:** Maximum 500 words
-- **Output:** Fact-dense value-focused analysis
-- **Saved as:** `discovery_pipeline/stage_6_final_insight.md`
-
-##### Final Augmentation (2 sub-calls)
-
-**LLM Call #11** (`_analyze_insights_for_augmentation`)
-- **Input:**
-  - Step 4 output (base)
-  - Discovery insights
-  - Section context
-- **Temperature:** 0.2 (low)
-- **Purpose:** Pre-filter insights for materiality
-- **Criteria:**
-  - NOT already in base output
-  - Would affect investment decisions
-  - Non-obvious value drivers/risks
-  - Can be stated in one sentence
-- **Output:** Critical insights with exact insertion points
-
-**LLM Call #12** (`_intelligent_augmentation`)
-- **Input:**
-  - Step 4 output (base output to preserve)
-  - Discovery insights from Stage 6
-  - Pre-analyzed critical insights from Call #11
-  - Section context
-- **Temperature:** 0.6 (medium)
-- **Rules:**
-  - Preserve 100% of Step 4 content
-  - Maximum 2-3 insertions total
-  - Single sentence insertions only
-  - Insert immediately after related content
-  - Use transition phrases
-  - Total additions under 100 words
-- **Output:** Augmented analysis with critical insights surgically inserted
-- **Saved as:** `step_5_discovery_augmented.md`
-
-#### Step 6: Learning Extraction
-**LLM Call #13** (`extract_learning`)
-- **Input:** Final augmented output
-- **Temperature:** 0.2 (low)
-- **Output:** JSON with analytical methodologies
-- **Saved as:** `step_6_learning.json`
-
-**Total LLM Calls: 13 per section with discovery pipeline**
-
-### Augmentation Quality Control
-
-The discovery pipeline augmentation uses a two-stage process to ensure only critical insights are added:
-
-#### Stage 1: Pre-Analysis Filter
-- Identifies which discovery insights are worth adding
-- Must pass ALL criteria:
-  - Not already covered in base output
-  - Would materially affect investment decisions  
-  - Reveals non-obvious value drivers or risks
-  - Can be stated in one impactful sentence
-
-#### Stage 2: Surgical Insertion
-- Maximum 2-3 insertions per section
-- Single sentences only
-- Inserted immediately after related content
-- Must quantify business impact
-- Example: "Notably, this 13.5% headcount reduction coincided with 18% revenue/employee growth, suggesting successful automation worth 200bps in margin expansion."
-
-#### What Gets Rejected
-- Academic observations
-- Obvious patterns
-- Insights without quantified business impact
-- Anything that doesn't affect cash generation or competitive position
-
-### Post-Processing
-
-1. **Memory Review** (if not in test mode)
-   - Reviews all learning JSON files
-   - Updates `learning_memory.json` with high-quality insights
-   
-2. **Profile Generation**
-   - Collects final outputs (prioritizes discovery augmented if available)
-   - Applies footnote management (max 5 per section)
-   - Fixes malformed markdown tables
-   - Generates HTML with cover page and TOC
-
-### File Structure Per Section
-```
-section_XX/
-├── step_1_initial_draft.md
-├── step_2_completeness_check.txt (skipped for Section 32)
-├── step_3_improved_draft.md (skipped for Section 32)
-├── step_4_final_section.md
-├── step_5_discovery_augmented.md (only if discovery ON)
-├── step_6_learning.json
-└── discovery_pipeline/ (only if discovery ON)
-    ├── stage_1_extracted_data.txt
-    ├── stage_2_relationships.txt
-    ├── stage_3_anomalies.txt
-    ├── stage_4_investigations.txt
-    ├── stage_5_impacts.txt
-    └── stage_6_final_insight.md
-```
+1. **Initial Draft**: Comprehensive analysis with all relevant data
+2. **Completeness Check**: Identifies missing critical information
+3. **Enhanced Draft**: Incorporates missing elements
+4. **Deep Analysis & Polish**: Condenses to ~500 words of essential insights
+5. **Learning Extraction**: Captures reusable analytical methodologies
 
 ### Key Features
 
-#### Parallel Processing
-- Supports 1-5 workers for concurrent section analysis
-- Automatic retry with exponential backoff for rate limits
-- PDF conversion uses single worker (PyTorch tensor constraints)
+- **Rate Limiting**: Automatic retry with exponential backoff (up to 3 retries)
+- **Thread Safety**: All operations use thread-safe printing for parallel processing
+- **Memory System**: Learning insights stored with section-based organization (max 30 words, quality score 9-10)
+- **Markdown Fixes**: Automatic correction of corrupted tables from PDF conversion
+- **Section 32 Special Handling**: No word limits, pure data extraction
 
-#### Quality Controls
-- Footnote management (max 5 per section, sequential numbering)
-- Malformed table detection and correction
-- Word count targets at each stage
-- Section requirement adherence
+## Output Structure
 
-#### Special Handling
-- **Section 32 (Data Appendix)**: 
-  - Skips Steps 2-4
-  - Skips Step 5 (Discovery Pipeline) - never runs discovery on data appendix
-  - Limited to 15-20 most important tables
-  - No analysis or insights, data only
-  - Only runs Step 1 (data extraction) and Step 6 (learning extraction)
+```
+runs/
+└── run_YYYY_MM_DD_HH_MM_SS/
+    ├── section_1/
+    │   ├── step_1_initial_draft.md
+    │   ├── step_2_completeness_check.txt
+    │   ├── step_3_enhanced_draft.md
+    │   ├── step_4_final_section.md
+    │   └── step_6_learning.json
+    ├── [Company]_profile.md      # Combined markdown
+    ├── [Company]_profile.html    # Final HTML output
+    └── run_summary.txt          # Processing summary
 
-#### Memory System
-- Captures analytical methodologies (not company-specific data)
-- Two-stage quality filtering
-- Section-based storage with quality scores
+memory/
+└── learning_memory.json         # Captured analytical patterns
 
-### Summary
-- **Base workflow**: 5 LLM calls per section
-- **With discovery**: 13 LLM calls per section (includes pre-analysis)
-- **Discovery advantage**: Finds non-obvious patterns and anomalies
-- **Augmentation approach**: 
-  - Two-stage process: analyze then augment
-  - Maximum 2-3 insertions per section
-  - Single sentences only, surgically placed
-  - Must pass materiality test
+quality_metrics/                 # Performance tracking data
+```
+
+## The 32 Analytical Sections
+
+### Group 1: Company Overview (1-6)
+1. Operating Footprint
+2. Corporate Structure & Ownership
+3. Management & Board
+4. Corporate History & Milestones
+5. Business Model & Value Chain
+6. Products & Services Portfolio
+
+### Group 2: Financial Analysis (7-13)
+7. Financial Performance Overview
+8. Revenue Analysis
+9. Margin & Profitability Analysis
+10. Cash Flow Analysis
+11. Balance Sheet & Capital Structure
+12. Capital Allocation & Returns
+13. Financial Deep Discoveries
+
+### Group 3: Strategy & Market Position (14-19)
+14. Business Strategy & Priorities
+15. Competitive Strengths
+16. Weaknesses & Challenges
+17. Market Opportunities
+18. Threats & Risks
+19. Market Position & Competition
+
+### Group 4: Investment Analysis (20-26)
+20. Investment Thesis
+21. Key Catalysts
+22. Bull Case Scenario
+23. Bear Case Scenario
+24. Valuation Analysis
+25. Key Investment Risks
+26. Investment Deep Discoveries
+
+### Group 5: Risk & Governance (27-32)
+27. Quality of Earnings
+28. Red Flags & Controversies
+29. Corporate Governance
+30. ESG & Sustainability
+31. Regulatory & Compliance
+32. Data Tables & Key Metrics
+
+## Deep Analysis Methodology
+
+ProfileDash 2.0 applies multi-layer analytical thinking:
+
+1. **Surface vs. Reality**: Identifies contradictions between management claims and actual data
+2. **Hidden Metrics**: Derives ratios and relationships not explicitly provided
+3. **Pattern Recognition**: Finds correlations across time periods and data sets
+4. **Relevance Filter**: Every insight must matter to company prospects
+5. **Logic Test**: Every insight must make business sense
+6. **Data Density**: Maximum insights per word - no fluff or corporate language
+7. **Contradiction Highlighting**: Flags where management narrative diverges from data reality
+
+**Quality Standard**: Would this insight change an investor's view of the company's prospects?
+
+## Known Limitations
+
+- Depends on Marker library for PDF conversion (may have table corruption issues)
+- PDF conversion limited to single worker due to PyTorch tensor memory constraints
+- No formal test suite or type checking
+- LLM quality scoring requires aggressive filtering (9-10 threshold)
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"Module not found" error**
-   - Solution: Run `pip install -r requirements.txt` again
+- **Rate limit exceeded**: Reduce parallel workers or wait before retrying
+- **PDF conversion failed**: Ensure PDF contains searchable text, not scanned images
+- **Empty section output**: Occasional API errors - re-run affected sections
+- **Out of memory**: Process fewer sections at once or reduce parallel workers
 
-2. **"API key not found" error**
-   - Solution: Check that your `.env` file contains `GEMINI_API_KEY=your-actual-key`
+### Getting Help
 
-3. **Rate limit errors**
-   - Solution: Use fewer parallel workers (1 or 2 instead of 3-5)
+1. Check `runs/run_*/run_summary.txt` for error details
+2. Monitor `quality_metrics/` for tracking data
+3. Review console output for specific error messages
 
-4. **Empty output for a section**
-   - This occasionally happens due to API errors
-   - Solution: Run the analysis again for that specific section
+## License
 
-5. **PDF conversion errors**
-   - Some PDFs may fail to convert properly
-   - Solution: Try converting the PDF to text manually first
-
-6. **Tables not rendering in HTML**
-   - Usually caused by malformed markdown
-   - The system attempts to auto-fix these issues
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
-
-## Acknowledgments
-
-- Built with Google's Gemini API
-- PDF processing powered by Marker library
-- Inspired by the needs of investment professionals for systematic document analysis
-
+This project is licensed under the MIT License. See the LICENSE file in the project directory for full details.

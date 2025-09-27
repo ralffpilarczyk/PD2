@@ -37,16 +37,45 @@ from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, Profil
 from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tables
 
 # Module-level worker function for PDF conversion (needed for multiprocessing)
-def _pdf_conversion_worker(pdf_path: str) -> Optional[str]:
-    """Worker function for parallel PDF conversion"""
+def _pdf_conversion_worker(pdf_path: str, use_llm: bool = False) -> Optional[str]:
+    """Worker function for parallel PDF conversion with optional LLM enhancement
+
+    Args:
+        pdf_path: Path to PDF file
+        use_llm: Whether to use LLM-enhanced conversion
+    """
     # Limit BLAS threads in child processes
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
+
+    # Pass Gemini key to Marker if using LLM
+    if use_llm:
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        if gemini_key:
+            os.environ["GOOGLE_API_KEY"] = gemini_key
+
     try:
         from marker.converters.pdf import PdfConverter
         from marker.models import create_model_dict
         from marker.output import text_from_rendered
-        converter = PdfConverter(artifact_dict=create_model_dict())
+
+        if use_llm and os.environ.get("GOOGLE_API_KEY"):
+            # LLM-enhanced converter with curated processors for business documents
+            converter = PdfConverter(
+                artifact_dict=create_model_dict(),
+                llm_service="google",
+                config={
+                    "llm_model": "gemini-2.5-flash",
+                    "llm_batch_size": 10,  # Batch multiple items per API call
+                    "table_confidence_threshold": 0.7,
+                    "enable_table_llm": True,
+                    "enable_complex_regions": True,
+                }
+            )
+        else:
+            # Basic converter (current behavior)
+            converter = PdfConverter(artifact_dict=create_model_dict())
+
         rendered = converter(pdf_path)
         full_text, _, _ = text_from_rendered(rendered)
         return full_text if isinstance(full_text, str) else (full_text or "")
@@ -56,12 +85,16 @@ def _pdf_conversion_worker(pdf_path: str) -> Optional[str]:
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
     
-    def __init__(self, source_files: dict, model_name: str = 'gemini-2.5-flash'):
+    def __init__(self, source_files: dict, model_name: str = 'gemini-2.5-flash', use_llm_pdf_conversion: bool = True):
         """Initialize ProfileDash with modular components
-        
+
         Args:
             source_files: Dict with 'pdf_files' and 'md_files' lists
+            model_name: Name of the Gemini model to use
+            use_llm_pdf_conversion: Whether to use LLM-enhanced PDF conversion
         """
+        # Store LLM conversion preference
+        self.use_llm_pdf_conversion = use_llm_pdf_conversion
         # Generate run timestamp
         self.run_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         
@@ -116,21 +149,43 @@ class IntelligentAnalyst:
         """Convert a single PDF file to markdown and save to SourceFiles"""
         source_dir = Path("SourceFiles")
         source_dir.mkdir(parents=True, exist_ok=True)
-        
+
         try:
-            thread_safe_print(f"Converting: {Path(pdf_path).name}")
-            
+            mode_str = "(enhanced)" if self.use_llm_pdf_conversion else ""
+            thread_safe_print(f"Converting {mode_str}: {Path(pdf_path).name}")
+
+            # Pass API key to environment for LLM mode
+            if self.use_llm_pdf_conversion:
+                gemini_key = os.environ.get("GEMINI_API_KEY", "")
+                if gemini_key:
+                    os.environ["GOOGLE_API_KEY"] = gemini_key
+
             # Import Marker components
             from marker.converters.pdf import PdfConverter
             from marker.models import create_model_dict
             from marker.output import text_from_rendered
-            
+
             # Create/reuse converter artifacts lazily via attribute cache
             if not hasattr(self, '_marker_converter'):
-                self._marker_converter = PdfConverter(
-                    artifact_dict=create_model_dict(),
-                )
-            
+                if self.use_llm_pdf_conversion and os.environ.get("GOOGLE_API_KEY"):
+                    # LLM-enhanced converter with curated processors
+                    self._marker_converter = PdfConverter(
+                        artifact_dict=create_model_dict(),
+                        llm_service="google",
+                        config={
+                            "llm_model": "gemini-2.5-flash",
+                            "llm_batch_size": 10,
+                            "table_confidence_threshold": 0.7,
+                            "enable_table_llm": True,
+                            "enable_complex_regions": True,
+                        }
+                    )
+                else:
+                    # Basic converter
+                    self._marker_converter = PdfConverter(
+                        artifact_dict=create_model_dict(),
+                    )
+
             # Convert PDF
             rendered = self._marker_converter(pdf_path)
             full_text, _, images = text_from_rendered(rendered)
@@ -162,6 +217,7 @@ class IntelligentAnalyst:
                 from marker.models import create_model_dict
                 from marker.output import text_from_rendered
                 if not hasattr(self, '_marker_converter_retry'):
+                    # For retry, use basic converter as fallback (simpler, more reliable)
                     self._marker_converter_retry = PdfConverter(
                         artifact_dict=create_model_dict(),
                     )
@@ -254,18 +310,30 @@ class IntelligentAnalyst:
         thread_safe_print(f"→ Converting {len(to_convert)} new PDF(s) to markdown...")
 
         # Use process pool to avoid PyTorch tensor conflicts
+        # Adjust workers based on LLM mode (API-bound vs CPU-bound)
         try:
-            workers_env = int(os.environ.get("MARKER_PROCESS_WORKERS", "2"))
+            if self.use_llm_pdf_conversion:
+                # LLM mode: use fewer workers to avoid API rate limits
+                workers_env = int(os.environ.get("MARKER_PROCESS_WORKERS", "2"))
+                if workers_env > 2:
+                    workers_env = 2  # Cap at 2 for LLM mode
+            else:
+                # Basic mode: can use more workers
+                workers_env = int(os.environ.get("MARKER_PROCESS_WORKERS", "3"))
+                if workers_env > 5:
+                    workers_env = 5
             if workers_env < 1:
                 workers_env = 1
-            if workers_env > 5:
-                workers_env = 5
         except (ValueError, TypeError):
-            thread_safe_print("Warning: Invalid MARKER_PROCESS_WORKERS value, using default of 2")
-            workers_env = 2
+            thread_safe_print("Warning: Invalid MARKER_PROCESS_WORKERS value, using default")
+            workers_env = 2 if self.use_llm_pdf_conversion else 3
+
+        mode_str = "enhanced" if self.use_llm_pdf_conversion else "basic"
+        thread_safe_print(f"Using {workers_env} worker(s) for {mode_str} PDF conversion")
 
         with ProcessPoolExecutor(max_workers=workers_env) as pool:
-            future_map = {pool.submit(_pdf_conversion_worker, p): p for p in to_convert}
+            # Pass use_llm flag to each worker
+            future_map = {pool.submit(_pdf_conversion_worker, p, self.use_llm_pdf_conversion): p for p in to_convert}
             for fut in as_completed(future_map):
                 src = future_map[fut]
                 try:
@@ -900,7 +968,20 @@ if __name__ == "__main__":
     
     # PDF conversion uses single worker to avoid PyTorch tensor memory issues
     
-    # Step 3: Ask about number of workers for section processing
+    # Step 3: Ask about LLM-enhanced PDF conversion
+    thread_safe_print("\nPDF Conversion Settings:")
+    use_llm_pdf = True  # Default
+    if source_file_selection['pdf_files']:
+        thread_safe_print("Enhanced PDF conversion uses AI to better extract tables and complex layouts.")
+        thread_safe_print("Recommended for investor presentations and financial documents.")
+        yn = prompt_yes_no("Use enhanced PDF conversion? (y/n, default y): ")
+        use_llm_pdf = yn
+        if use_llm_pdf:
+            thread_safe_print("  ✓ Enhanced conversion enabled (better quality)")
+        else:
+            thread_safe_print("  ✓ Basic conversion enabled (faster processing)")
+
+    # Step 4: Ask about number of workers for section processing
     thread_safe_print("\nSection Processing Settings:")
     thread_safe_print("Note: Rate limiting protection enabled")
     thread_safe_print("- Automatic retry with exponential backoff for rate limits")
@@ -921,13 +1002,13 @@ if __name__ == "__main__":
         if 1 <= max_workers <= env_cap:
             break
     
-    # Step 4: Now initialize ProfileDash with source files (includes PDF conversion)
+    # Step 5: Now initialize ProfileDash with source files (includes PDF conversion)
     thread_safe_print("\n" + "="*60)
     thread_safe_print("STARTING PROCESSING")
     thread_safe_print("="*60)
-    
+
     try:
-        analyst = IntelligentAnalyst(source_file_selection, model_name=selected_model)
+        analyst = IntelligentAnalyst(source_file_selection, model_name=selected_model, use_llm_pdf_conversion=use_llm_pdf)
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your files and try again.")

@@ -30,7 +30,11 @@ pip install -r requirements.txt
 3. **Memory System**: Learning insights stored in `memory/learning_memory.json` - section-based, max 30 words, quality score 9-10
 4. **Section 32**: Special handling - no word limits, pure data extraction
 5. **Parallel Processing**: Section analysis uses ThreadPoolExecutor (1-5 workers configurable)
-6. **PDF Conversion**: Uses single worker to avoid PyTorch tensor memory issues in Marker library
+6. **PDF Conversion**:
+   - **LLM-Enhanced Mode** (default): Uses Gemini API to improve table/chart extraction
+   - **Basic Mode**: Standard Marker conversion without LLM
+   - Worker count auto-adjusts: 2 for LLM mode (API-bound), 3-5 for basic (CPU-bound)
+   - User can toggle between modes via UI prompt
 
 ## Code Style & Communication
 1. **No Emojis**: Do not use emojis in code, comments, commit messages, or documentation
@@ -210,6 +214,7 @@ No formal test suite exists. When making changes:
 - Verify HTML output renders correctly
 
 ## Recent Improvements
+- **LLM-Enhanced PDF Conversion**: Optional AI-powered extraction for better table/chart handling
 - **Markdown Table Fixes**: Automatic correction of corrupted tables from PDF conversion
 - **HTML Rendering**: Fixed table rendering and Section 32 code block issues
 - **Workflow Optimization**: All user selections happen upfront before processing

@@ -1,6 +1,5 @@
 import re
 from typing import Dict
-import re
 
 class QualityTracker:
     """Handles quality metrics calculation and tracking"""

@@ -40,8 +40,6 @@ def clean_markdown_tables(content: str) -> str:
     Returns:
         Cleaned markdown content
     """
-    import re
-    
     lines = content.split('\n')
     cleaned_lines = []
     table_active = False
@@ -104,8 +102,6 @@ def validate_and_fix_tables(content: str) -> str:
     Returns:
         Content with validated/fixed tables
     """
-    import re
-    
     lines = content.split('\n')
     fixed_lines = []
     in_table = False

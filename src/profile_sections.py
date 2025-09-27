@@ -233,7 +233,6 @@ sections = [
                 "b. MDNA highlighting key recent trends by segment:\\n"
                 "   - 2 key achievements by segment\\n"
                 "   - 2 key challenges by segment\\n"
-                "   - 2 areas of disconnect between management statements and actual performance by segment\\n"
                 "\\n"
                 "For each data point, extract historical values for the last 3 years and the 5 most recent interim periods. "
                 "Present data points in table format to the extent reasonable. If not, use bullet points.\\n"
@@ -283,7 +282,6 @@ sections = [
                 "   - 2 key challenges\\n"
                 "   - 2 observations on leverage and covenants\\n"
                 "   - 2 observations on working capital\\n"
-                "   - 2 areas of disconnect between management statements and actual performance\\n"
                 "\\n"
                 "For each data point, extract historical values for the last 3 years and the 5 most recent interim periods. "
                 "Present data points in table format to the extent reasonable. If not, use bullet points.\\n"
@@ -324,8 +322,7 @@ sections = [
                 "3. Specific deals currently underway and transaction status - active discussions, LOIs, due diligence, regulatory approvals, or recently completed/failed deals\\n"
                 "4. M&A capacity and constraints - financial capacity, leverage limits, regulatory considerations\\n"
                 "5. Track record - historical M&A performance and integration outcomes where disclosed\\n"
-                "\\n"
-                "In addition, extract and analyze significant corporate events and transactions over the last 2 years.\\n"
+                "6. Recent corporate events - extract and analyze significant corporate events and transactions over the last 2 years.\\n"
                 "Present information in a concise narrative format with specific quotes and data points where available.\\n"
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point."
                 "\\n"
@@ -361,10 +358,10 @@ sections = [
     {
         "number": 13,
         "title": "Deep Dive Discoveries",
-        "specs": "Extract risks or contradictions not immediately apparent. Focus on identifying information that could materially impact the company's prospects.\\n"
+        "specs": "Extract risks or contradictions not immediately apparent. Focus on identifying those that could materially impact the company's prospects.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
-                "a. Heroic Assumptions: Identify up to 3 material assumptions made by management that require achievements well outside historical norms, where material means impacting the prospects of the company\\n"
+                "a. Big Assumptions: Identify up to 3 material assumptions made by management that require achievements well outside historical norms, where material means impacting the prospects of the company\\n"
                 "b. Disconnects: Identify up to 3 material disconnects between what management is saying and what the company is actually doing, where material means impacting the prospects of the company\\n"
                 "c. Buried Disclosures: Identify up to 3 material observations that are hidden away in a single place, maybe just a footnote, but which could materially impact the prospects of the company\\n"
                 "\\n"

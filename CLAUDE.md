@@ -40,6 +40,7 @@ pip install -r requirements.txt
 1. **No Emojis**: Do not use emojis in code, comments, commit messages, or documentation
 2. **Professional Tone**: Maintain clear, concise technical communication
 3. **Comments**: Only add comments when explicitly requested
+4. **Git Commits**: Do NOT add "Co-Authored-By: Claude" or any AI attribution lines to commit messages
 
 # Engineering Principles: Build Systems That Stay Correct
 

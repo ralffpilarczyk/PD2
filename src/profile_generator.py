@@ -6,6 +6,7 @@ from pathlib import Path
 import google.generativeai as genai
 from .utils import retry_with_backoff, thread_safe_print, clean_markdown_tables, validate_and_fix_tables
 from .profile_sections import sections
+from .pdf_generator import generate_pdf_from_html
 import markdown
 from markdown.extensions import tables
 
@@ -28,13 +29,13 @@ class ProfileGenerator:
         
         # Extract company name
         company_name = self._extract_company_name(full_context)
-        thread_safe_print(f"Generating combined profile for: {company_name}")
+        thread_safe_print(f"Company: {company_name}")
         
         # Collect markdown from existing section files
         combined_markdown, processed_sections = self._collect_section_markdown()
         
         if not combined_markdown:
-            thread_safe_print("No section markdown files found!")
+            thread_safe_print("⚠ No sections found!")
             return None
         
         # Clean company name for filename
@@ -46,8 +47,7 @@ class ProfileGenerator:
         
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(combined_markdown)
-        thread_safe_print(f"Combined markdown saved: {md_path}")
-        
+
         # Generate HTML from combined markdown
         html_path = self._generate_html_from_markdown(combined_markdown, processed_sections, company_name, clean_company_name)
         
@@ -87,15 +87,15 @@ class ProfileGenerator:
                 
                 # If no final file found, use the first one
                 md_file = final_file if final_file else md_files[0]
-                
-                thread_safe_print(f"Reading section {section_num}: {section_title} - {md_file}")
-                
+
+                thread_safe_print(f"→ Section {section_num}: {section_title}")
+
                 with open(md_file, 'r', encoding='utf-8') as f:
                     content = f.read()
 
                 # Skip near-empty content to reduce blank sections
                 if not content or len(content.strip()) < 50:
-                    thread_safe_print(f"  → Skipping section {section_num} due to empty content in {os.path.basename(md_file)}")
+                    thread_safe_print(f"  → Skipping section {section_num} (empty)")
                     continue
                 
                 # Clean corrupted tables first
@@ -129,28 +129,24 @@ class ProfileGenerator:
             # Remove the HTML code block wrapper for Section 32
             content = content[8:-4]  # Remove ```html\n at start and \n``` at end
             content = content.strip()
-            thread_safe_print("  → Removed HTML code block wrapper (Section 32)")
         elif content.startswith('```html'):
             # Handle case without newline after ```html
             content = content[7:]  # Remove ```html at start
             if content.endswith('```'):
                 content = content[:-3]  # Remove ``` at end
             content = content.strip()
-            thread_safe_print("  → Removed HTML code block wrapper (Section 32)")
         
         # Check if content is wrapped in markdown code block
         elif content.startswith('```markdown\n') and content.endswith('\n```'):
             # Remove the wrapper
             content = content[12:-4]  # Remove ```markdown\n at start and \n``` at end
             content = content.strip()
-            thread_safe_print("  → Cleaned problematic markdown code block wrapper")
         elif content.startswith('```markdown'):
             # Handle case without newline after ```markdown
             content = content[11:]  # Remove ```markdown at start
             if content.endswith('```'):
                 content = content[:-3]  # Remove ``` at end
             content = content.strip()
-            thread_safe_print("  → Cleaned problematic markdown code block wrapper")
         
         # Table structure fixes are handled centrally by validate_and_fix_tables
         import re
@@ -161,7 +157,6 @@ class ProfileGenerator:
         if lines and (lines[0].startswith('## SECTION ') or lines[0].startswith('# SECTION ') or lines[0].startswith('SECTION ')):
             lines = lines[1:]  # Remove the first line
             content = '\n'.join(lines).strip()
-            thread_safe_print("  → Removed duplicate section title")
         
         # Ensure blank lines before tables for proper markdown parsing
         lines = content.split('\n')
@@ -174,8 +169,7 @@ class ProfileGenerator:
                 if prev_line and not prev_line.startswith('|'):
                     if not fixed_lines or fixed_lines[-1].strip():  # Avoid multiple blank lines
                         fixed_lines.append('')
-                        thread_safe_print("  → Added blank line before table")
-            
+
             # Check if current line starts a list (-, *, or numbered)
             if re.match(r'^\s*(?:[-*]|\d+\.)', line) and i > 0:
                 prev_line = lines[i-1].strip()
@@ -183,7 +177,6 @@ class ProfileGenerator:
                 if prev_line and not re.match(r'^\s*(?:[-*]|\d+\.)', prev_line):
                     if not fixed_lines or fixed_lines[-1].strip():  # Avoid multiple blank lines
                         fixed_lines.append('')
-                        thread_safe_print("  → Added blank line before list")
             
             fixed_lines.append(line)
         
@@ -308,10 +301,14 @@ class ProfileGenerator:
         
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(full_html)
-        
-        thread_safe_print(f"HTML report saved: {html_path}")
-        thread_safe_print(f"Processed {len(processed_sections)} sections")
-        
+
+        thread_safe_print(f"✓ HTML: {html_path.name}")
+
+        # Generate PDF from HTML
+        pdf_path = generate_pdf_from_html(str(html_path))
+        if pdf_path:
+            thread_safe_print(f"✓ PDF: {Path(pdf_path).name}")
+
         return str(html_path)
     
     def _generate_cover_page(self, processed_sections, company_name):
@@ -399,9 +396,9 @@ Examples:
                 return "Company Profile"
             
             return company_name
-            
+
         except Exception as e:
-            thread_safe_print(f"Company name extraction failed: {e}")
+            thread_safe_print(f"⚠ Could not extract company name")
             return "Company Profile"
     
     def _markdown_to_html(self, markdown_content: str) -> str:

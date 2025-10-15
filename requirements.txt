@@ -4,3 +4,4 @@ google-generativeai
 markdown
 requests
 pdfminer.six
+weasyprint

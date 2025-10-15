@@ -289,12 +289,12 @@ class IntelligentAnalyst:
             if cached_md.exists():
                 with progress_tracker['lock']:
                     progress_tracker['completed'] += 1
-                    thread_safe_print(f"Using cached: {Path(pdf_path).name} → {cached_md.name} ({progress_tracker['completed']}/{progress_tracker['total']})")
+                    thread_safe_print(f"[{progress_tracker['completed']}/{progress_tracker['total']}] {Path(pdf_path).name} → Cached")
                 converted_files.append(str(cached_md))
             elif cached_md_legacy.exists():
                 with progress_tracker['lock']:
                     progress_tracker['completed'] += 1
-                    thread_safe_print(f"Using cached (legacy): {Path(pdf_path).name} → {cached_md_legacy.name} ({progress_tracker['completed']}/{progress_tracker['total']})")
+                    thread_safe_print(f"[{progress_tracker['completed']}/{progress_tracker['total']}] {Path(pdf_path).name} → Cached")
                 converted_files.append(str(cached_md_legacy))
             else:
                 to_convert.append(pdf_path)
@@ -347,7 +347,7 @@ class IntelligentAnalyst:
                         out_path.write_text(cleaned, encoding='utf-8')
                         with progress_tracker['lock']:
                             progress_tracker['completed'] += 1
-                            thread_safe_print(f"Converted and saved: {Path(src).name} → {out_path.name} ({progress_tracker['completed']}/{progress_tracker['total']})")
+                            thread_safe_print(f"[{progress_tracker['completed']}/{progress_tracker['total']}] {Path(src).name} → Complete")
                         converted_files.append(str(out_path))
                     else:
                         # Fallback to original single-threaded path for this file
@@ -361,30 +361,26 @@ class IntelligentAnalyst:
                 except Exception as e:
                     thread_safe_print(f"Conversion task error for {Path(src).name}: {e}")
 
-        thread_safe_print(f"\nPDF processing summary:")
-        thread_safe_print(f"  • Cached (reused): {cached_count}")
-        thread_safe_print(f"  • Newly converted: {progress_tracker['completed']}")
+        thread_safe_print(f"\nSummary: {cached_count} cached, {progress_tracker['completed']} converted, {len(converted_files)} total")
         if progress_tracker['failed'] > 0:
-            thread_safe_print(f"  • Failed: {progress_tracker['failed']}")
-        thread_safe_print(f"  • Total processed: {len(converted_files)}")
-        thread_safe_print(f"All converted files saved to SourceFiles/ for future reuse")
+            thread_safe_print(f"⚠ {progress_tracker['failed']} file(s) failed")
 
         return converted_files
     
     def analyze_section(self, section_num: int) -> str:
         """Enhanced 5-step analysis pipeline with completeness and deep analysis."""
         section = next(s for s in sections if s['number'] == section_num)
-        
-        thread_safe_print(f"\n{'='*50}")
-        thread_safe_print(f"ANALYZING SECTION {section_num}: {section['title']}")
-        thread_safe_print(f"{'='*50}")
-        
+
+        thread_safe_print(f"\n{'='*60}")
+        thread_safe_print(f"Section {section_num}: {section['title']}")
+        thread_safe_print(f"{'='*60}")
+
         try:
             # Get relevant memory for this section
             relevant_memory = self.insight_memory.get_relevant_memory(section_num)
-            
+
             # Step 1: Initial Draft
-            thread_safe_print(f"Section {section_num} - Step 1: Creating initial draft...")
+            thread_safe_print(f"Section {section_num} → Drafting...")
             initial_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
             self.file_manager.save_step_output(section_num, "step_1_initial_draft.md", initial_draft)
 
@@ -393,40 +389,38 @@ class IntelligentAnalyst:
                 return not text or len(text.strip()) < minimum
 
             if _is_empty(initial_draft):
-                thread_safe_print(f"WARNING: Section {section_num} Step 1 produced empty/short output. Retrying once...")
+                thread_safe_print(f"Section {section_num} ⚠ Retrying draft...")
                 retry_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
                 if not _is_empty(retry_draft):
                     initial_draft = retry_draft
                 # Save retry attempt separately for diagnostics
                 self.file_manager.save_step_output(section_num, "step_1_initial_draft_retry.md", retry_draft or "")
-            
+
             # Initialize variables to avoid UnboundLocalError
             improved_draft = None
             step4_output = None
-            
+
             # For Section 33 (Data Book), the initial draft is the final output. No critiques needed.
             if section['number'] == self.core_analyzer.SECTION_32_EXEMPT:
-                thread_safe_print(f"Section {section_num} is a data appendix. Skipping analytical and polish steps.")
                 final_output = initial_draft
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
             else:
                 # Step 2: Completeness Check
-                thread_safe_print(f"Section {section_num} - Step 2: Checking for missing content...")
+                thread_safe_print(f"Section {section_num} → Refining...")
                 add_list = self.core_analyzer.completeness_check(section, initial_draft)
                 self.file_manager.save_step_output(section_num, "step_2_completeness_check.txt", add_list)
-                
+
                 # Step 3: Apply Completeness Changes
-                thread_safe_print(f"Section {section_num} - Step 3: Applying completeness changes...")
                 improved_draft = self.core_analyzer.apply_completeness_only(section, initial_draft, add_list)
                 self.file_manager.save_step_output(section_num, "step_3_improved_draft.md", improved_draft)
-                
+
                 # Step 4: Deep Analysis and Polish
-                thread_safe_print(f"Section {section_num} - Step 4: Applying deep analysis and polish...")
+                thread_safe_print(f"Section {section_num} → Polishing...")
                 step4_output = self.core_analyzer.deep_analysis_and_polish(section, improved_draft)
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", step4_output)
-                
+
                 final_output = step4_output
-            
+
             # Final failsafe: choose the last non-empty among outputs
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
                 candidates = [final_output]
@@ -437,7 +431,7 @@ class IntelligentAnalyst:
                 candidates.append(initial_draft)
                 final_chosen = next((c for c in candidates if c and len(c.strip()) >= 200), None)
                 if final_chosen is None:
-                    thread_safe_print(f"Section {section_num} - WARNING: Generated empty outputs across steps. Inserting placeholder.")
+                    thread_safe_print(f"Section {section_num} ⚠ Empty output, using placeholder")
                     final_output = f"_This section failed to generate content during this run._"
                     # Overwrite final file with placeholder to avoid blank HTML
                     self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
@@ -446,12 +440,11 @@ class IntelligentAnalyst:
             else:
                 # Section 33 (Data Book) special-case placeholder if empty
                 if _is_empty(final_output, minimum=200):
-                    thread_safe_print(f"Section {section_num} - WARNING: Appendix is empty. Inserting placeholder.")
+                    thread_safe_print(f"Section {section_num} ⚠ Appendix empty, using placeholder")
                     final_output = "_Appendix could not be generated from the provided documents in this run._"
                     self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
 
             # Step 6: Learning Extraction (Applied to the final output)
-            thread_safe_print(f"Section {section_num} - Step 6: Learning extraction...")
             # Run learning extraction only on analytical sections
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
                 learning = self.core_analyzer.extract_learning(section, final_output)
@@ -459,14 +452,13 @@ class IntelligentAnalyst:
                 learning_str = json.dumps(learning, indent=4)
                 self.file_manager.save_step_output(section_num, "step_6_learning.json", learning_str)
                 # Note: Learning will be processed in post-run memory review
-            
+
             # Calculate quality metrics for the section
             self.quality_tracker.calculate_section_metrics(section_num, final_output)
-            thread_safe_print(f"Section {section_num} completed successfully.")
             return f"Section {section_num} completed."
 
         except Exception as e:
-            thread_safe_print(f"An error occurred in section {section_num}: {e}")
+            thread_safe_print(f"Section {section_num} ⚠ Error: {e}")
             # Optionally re-raise or handle as per overall error strategy
             return f"Section {section_num} failed."
 
@@ -510,20 +502,20 @@ class IntelligentAnalyst:
                             res = fut.result()
                             local[s_num] = res
                             completed += 1
-                            thread_safe_print(f"Section {s_num} - Completed ({completed}/{len(sec_list)} sections done)")
+                            thread_safe_print(f"Section {s_num} ✓ Complete ({completed}/{len(sec_list)} sections done)")
                         except Exception as e:
                             err = str(e)
                             if "429" in err or "quota" in err.lower():
-                                thread_safe_print(f"Section {s_num} - Hit rate limit: {e}")
+                                thread_safe_print(f"Section {s_num} ⚠ Rate limit: {e}")
                             else:
-                                thread_safe_print(f"Section {s_num} - Failed to process: {e}")
+                                thread_safe_print(f"Section {s_num} ⚠ Error: {e}")
                             local[s_num] = f"Processing failed: {e}"
             else:
                 for s_num in sec_list:
                     try:
                         local[s_num] = self.analyze_section(s_num)
                     except Exception as e:
-                        thread_safe_print(f"Section {s_num} - Failed to process: {e}")
+                        thread_safe_print(f"Section {s_num} ⚠ Error: {e}")
                         local[s_num] = f"Processing failed: {e}"
             return local
 
@@ -540,56 +532,51 @@ class IntelligentAnalyst:
         self._generate_run_summary(results)
 
         # Generate profile with Phase 1 results (and potential placeholder for 33)
-        thread_safe_print(f"\n{'='*50}")
-        thread_safe_print("GENERATING FINAL PROFILE (Phase 1)")
-        thread_safe_print(f"{'='*50}")
+        thread_safe_print(f"\n{'='*60}")
+        thread_safe_print("Generating Profile")
+        thread_safe_print(f"{'='*60}")
         try:
             profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
             # Include 33 in list so placeholder (if present) is picked up
             phase1_list = non32 + ([self.core_analyzer.SECTION_32_EXEMPT] if has32 else [])
             profile_generator.generate_html_profile(results, phase1_list, self.full_context, sections)
-            thread_safe_print("Profile generation complete (Phase 1)!")
+            thread_safe_print("✓ Profile ready")
         except Exception as e:
-            thread_safe_print(f"Warning: HTML profile generation failed: {e}")
+            thread_safe_print(f"⚠ Profile generation failed: {e}")
 
         # Phase 2: run Section 33 (Data Book) alone (sequential) and regenerate
         if has32:
-            thread_safe_print(f"\n{'='*50}")
-            thread_safe_print("RUNNING APPENDIX (SECTION 33 DATA BOOK) - PHASE 2")
-            thread_safe_print(f"{'='*50}")
+            thread_safe_print(f"\n{'='*60}")
+            thread_safe_print("Generating Data Appendix (Section 33)")
+            thread_safe_print(f"{'='*60}")
             try:
                 res32 = self.analyze_section(self.core_analyzer.SECTION_32_EXEMPT)
                 results[self.core_analyzer.SECTION_32_EXEMPT] = res32
             except Exception as e:
-                thread_safe_print(f"Appendix generation failed: {e}")
+                thread_safe_print(f"⚠ Appendix generation failed: {e}")
             # Regenerate profile with full set
             try:
                 profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
                 profile_generator.generate_html_profile(results, section_numbers, self.full_context, sections)
-                thread_safe_print("Profile updated with Appendix (if available)")
+                thread_safe_print("✓ Appendix complete - Profile updated")
             except Exception as e:
-                thread_safe_print(f"Warning: HTML profile regeneration failed: {e}")
+                thread_safe_print(f"⚠ Profile update failed: {e}")
 
         # Post-run memory review AFTER profile delivery
         if len(section_numbers) > 1:
-            thread_safe_print(f"\n{'='*50}")
-            thread_safe_print("CONDUCTING POST-RUN MEMORY REVIEW")
-            thread_safe_print("(Running in background - your profile is ready)")
-            thread_safe_print(f"{'='*50}")
+            thread_safe_print(f"\n{'='*60}")
+            thread_safe_print("Learning Review")
+            thread_safe_print(f"{'='*60}")
             try:
                 self._conduct_memory_review()
             except Exception as e:
-                thread_safe_print(f"Warning: Memory review failed: {e}")
-        else:
-            thread_safe_print(f"\n{'='*50}")
-            thread_safe_print("SKIPPING MEMORY REVIEW (Single section)")
-            thread_safe_print(f"{'='*50}")
+                thread_safe_print(f"⚠ Memory review failed: {e}")
 
         return results
     
     def _conduct_memory_review(self):
         """Review and update learning memory"""
-        thread_safe_print("Extracting new insights...")
+        thread_safe_print("→ Extracting insights...")
         
         # Collect all learning extractions
         learning_files = []
@@ -660,29 +647,25 @@ Generate comprehensive methodology candidates - subsequent harsh filtering will 
             
             # Process and add new insights
             self.insight_memory.process_new_insights(new_insights_text)
-            thread_safe_print("Successfully processed new analytical instructions")
-            
+
             # Clean up and diversify memory
-            thread_safe_print("Optimizing insight memory for diversity...")
             self.insight_memory.cleanup_and_diversify()
-            
+
             # Update metadata
             self.insight_memory.update_metadata()
-            
+
             # Save updated memory
             self.insight_memory.save_memory()
-            
+
             # Save post-run memory state
             self.file_manager.save_memory_state(
-                self.insight_memory.get_memory_data(), 
+                self.insight_memory.get_memory_data(),
                 "post_run_memory.json"
             )
-            
+
             # Show memory stats after cleanup
             memory_stats = self.insight_memory.get_memory_stats()
-            thread_safe_print(f"Memory optimization completed - {memory_stats['total_insights']}/{memory_stats['max_possible']} insights ({memory_stats['utilization_percent']}% utilized)")
-            
-            thread_safe_print("Memory review completed")
+            thread_safe_print(f"✓ Memory updated: {memory_stats['total_insights']}/{memory_stats['max_possible']} insights ({memory_stats['utilization_percent']}%)")
         except Exception as e:
             thread_safe_print(f"Warning: Memory update failed: {e}")
     
@@ -871,35 +854,46 @@ if __name__ == "__main__":
     thread_safe_print("="*60)
     
     # Pre-flight checks
-    thread_safe_print("\nRunning pre-flight checks...")
-    
+    thread_safe_print("\nSystem Check")
+    thread_safe_print("="*60)
+
     # Check 1: Verify API key is set
     if not os.environ.get("GEMINI_API_KEY"):
-        thread_safe_print("ERROR: GEMINI_API_KEY environment variable not set")
-        thread_safe_print("Please set your Gemini API key in a .env file:")
+        thread_safe_print("ERROR: GEMINI_API_KEY not configured")
+        thread_safe_print("Please set your API key in .env file:")
         thread_safe_print("  echo 'GEMINI_API_KEY=your-key-here' > .env")
         sys.exit(1)
-    thread_safe_print("✓ Gemini API key configured")
-    
+    thread_safe_print("✓ API key configured")
+
     # Check 2: Verify required dependencies
     try:
         # Check for Marker (PDF conversion)
         from marker.converters.pdf import PdfConverter
-        thread_safe_print("✓ Marker library available for PDF conversion")
+        thread_safe_print("✓ PDF conversion ready (Marker)")
         pdf_support = True
     except ImportError as e:
-        thread_safe_print("WARNING: Marker library not available - PDF files cannot be processed")
-        thread_safe_print("To enable PDF support, install with: pip install marker-pdf")
+        thread_safe_print("⚠ Marker not installed - PDF files cannot be processed")
+        thread_safe_print("  Install with: pip install marker-pdf")
         pdf_support = False
         # Don't exit - user might only want to use MD files
-    
-    # Check 3: Create base directories
+
+    # Check 3: Verify WeasyPrint (PDF report generation)
+    try:
+        from weasyprint import HTML
+        thread_safe_print("✓ PDF reports ready (WeasyPrint)")
+        pdf_generation_support = True
+    except ImportError:
+        thread_safe_print("⚠ WeasyPrint not installed - HTML only")
+        thread_safe_print("  Install with: pip install weasyprint")
+        pdf_generation_support = False
+        # Don't exit - HTML reports will still be generated
+
+    # Check 4: Create base directories
     base_dirs = ["runs", "memory", "quality_metrics"]
     for dir_path in base_dirs:
         os.makedirs(dir_path, exist_ok=True)
-    thread_safe_print("✓ Directory structure verified")
-    
-    thread_safe_print("Pre-flight checks completed\n")
+    thread_safe_print("✓ Directories verified")
+    thread_safe_print("="*60 + "\n")
     
     # Model selection
     thread_safe_print("Select LLM model:")
@@ -979,19 +973,14 @@ if __name__ == "__main__":
             thread_safe_print("  ✓ Basic conversion enabled (faster processing)")
 
     # Step 4: Ask about number of workers for section processing
-    thread_safe_print("\nSection Processing Settings:")
-    thread_safe_print("Note: Rate limiting protection enabled")
-    thread_safe_print("- Automatic retry with exponential backoff for rate limits")
-    thread_safe_print("- Extracts retry delays from API responses")
-    thread_safe_print("- Up to 3 retry attempts with intelligent delays")
-    
+    thread_safe_print("\nAnalysis Settings")
     while True:
         env_cap = int(os.environ.get("MAX_SECTION_WORKERS", "3"))
         env_cap = 1 if env_cap < 1 else (8 if env_cap > 8 else env_cap)
         default_workers = min(2, env_cap)
         valid_digits = ''.join(str(i) for i in range(1, env_cap + 1))
         choice = prompt_single_digit(
-            f"Number of parallel workers for section analysis (1-{env_cap}, default {default_workers}): ",
+            f"Parallel workers (1-{env_cap}, default {default_workers}): ",
             valid_digits=valid_digits,
             default_digit=str(default_workers)
         )
@@ -1016,9 +1005,7 @@ if __name__ == "__main__":
     results = analyst.process_all_sections(selected_sections, max_workers)
     
     thread_safe_print(f"\n{'='*60}")
-    thread_safe_print("ANALYSIS COMPLETE!")
+    thread_safe_print("Analysis Complete")
     thread_safe_print(f"{'='*60}")
-    thread_safe_print(f"HTML Report: Check ReportFiles/ folder")
-    thread_safe_print(f"Analysis details: runs/run_{analyst.run_timestamp}/")
-    thread_safe_print(f"Quality metrics and learning insights saved")
-    thread_safe_print(f"Step-by-step analysis available for review") 
+    thread_safe_print(f"Reports: ReportFiles/")
+    thread_safe_print(f"Details: runs/run_{analyst.run_timestamp}/") 

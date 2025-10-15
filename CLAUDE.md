@@ -3,17 +3,17 @@
 This file provides guidance to AI assistants when working with code in this repository.
 
 ## Project Overview
-ProfileDash 2.0 is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 32 different analytical sections using Google's Gemini API.
+ProfileDash 2.0 is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 33 analytical sections using Google's Gemini API.
 
-## Architecture
-The project uses a clean modular architecture with all core components in the `src/` package:
-- `PD2.py` - Main application entry point with UI and orchestration
-- `src/core_analyzer.py` - Multi-step analysis pipeline with progressive refinement
-- `src/insight_memory.py` - Learning system that captures analytical patterns
-- `src/profile_generator.py` - HTML report generation with markdown processing
-- `src/utils.py` - Shared utilities including rate limiting and markdown fixes
-- `src/file_manager.py` - Handles file I/O and markdown preprocessing
-- `src/profile_sections.py` - Defines all 32 analysis sections
+## Architecture Principles
+The system follows a clean modular architecture with separation of concerns:
+- **Orchestration Layer**: Main entry point handles user interaction and coordinates all components
+- **Analysis Pipeline**: Multi-step refinement process with progressive condensation
+- **Learning System**: Captures and reuses analytical patterns across runs
+- **Output Generation**: Professional PDF reports with HTML intermediate format
+- **Utilities Layer**: Shared functionality for thread safety, rate limiting, and data cleaning
+- **File Management**: Handles I/O operations and markdown preprocessing
+- **Section Definitions**: Declarative specification of all analysis requirements
 
 ## Key Commands
 ```bash
@@ -25,16 +25,20 @@ pip install -r requirements.txt
 ```
 
 ## Development Guidelines
-1. **API Configuration**: Ensure `GEMINI_API_KEY` is set in `.env` file
-2. **Rate Limiting**: All Gemini API calls must use `retry_with_backoff` from `src/utils.py`
-3. **Memory System**: Learning insights stored in `memory/learning_memory.json` - section-based, max 30 words, quality score 9-10
-4. **Section 32**: Special handling - no word limits, pure data extraction
-5. **Parallel Processing**: Section analysis uses ThreadPoolExecutor (1-5 workers configurable)
-6. **PDF Conversion**:
-   - **LLM-Enhanced Mode** (default): Uses Gemini API to improve table/chart extraction
-   - **Basic Mode**: Standard Marker conversion without LLM
-   - Worker count auto-adjusts: 2 for LLM mode (API-bound), 3-5 for basic (CPU-bound)
-   - User can toggle between modes via UI prompt
+
+### Core System Principles
+1. **API Operations**: All external API calls must implement exponential backoff and respect rate limits
+2. **Learning System**: Insights must be high-quality (9-10 score), concise (max 30 words), and section-specific
+3. **Special Cases**: Section 33 (Data Book) has no word limits - pure extraction mode
+4. **Concurrency**: Use thread-safe operations for all parallel processing contexts
+5. **PDF Processing**: Support both LLM-enhanced and basic conversion modes with appropriate worker counts
+6. **Output Quality**: All analysis must pass the relevance filter: "Does this change an investor's view?"
+
+### Processing Modes
+- **LLM-Enhanced PDF Conversion**: Uses AI for better table/chart extraction (2 workers - API-bound)
+- **Basic PDF Conversion**: Standard Marker library conversion (3-5 workers - CPU-bound)
+- **Parallel Section Analysis**: Configurable worker count (1-8) based on API quotas
+- **Two-Phase Scheduling**: Process sections 1-32 first, then section 33 separately
 
 ## Code Style & Communication
 1. **No Emojis**: Do not use emojis in code, comments, commit messages, or documentation
@@ -190,55 +194,67 @@ When analyzing company data, always apply multi-layer analytical thinking:
 
 **Quality Standard**: Would this insight change an investor's view of the company's prospects? If no, remove it.
 
-## Analysis Pipeline
-Each section goes through multiple refinement steps with progressive condensation:
-1. Initial Draft - Comprehensive analysis with all relevant data
-2. Completeness Check - Identifies missing critical information
-3. Enhanced Draft - Incorporates missing elements
-4. Deep Analysis & Polish - Condenses to ~500 words of essential insights
-5. (Optional) Discovery Pipeline - Additional pattern finding for deeper insights
-6. Learning Extraction - Captures reusable analytical methodologies
+## Analysis Pipeline Architecture
+Each section follows a progressive refinement approach with multiple stages:
+1. **Initial Draft** - Comprehensive analysis capturing all relevant data (~1000 words)
+2. **Completeness Check** - Validates against source documents, identifies gaps
+3. **Enhanced Draft** - Incorporates missing elements from validation
+4. **Deep Analysis & Polish** - Condenses to essential insights (~500 words) with investor relevance filter
+5. **Discovery Pipeline** (Optional) - Six-stage deep pattern finding for quantitative insights
+6. **Learning Extraction** - Captures reusable analytical methodologies for future runs
 
-## Important Patterns
-- Section definitions in `profile_sections.py` organized into 5 groups
-- Thread-safe operations for parallel processing (using thread_safe_print from utils.py)
-- Two-stage quality filtering for learning insights
-- Exponential backoff for API rate limits (up to 3 retries)
-- Professional HTML output with markdown-to-HTML conversion
-- All print statements should use thread_safe_print to avoid garbled output in parallel mode
+## Design Patterns & Conventions
+
+### Parallel Processing Patterns
+- **Thread Safety First**: All console output must use thread-safe mechanisms in parallel contexts
+- **Worker Pool Management**: Thread pools for section analysis, process pools for PDF conversion
+- **Resource Limiting**: Global semaphores control concurrent API calls to prevent quota exhaustion
+- **Staged Scheduling**: Submit tasks with slight delays to prevent thundering herd
+
+### Quality Assurance Patterns
+- **Two-Stage Filtering**: Learning insights undergo dual quality checks before persistence
+- **Output Validation**: Check for empty outputs, retry with fallback to previous steps
+- **Table Constraints**: Enforce maximum dimensions (10 columns, 20 rows) to prevent bloat
+- **Markdown Cleaning**: Automatic correction of corrupted tables from PDF conversion
+
+### Error Handling Patterns
+- **Exponential Backoff**: 3 retries with increasing delays (1s, 2s, 4s) and jitter
+- **Graceful Degradation**: Failed sections don't block others, partial outputs are acceptable
+- **Respect Server Signals**: Honor Retry-After headers from API responses
+- **Cache Aggressively**: SHA-256 based caching prevents redundant PDF conversions
+
+### Output Delivery Patterns
+- **Two-Phase Generation**: Sections 1-32 first, then Section 33 separately
+- **Progressive Refinement**: Multiple passes with increasing constraints
+- **Format Chain**: Markdown → HTML → PDF with WeasyPrint
+- **Professional Styling**: Consistent typography, pagination, footers with generation metadata
 
 ## Testing & Quality
-No formal test suite exists. When making changes:
-- Test with sample PDFs
-- Monitor `runs/run_*/run_summary.txt` for errors
-- Check `quality_metrics/` for tracking data
-- Verify HTML output renders correctly
-
-## Recent Improvements
-- **LLM-Enhanced PDF Conversion**: Optional AI-powered extraction for better table/chart handling
-- **Markdown Table Fixes**: Automatic correction of corrupted tables from PDF conversion
-- **HTML Rendering**: Fixed table rendering and Section 32 code block issues
-- **Workflow Optimization**: All user selections happen upfront before processing
-- **Safety Features**: Output size limits prevent excessive LLM generation
-- **Thread Safety**: All operations use thread-safe printing for parallel processing
+No formal test suite exists. Testing approach:
+- **Validation Method**: Test with sample PDFs representing different document types
+- **Monitoring**: Check run summaries and quality metrics for errors and degradation
+- **Output Verification**: Manually review PDF output for formatting and content quality
+- **Regression Detection**: Compare outputs across runs for consistency
 
 ## Output Structure
 ```
-runs/
-└── run_YYYY_MM_DD_HH_MM_SS/
-    ├── section_1/
-    │   ├── step_1_initial_draft.md
-    │   ├── step_2_completeness_check.txt
-    │   ├── step_3_enhanced_draft.md
-    │   ├── step_4_final_section.md
-    │   └── step_6_learning.json
-    ├── [Company]_profile.md      # Combined markdown
-    ├── [Company]_profile.html    # Final HTML output
-    └── run_summary.txt          # Processing summary
+runs/run_YYYY_MM_DD_HH_MM_SS/    # Timestamped run directory
+├── section_*/                    # Individual section work products
+│   ├── step_1_initial_draft.md
+│   ├── step_2_completeness_check.txt
+│   ├── step_3_enhanced_draft.md
+│   ├── step_4_final_section.md
+│   └── step_6_learning.json
+├── [Company]_profile.md          # Combined markdown
+└── run_summary.txt               # Processing log
+
+ReportFiles/                      # Final deliverables
+└── [Company]_YYMMDD_HHMM.pdf    # Professional PDF report
 ```
 
-## Known Limitations
-- Depends on Marker library for PDF conversion (can have table corruption issues)
-- PDF conversion limited to single worker due to PyTorch tensor memory constraints
-- No formal test suite or type checking
-- LLM quality scoring requires aggressive filtering (9-10 threshold)
+## Known Constraints & Limitations
+- **PDF Conversion**: Marker library can corrupt tables during extraction
+- **Process Isolation**: PDF conversion requires separate processes due to PyTorch memory constraints
+- **Quality Filtering**: Learning system requires aggressive 9-10 threshold to prevent noise
+- **No Formal Testing**: Manual validation only - no automated test suite
+- **Memory Accumulation**: Learning insights grow unbounded over time

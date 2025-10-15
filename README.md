@@ -44,10 +44,12 @@ Intelligent document analysis system that processes PDF financial documents and 
 
 ## Output
 
-Reports saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
-- `[Company]_profile.html` - Final report
-- `[Company]_profile.md` - Markdown version
-- `section_*/` - Individual section analysis steps
+Professional PDF report saved to `ReportFiles/`:
+- `[Company]_YYMMDD_HHMM.pdf` - Final report with footers and page numbers
+
+Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
+- `[Company]_profile.md` - Combined markdown
+- `section_*/` - Individual section drafts and refinements
 - `run_summary.txt` - Processing log
 
 ## Architecture

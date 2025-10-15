@@ -82,6 +82,64 @@ def _pdf_conversion_worker(pdf_path: str, use_llm: bool = False) -> Optional[str
     except Exception:
         return None
 
+
+class WorkerDisplay:
+    """Thread-safe display manager for parallel worker status"""
+
+    def __init__(self, num_workers):
+        self.num_workers = num_workers
+        self.worker_status = {}  # {worker_id: (section_num, action)}
+        self.lock = threading.Lock()
+        self.next_worker_id = 1
+        self.worker_ids = {}  # {section_num: worker_id}
+
+    def update(self, section_num, action):
+        """Update a worker's status and redraw the line
+
+        Args:
+            section_num: Section number being processed
+            action: One of "Draft", "Refine", "Polish"
+        """
+        with self.lock:
+            # Assign worker ID if this is a new section
+            if section_num not in self.worker_ids:
+                self.worker_ids[section_num] = self.next_worker_id
+                self.next_worker_id += 1
+
+            worker_id = self.worker_ids[section_num]
+            self.worker_status[worker_id] = (section_num, action)
+            self._redraw()
+
+    def complete(self, section_num, completed, total):
+        """Mark a section as complete and print completion message"""
+        with self.lock:
+            # Remove from active workers
+            if section_num in self.worker_ids:
+                worker_id = self.worker_ids[section_num]
+                if worker_id in self.worker_status:
+                    del self.worker_status[worker_id]
+
+            # Print completion on new line
+            print(f"\nSec. {section_num} ✓ Complete ({completed}/{total})")
+
+    def _redraw(self):
+        """Redraw the worker status line (only active workers)"""
+        if not self.worker_status:
+            return
+
+        # Sort by worker ID and format each active worker
+        parts = []
+        for wid in sorted(self.worker_status.keys()):
+            sec_num, action = self.worker_status[wid]
+            # Fixed width: "Sec. 1 → Draft     " = 20 chars
+            status = f"Sec. {sec_num} → {action}".ljust(20)
+            parts.append(status)
+
+        # Join with separator and print
+        line = " | ".join(parts)
+        print(f"\r{line:<80}", end='', flush=True)
+
+
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
     
@@ -371,16 +429,15 @@ class IntelligentAnalyst:
         """Enhanced 5-step analysis pipeline with completeness and deep analysis."""
         section = next(s for s in sections if s['number'] == section_num)
 
-        thread_safe_print(f"\n{'='*60}")
-        thread_safe_print(f"Section {section_num}: {section['title']}")
-        thread_safe_print(f"{'='*60}")
-
         try:
             # Get relevant memory for this section
             relevant_memory = self.insight_memory.get_relevant_memory(section_num)
 
             # Step 1: Initial Draft
-            thread_safe_print(f"Section {section_num} → Drafting...")
+            if hasattr(self, 'worker_display') and self.worker_display:
+                self.worker_display.update(section_num, "Draft")
+            else:
+                thread_safe_print(f"Section {section_num} → Drafting...")
             initial_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
             self.file_manager.save_step_output(section_num, "step_1_initial_draft.md", initial_draft)
 
@@ -406,7 +463,10 @@ class IntelligentAnalyst:
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
             else:
                 # Step 2: Completeness Check
-                thread_safe_print(f"Section {section_num} → Refining...")
+                if hasattr(self, 'worker_display') and self.worker_display:
+                    self.worker_display.update(section_num, "Refine")
+                else:
+                    thread_safe_print(f"Section {section_num} → Refining...")
                 add_list = self.core_analyzer.completeness_check(section, initial_draft)
                 self.file_manager.save_step_output(section_num, "step_2_completeness_check.txt", add_list)
 
@@ -415,7 +475,10 @@ class IntelligentAnalyst:
                 self.file_manager.save_step_output(section_num, "step_3_improved_draft.md", improved_draft)
 
                 # Step 4: Deep Analysis and Polish
-                thread_safe_print(f"Section {section_num} → Polishing...")
+                if hasattr(self, 'worker_display') and self.worker_display:
+                    self.worker_display.update(section_num, "Polish")
+                else:
+                    thread_safe_print(f"Section {section_num} → Polishing...")
                 step4_output = self.core_analyzer.deep_analysis_and_polish(section, improved_draft)
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", step4_output)
 
@@ -488,6 +551,8 @@ class IntelligentAnalyst:
             if not sec_list:
                 return local
             if actual_workers > 1:
+                # Initialize worker display for parallel processing
+                self.worker_display = WorkerDisplay(actual_workers)
                 thread_safe_print(f"Processing {len(sec_list)} sections with {actual_workers} parallel workers...")
                 with ThreadPoolExecutor(max_workers=actual_workers) as executor:
                     future_map = {}
@@ -502,7 +567,7 @@ class IntelligentAnalyst:
                             res = fut.result()
                             local[s_num] = res
                             completed += 1
-                            thread_safe_print(f"Section {s_num} ✓ Complete ({completed}/{len(sec_list)} sections done)")
+                            self.worker_display.complete(s_num, completed, len(sec_list))
                         except Exception as e:
                             err = str(e)
                             if "429" in err or "quota" in err.lower():
@@ -511,6 +576,8 @@ class IntelligentAnalyst:
                                 thread_safe_print(f"Section {s_num} ⚠ Error: {e}")
                             local[s_num] = f"Processing failed: {e}"
             else:
+                # Disable worker display for single-worker mode
+                self.worker_display = None
                 for s_num in sec_list:
                     try:
                         local[s_num] = self.analyze_section(s_num)

@@ -901,19 +901,16 @@ if __name__ == "__main__":
     
     thread_safe_print("Pre-flight checks completed\n")
     
-    # Model selection (Flash / Flash-Lite / 2.0 Flash)
+    # Model selection
     thread_safe_print("Select LLM model:")
-    thread_safe_print("  1) gemini-2.5-flash       (higher quality)")
-    thread_safe_print("  2) gemini-2.5-flash-lite  (cheaper)")
-    thread_safe_print("  3) gemini-2.0-flash       (legacy, cheaper)")
+    thread_safe_print("  1) gemini-2.5-flash")
+    thread_safe_print("  2) gemini-2.5-pro")
     selected_model = None
-    choice = prompt_single_digit("Choose model [1/2/3] (default 1): ", valid_digits="123", default_digit="1")
+    choice = prompt_single_digit("Choose model [1/2] (default 1): ", valid_digits="12", default_digit="1")
     if choice == "1":
         selected_model = 'gemini-2.5-flash'
-    elif choice == "2":
-        selected_model = 'gemini-2.5-flash-lite'
     else:
-        selected_model = 'gemini-2.0-flash'
+        selected_model = 'gemini-2.5-pro'
 
     # Optional LLM warm-up to reduce first-call latency (uses selected model)
     try:

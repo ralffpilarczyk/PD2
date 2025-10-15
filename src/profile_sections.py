@@ -183,7 +183,7 @@ sections = [
                 "   - 2 areas of disconnect between management statements and actual performance\\n"
                 "\\n"
                 "For each data point, extract historical values for the last 3 years and the 5 most recent interim periods. "
-                "Present data points in table format to the extent reasonable. If not, use bullet points.\\n"
+                "Present data points in table format to the extent reasonable.\\n"
                 "For each data point, always try to identify the most recent value and its date, because that's usually the most important one.\\n"
                 "For each data point, always reference the specific point in time or time period it relates to.\\n"
                 "For each data point, note any anomalies, any disconnects between the data point and management's commentary, and any industry benchmarks mentioned."
@@ -584,98 +584,131 @@ sections = [
     {
         "number": 27,
         "title": "Buyside Due Diligence - Macro",
-        "specs": "Describe the 3 most important macroeconomic trends that could materially impact the Company's economic performance over the next 12 months.\\n"
-                "Focus on downside risks, not upside opportunities. Provide a detailed analysis of potential negative impacts.\\n"
-                "For each trend, provide a quantitative assessment of the Company's sensitivity to these factors, \\n"
-                "including impacts on margins, revenue, and cash flow. Include benchmarking against competitors' sensitivity to the \\n"
-                "same macroeconomic factors where material differences in relative performance exist.\\n"
-                "For each key trend, formulate 1-2 detailed, data-driven due diligence questions that a potential buyer should ask.\\n"
+        "specs": "Identify 2-3 macroeconomic factors where the Company has demonstrated unusual sensitivity or disclosed specific exposure.\\n"
+                "Unusual sensitivity means: disclosed exposure that peers don't face, material increase in exposure over recent periods, \\n"
+                "explicit management statements about vulnerability to the factor, or incomplete hedging against a factor already moving adversely.\\n"
+                "Order them in declining order of importance.\\n"
+                "Focus on factors where a foreseeable change would fundamentally damage cash generation within 12 months.\\n"
+                "Describe each factor in one sentence, underpinned by specific data points.\\n"
+                "For each factor, cite the specific disclosure and the company's stated exposure.\\n"
+                "Then formulate one question that challenges whether this exposure is sustainable, hedgeable, or accurately disclosed.\\n"
+                "Questions must follow this format: [Document name] states on page [X] that [specific statement]. [One sentence explaining why this creates fundamental risk]. [One question that exposes the gap between management's position and economic reality]."
+                "Keep each question as short as possible and as loaded with data points as possible.\\n"
+                "Do not ask questions for data. Ask questions that challenge assumptions, expose timing risks, or reveal dependencies management has downplayed.\\n"
+                "Each question should make whoever reads it uncomfortable about something they thought they understood.\\n"
                 "Validate all claims with specific historical data points and quantitative examples.\\n"
                 "All data points must reference the specific point in time or time period they relate to.\\n"
                 "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report).\\n"
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
+ 
     {
         "number": 28,
         "title": "Buyside Due Diligence - Industry",
-        "specs": "Describe the 3 most important industry trends that could materially impact the Company's economic performance over the next 12-24 months.\\n"
-                "Focus on downside risks, not upside opportunities, including technology shifts, competitive dynamics, and regulatory changes.\\n"
-                "Provide a detailed analysis of potential negative impacts. \\"
-                "For each trend, provide a quantitative assessment of the Company's sensitivity to these factors, \\n"
-                "including impacts on margins, revenue, and cash flow. Include benchmarking against competitors' sensitivity to the \\n"
-                "same industry factors where material differences in relative performance exist.\\n"
-                "For each key trend, formulate 1-2 detailed, data-driven due diligence questions that a potential buyer should ask.\\n"
+        "specs": "Identify 2-3 industry-specific factors where the Company has demonstrated unusual sensitivity or disclosed specific exposure.\\n"
+                "Unusual sensitivity means: exposure to industry structural shifts that peers avoid, regulatory changes that disproportionately impact the company's business model, \\n"
+                "technology transitions where the company lags adoption, competitive dynamics where market share is eroding, or customer concentration in declining end markets.\\n"
+                "Order them in declining order of importance.\\n"
+                "Focus on factors where a foreseeable change would fundamentally damage cash generation within 12 months.\\n"
+                "Describe each factor in one sentence, underpinned by specific data points.\\n"
+                "For each factor, cite the specific disclosure and the company's stated exposure or observed impact.\\n"
+                "Then formulate one question that challenges whether this exposure is defensible, reversible, or accurately disclosed.\\n"
+                "Questions must follow this format: [Document name] states on page [X] that [specific statement]. [One sentence explaining why this creates fundamental risk]. [One question that exposes the gap between management's position and competitive reality].\\n"
+                "Keep each question as short as possible and as loaded with data points as possible.\\n"
+                "Do not ask questions for data. Ask questions that challenge assumptions, expose competitive timing risks, or reveal structural disadvantages management has downplayed.\\n"
+                "Each question should make whoever reads it uncomfortable about something they thought they understood.\\n"
                 "Validate all claims with specific historical data points and quantitative examples.\\n"
                 "All data points must reference the specific point in time or time period they relate to.\\n"
                 "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report).\\n"
                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
+ 
     {
         "number": 29,
         "title": "Buyside Due Diligence - Competitive Positioning",
-        "specs": "Describe the Company's 3 most important quantifiable competitive weaknesses versus key competitors and industry benchmarks.\\n"
-                 "Analyze market share trends over the past 24 months and describe whether the Company's position is deteriorating.\\n"
-                 "Measure product/service differentiation using objective metrics, pricing power through realization rates and premiums, and customer loyalty through retention and satisfaction scores.\\n"
-                 "Quantify cost position and operational efficiency relative to key competitors using margin analysis and productivity metrics.\\n"
-                 "For each topic, formulate 1-2 specific due diligence questions to validate competitive claims with concrete data.\\n"
-                 "Triangulate all competitive positioning assertions using measurable data from multiple sources including customer metrics, win/loss analysis, and third-party benchmarking.\\n"
-                 "All data points must reference the specific point in time or time period they relate to.\\n"
-                 "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report).\\n"
-                 "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
+        "specs": "Identify 2-3 competitive dynamics where the Company has demonstrated unusual weakness or disclosed deteriorating position.\\n"
+                "Unusual weakness means: market share losses accelerating versus prior periods, pricing power eroding with documented price realization declines, \\n"
+                "customer defection rates rising or key customer losses disclosed, win/loss ratios deteriorating, cost position disadvantaged versus named competitors, \\n"
+                "or product differentiation narrowing with competitors matching features that previously commanded premiums.\\n"
+                "Order them in declining order of importance.\\n"
+                "Focus on dynamics where continued deterioration would fundamentally damage cash generation within 12 months.\\n"
+                "Describe each dynamic in one sentence, underpinned by specific data points.\\n"
+                "For each dynamic, cite the specific disclosure and the company's stated position or observed competitive impact.\\n"
+                "Then formulate one question that challenges whether this position is defensible, whether management's characterization matches the data, or whether the deterioration is accelerating.\\n"
+                "Questions must follow this format: [Document name] states on page [X] that [specific statement]. [One sentence explaining why this creates fundamental risk]. [One question that exposes the gap between management's position and competitive data].\\n"
+                "Keep each question as short as possible and as loaded with data points as possible.\\n"
+                "Do not ask questions for data. Ask questions that challenge competitive claims, expose share loss trajectories, or reveal pricing power erosion management has reframed as strategic choices.\\n"
+                "Each question should make whoever reads it uncomfortable about something they thought they understood.\\n"
+                "Validate all claims with specific historical data points and quantitative examples.\\n"
+                "All data points must reference the specific point in time or time period they relate to.\\n"
+                "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report).\\n"
+                "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
+
     {
         "number": 30,
         "title": "Buyside Due Diligence - Operating Performance",
-        "specs": "Describe the 3 most important operating metrics that materially impact the Company's economic performance over the last 24 months. \\n"
-            "Prioritize metrics related to market share, volumes, unit pricing, revenue per user, unit margins, \\n"
-            "customer acquisition costs, customer churn/retention, asset utilization, and unit economics. Not financial metrics. \\n"
-            "For each metric:\n"
-            "  - Provide a clear definition of the metric and its relevance.\\n"
-            "  - Present historical data for the last 24 months, showing trends (preferably quarterly data if available).\\n"
-            "  - Benchmark against key competitors and/or industry averages, where data is available. Quantify any outperformance or underperformance. \\n"
-            "  - Analyze the drivers of the metric's performance.  Explain why the metric has changed (e.g., due to market conditions, competitive actions, internal initiatives).\\n"
-            "  - Assess the sustainability of the current performance trend.  Are there factors that could cause the metric to improve or deteriorate? \\n"
-            "  - Quantify the financial impact of the metric's performance (e.g., contribution to revenue growth, margin expansion/compression). \\n"
-            "  - Formulate 1-2 specific, data-driven due diligence questions that a potential buyer should ask. \\n"
-            "Provide an introductory paragraph summarizing the overall operating performance based on the chosen metrics. \\n"
-            "All data points must reference the specific point in time or time period they relate to. \\n"
-            "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report). \\n"
-            "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
+        "specs": "Identify 2-3 operating metrics where the Company has demonstrated unusual deterioration or disclosed weakening trends.\\n"
+                "Unusual deterioration means: volume or unit sales declining faster than industry growth rates, unit economics worsening with revenue per unit falling or cost per unit rising, \\n"
+                "customer acquisition costs increasing while customer lifetime value or retention rates decline, capacity utilization falling despite management claims of demand strength, \\n"
+                "productivity metrics declining with output per employee or asset turns slowing, or operational efficiency metrics deteriorating faster than peers.\\n"
+                "Order them in declining order of importance.\\n"
+                "Focus on metrics where continued deterioration would fundamentally damage cash generation within 12 months.\\n"
+                "Describe each metric in one sentence, underpinned by specific data points.\\n"
+                "For each metric, cite the specific disclosure and the company's stated performance or observed operational impact.\\n"
+                "Then formulate one question that challenges whether this deterioration is cyclical or structural, temporary or permanent, or whether management's mitigation plans are credible given the trajectory.\\n"
+                "Questions must follow this format: [Document name] states on page [X] that [specific statement]. [One sentence explaining why this creates fundamental risk]. [One question that exposes the gap between management's explanation and operational data].\\n"
+                "Keep each question as short as possible and as loaded with data points as possible.\\n"
+                "Do not ask questions for data. Ask questions that challenge operational claims, expose unit economics erosion, or reveal efficiency deterioration management has attributed to temporary factors.\\n"
+                "Each question should make whoever reads it uncomfortable about something they thought they understood.\\n"
+                "Validate all claims with specific historical data points and quantitative examples.\\n"
+                "All data points must reference the specific point in time or time period they relate to.\\n"
+                "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report).\\n"
+                "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
+
     {
         "number": 31,
         "title": "Buyside Due Diligence - Financial Performance",
-        "specs": "Describe the 3 most important financial metrics and then identify and quantify material risks to these metrics and the Company's economic well-being over the next 12-24 months. \\n"
-            "Analyse the underlying drivers, trends, and potential vulnerabilities. \\n"
-            "For each metric:\\n"
-            "  - Provide a clear definition and explain its relevance to the Company's financial health. \\n"
-            "  - Present historical data for the last 24 months (preferably quarterly), showing trends and comparing to relevant benchmarks (industry averages, key competitors) where available. \\n"
-            "  - Analyze the quality of the metric.  Are there any accounting treatments, one-time items, or unusual adjustments that could distort the true picture? \\n"
-            "  - Assess sustainability.  Is the current performance likely to continue, improve, or deteriorate? What are the key drivers and risks? \\n"
-            "  - Quantify the potential financial impact of any identified risks or vulnerabilities (e.g., impact on revenue, EBITDA, cash flow, valuation). \\n"
-            "  - For each of the 3 metrics, formulate 1-2 specific, data-driven due diligence questions that a potential buyer should ask. \\n"
-            "Include an introductory paragraph summarizing the overall financial risk profile based on the chosen metrics. \\n"
-            "Conduct a forensic accounting review to the extent possible based on the provided documents, to search for unusual accounting policies. \\n"
-            "All data points must reference the specific point in time or time period they relate to. \\n"
-            "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report). \\n"
-            "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
+        "specs": "Identify 2-3 financial metrics where the Company has demonstrated unusual deterioration or disclosed weakening cash generation quality.\\n"
+                "Unusual deterioration means: margins compressing faster than cost inflation or pricing weakness would suggest, cash conversion declining with cash flow from operations lagging reported earnings, \\n"
+                "working capital building with receivables aging or inventory turns slowing, capital intensity increasing without disclosed capacity additions, \\n"
+                "one-time adjustments recurring across multiple periods, GAAP versus non-GAAP gaps widening, or revenue recognition timing creating disconnect between reported revenue and cash collection.\\n"
+                "Order them in declining order of importance.\\n"
+                "Focus on metrics where continued deterioration would fundamentally damage cash generation within 12 months.\\n"
+                "Describe each metric in one sentence, underpinned by specific data points.\\n"
+                "For each metric, cite the specific disclosure and the company's stated financial performance or observed cash impact.\\n"
+                "Then formulate one question that challenges whether earnings quality is deteriorating, whether cash generation matches reported profits, or whether accounting choices mask underlying weakness.\\n"
+                "Questions must follow this format: [Document name] states on page [X] that [specific statement]. [One sentence explaining why this creates fundamental risk]. [One question that exposes the gap between management's characterization and financial reality].\\n"
+                "Keep each question as short as possible and as loaded with data points as possible.\\n"
+                "Do not ask questions for data. Ask questions that challenge earnings quality, expose cash conversion deterioration, or reveal working capital absorption management has characterized as temporary or strategic.\\n"
+                "Each question should make whoever reads it uncomfortable about something they thought they understood.\\n"
+                "Validate all claims with specific historical data points and quantitative examples.\\n"
+                "All data points must reference the specific point in time or time period they relate to.\\n"
+                "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report).\\n"
+                "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
     {
         "number": 32,
         "title": "Buyside Due Diligence - Management",
-        "specs": "Describe the key members of the management team and the Board of Directors, focusing on individual track records, experience, and potential risks.\n"
-            "For each key individual (primarily C-suite and key Board members):\n"
-            "  - Provide a brief overview of their current role and tenure at the Company.\n"
-            "  - Analyze their track record, both at the Company and in previous roles. Include:\n"
-            "    - Quantifiable achievements (e.g., revenue growth, cost reductions, successful product launches) over the last 24 months.\n"
-            "    - Any identified failures or setbacks.\n"
-            "    - Relevant experience and expertise, particularly as it relates to the Company's strategic priorities.\n"
-            "    - Identification of any potential 'red flags' (e.g., frequent job changes, involvement in controversies, lack of relevant experience).\n"
-            "  - Assess potential retention risks based on information available in the provided documents (e.g., recent departures, changes in compensation structure, negative sentiment expressed in internal communications).\n"
-            "  - For each decision maker formulate 1 specific, data-driven due diligence questions that a potential buyer should ask. \n"
-            "All data points must reference the specific point in time or time period they relate to. \\n"
-            "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report). \\n"
-            "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
+        "specs": "Identify 2-3 management or governance issues where the Company has demonstrated unusual risk signals or disclosed credibility concerns.\\n"
+                "Unusual risk signals mean: management missing previously stated targets or guidance across multiple periods, key executive turnover accelerating with departures not replaced or roles consolidated, \\n"
+                "compensation structures misaligned with shareholder value creation or rewarding metrics that don't correlate with cash generation, insider selling concentrated in periods before negative results disclosed, \\n"
+                "management tone shifting materially between periods without acknowledgment of changed circumstances, board independence compromised with interlocking relationships or concentrated voting control, \\n"
+                "or track record showing repeated failed strategic initiatives or acquisitions that destroyed value.\\n"
+                "Order them in declining order of importance.\\n"
+                "Focus on issues where continued deterioration or misalignment would fundamentally damage execution capability or capital allocation within 12 months.\\n"
+                "Describe each issue in one sentence, underpinned by specific data points.\\n"
+                "For each issue, cite the specific disclosure and the company's stated position or observed management action.\\n"
+                "Then formulate one question that challenges whether management has the capability to execute stated strategy, whether incentives drive value creation, or whether credibility remains intact given track record.\\n"
+                "Questions must follow this format: [Document name] states on page [X] that [specific statement]. [One sentence explaining why this creates fundamental risk]. [One question that exposes the gap between management's claims and execution reality].\\n"
+                "Keep each question as short as possible and as loaded with data points as possible.\\n"
+                "Do not ask questions for data. Ask questions that challenge management capability, expose incentive misalignment, or reveal credibility gaps between promises and delivery.\\n"
+                "Each question should make whoever reads it uncomfortable about something they thought they understood.\\n"
+                "Validate all claims with specific historical data points and quantitative examples.\\n"
+                "All data points must reference the specific point in time or time period they relate to.\\n"
+                "More recent data points (e.g. from subsequent interim financials) are more important than older data points (e.g. from the preceding annual report).\\n"
+                "Always include precise footnotes with exact sources, document references, page numbers, and sections for each data point.",
     },
 
     {

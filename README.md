@@ -1,4 +1,4 @@
-# ProfileDash 2.0
+# ProfileDash 2.1
 
 Intelligent document analysis system that processes PDF financial documents and generates comprehensive company profiles with 33 analytical sections using Google's Gemini API.
 

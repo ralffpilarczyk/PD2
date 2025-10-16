@@ -31,10 +31,26 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Import modular components
-from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections
+from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections, __version__
 
 # Import thread_safe_print, retry_with_backoff, and clean_markdown_tables from utils
 from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tables
+
+# ANSI Color Codes and Styling
+RESET = '\033[0m'
+BOLD = '\033[1m'
+DIM = '\033[2m'
+
+# Colors (minimal elegant scheme)
+RED = '\033[91m'      # Errors only
+CYAN = '\033[96m'     # Success, progress (light blue)
+WHITE = '\033[97m'    # Base color for everything else
+
+# Symbols
+CHECK = '✓'
+ARROW = '→'
+WARNING = '⚠'
+CROSS = '✗'
 
 # Module-level worker function for PDF conversion (needed for multiprocessing)
 def _pdf_conversion_worker(pdf_path: str, use_llm: bool = False) -> Optional[str]:
@@ -111,7 +127,7 @@ class WorkerDisplay:
             self._redraw()
 
     def complete(self, section_num, completed, total):
-        """Mark a section as complete and print completion message"""
+        """Mark a section as complete (silent - no output)"""
         with self.lock:
             # Remove from active workers
             if section_num in self.worker_ids:
@@ -119,8 +135,7 @@ class WorkerDisplay:
                 if worker_id in self.worker_status:
                     del self.worker_status[worker_id]
 
-            # Print completion on new line
-            print(f"\nSec. {section_num} ✓ Complete ({completed}/{total})")
+            # Silent completion - no progress output needed
 
     def _redraw(self):
         """Redraw the worker status line (only active workers)"""
@@ -131,13 +146,14 @@ class WorkerDisplay:
         parts = []
         for wid in sorted(self.worker_status.keys()):
             sec_num, action = self.worker_status[wid]
-            # Fixed width: "Sec. 1 → Draft     " = 20 chars
-            status = f"Sec. {sec_num} → {action}".ljust(20)
+
+            # Format with minimal styling: "Sec. 5 → Draft"
+            status = f"{DIM}Sec.{RESET} {BOLD}{sec_num}{RESET} {ARROW} {action}"
             parts.append(status)
 
         # Join with separator and print
-        line = " | ".join(parts)
-        print(f"\r{line:<80}", end='', flush=True)
+        line = f" {DIM}|{RESET} ".join(parts)
+        print(f"\r{line}{RESET}{'':80}", end='', flush=True)
 
 
 class IntelligentAnalyst:
@@ -342,17 +358,17 @@ class IntelligentAnalyst:
             cached_md = source_dir / f"{pdf_name}.md"
             # Old convention: PDF filename with _m.md suffix
             cached_md_legacy = source_dir / f"{pdf_name}_m.md"
-            
+
             # Prefer new naming, fall back to legacy
             if cached_md.exists():
                 with progress_tracker['lock']:
                     progress_tracker['completed'] += 1
-                    thread_safe_print(f"[{progress_tracker['completed']}/{progress_tracker['total']}] {Path(pdf_path).name} → Cached")
+                    thread_safe_print(f"{DIM}[{progress_tracker['completed']}/{progress_tracker['total']}]{RESET} {Path(pdf_path).name} {ARROW} {CYAN}Cached{RESET}")
                 converted_files.append(str(cached_md))
             elif cached_md_legacy.exists():
                 with progress_tracker['lock']:
                     progress_tracker['completed'] += 1
-                    thread_safe_print(f"[{progress_tracker['completed']}/{progress_tracker['total']}] {Path(pdf_path).name} → Cached")
+                    thread_safe_print(f"{DIM}[{progress_tracker['completed']}/{progress_tracker['total']}]{RESET} {Path(pdf_path).name} {ARROW} {CYAN}Cached{RESET}")
                 converted_files.append(str(cached_md_legacy))
             else:
                 to_convert.append(pdf_path)
@@ -360,12 +376,12 @@ class IntelligentAnalyst:
         # Process conversion for remaining PDFs
         cached_count = len(pdf_files) - len(to_convert)
         if not to_convert:
-            thread_safe_print(f"✓ All {len(pdf_files)} PDF(s) served from SourceFiles cache - no conversion needed!")
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} All {BOLD}{len(pdf_files)}{RESET} PDF(s) served from SourceFiles cache - no conversion needed!")
             return converted_files
-        
+
         if cached_count > 0:
-            thread_safe_print(f"✓ Reusing {cached_count} cached file(s) from SourceFiles")
-        thread_safe_print(f"→ Converting {len(to_convert)} new PDF(s) to markdown...")
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Reusing {BOLD}{cached_count}{RESET} cached file(s) from SourceFiles")
+        thread_safe_print(f"{ARROW} Converting {BOLD}{len(to_convert)}{RESET} new PDF(s) to markdown...")
 
         # Use process pool to avoid PyTorch tensor conflicts
         # Adjust workers based on LLM mode (API-bound vs CPU-bound)
@@ -387,7 +403,7 @@ class IntelligentAnalyst:
             workers_env = 2 if self.use_llm_pdf_conversion else 3
 
         mode_str = "enhanced" if self.use_llm_pdf_conversion else "basic"
-        thread_safe_print(f"Using {workers_env} worker(s) for {mode_str} PDF conversion")
+        thread_safe_print(f"Using {BOLD}{workers_env}{RESET} worker(s) for {mode_str} PDF conversion")
 
         with ProcessPoolExecutor(max_workers=workers_env) as pool:
             # Pass use_llm flag to each worker
@@ -405,7 +421,7 @@ class IntelligentAnalyst:
                         out_path.write_text(cleaned, encoding='utf-8')
                         with progress_tracker['lock']:
                             progress_tracker['completed'] += 1
-                            thread_safe_print(f"[{progress_tracker['completed']}/{progress_tracker['total']}] {Path(src).name} → Complete")
+                            thread_safe_print(f"{DIM}[{progress_tracker['completed']}/{progress_tracker['total']}]{RESET} {Path(src).name} {ARROW} {CYAN}Complete{RESET}")
                         converted_files.append(str(out_path))
                     else:
                         # Fallback to original single-threaded path for this file
@@ -415,13 +431,13 @@ class IntelligentAnalyst:
                         else:
                             with progress_tracker['lock']:
                                 progress_tracker['failed'] += 1
-                                thread_safe_print(f"Failed: {Path(src).name}")
+                                thread_safe_print(f"{RED}{CROSS}{RESET} Failed: {Path(src).name}")
                 except Exception as e:
-                    thread_safe_print(f"Conversion task error for {Path(src).name}: {e}")
+                    thread_safe_print(f"{RED}Conversion task error for {Path(src).name}: {e}{RESET}")
 
-        thread_safe_print(f"\nSummary: {cached_count} cached, {progress_tracker['completed']} converted, {len(converted_files)} total")
+        thread_safe_print(f"\nSummary: {cached_count} cached, {progress_tracker['completed']} converted, {BOLD}{len(converted_files)}{RESET} total")
         if progress_tracker['failed'] > 0:
-            thread_safe_print(f"⚠ {progress_tracker['failed']} file(s) failed")
+            thread_safe_print(f"{WARNING} {progress_tracker['failed']} file(s) failed")
 
         return converted_files
     
@@ -600,50 +616,50 @@ class IntelligentAnalyst:
 
         # Generate profile with Phase 1 results (and potential placeholder for 33)
         thread_safe_print(f"\n{'='*60}")
-        thread_safe_print("Generating Profile")
+        thread_safe_print(f"{BOLD}Generating Profile{RESET}")
         thread_safe_print(f"{'='*60}")
         try:
             profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
             # Include 33 in list so placeholder (if present) is picked up
             phase1_list = non32 + ([self.core_analyzer.SECTION_32_EXEMPT] if has32 else [])
             profile_generator.generate_html_profile(results, phase1_list, self.full_context, sections)
-            thread_safe_print("✓ Profile ready")
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
         except Exception as e:
-            thread_safe_print(f"⚠ Profile generation failed: {e}")
+            thread_safe_print(f"{WARNING} Profile generation failed: {e}")
 
         # Phase 2: run Section 33 (Data Book) alone (sequential) and regenerate
         if has32:
             thread_safe_print(f"\n{'='*60}")
-            thread_safe_print("Generating Data Appendix (Section 33)")
+            thread_safe_print(f"{BOLD}Generating Data Appendix (Section 33){RESET}")
             thread_safe_print(f"{'='*60}")
             try:
                 res32 = self.analyze_section(self.core_analyzer.SECTION_32_EXEMPT)
                 results[self.core_analyzer.SECTION_32_EXEMPT] = res32
             except Exception as e:
-                thread_safe_print(f"⚠ Appendix generation failed: {e}")
+                thread_safe_print(f"{WARNING} Appendix generation failed: {e}")
             # Regenerate profile with full set
             try:
                 profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
                 profile_generator.generate_html_profile(results, section_numbers, self.full_context, sections)
-                thread_safe_print("✓ Appendix complete - Profile updated")
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profile updated")
             except Exception as e:
-                thread_safe_print(f"⚠ Profile update failed: {e}")
+                thread_safe_print(f"{WARNING} Profile update failed: {e}")
 
         # Post-run memory review AFTER profile delivery
         if len(section_numbers) > 1:
             thread_safe_print(f"\n{'='*60}")
-            thread_safe_print("Learning Review")
+            thread_safe_print(f"{BOLD}Learning Review{RESET}")
             thread_safe_print(f"{'='*60}")
             try:
                 self._conduct_memory_review()
             except Exception as e:
-                thread_safe_print(f"⚠ Memory review failed: {e}")
+                thread_safe_print(f"{WARNING} Memory review failed: {e}")
 
         return results
     
     def _conduct_memory_review(self):
         """Review and update learning memory"""
-        thread_safe_print("→ Extracting insights...")
+        thread_safe_print(f"{ARROW} Extracting insights...")
         
         # Collect all learning extractions
         learning_files = []
@@ -732,9 +748,9 @@ Generate comprehensive methodology candidates - subsequent harsh filtering will 
 
             # Show memory stats after cleanup
             memory_stats = self.insight_memory.get_memory_stats()
-            thread_safe_print(f"✓ Memory updated: {memory_stats['total_insights']}/{memory_stats['max_possible']} insights ({memory_stats['utilization_percent']}%)")
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Memory updated: {BOLD}{memory_stats['total_insights']}{RESET}/{memory_stats['max_possible']} insights ({memory_stats['utilization_percent']}%)")
         except Exception as e:
-            thread_safe_print(f"Warning: Memory update failed: {e}")
+            thread_safe_print(f"{WARNING} Memory update failed: {e}")
     
     def _generate_run_summary(self, results: Dict):
         """Generates a final summary markdown file only (HTML handled by ProfileGenerator)."""
@@ -917,7 +933,10 @@ def select_pdf_files():
 
 # Usage interface
 if __name__ == "__main__":
-    thread_safe_print("PROFILEDASH 2.0 - with Learning Memory")
+    # Clear terminal screen
+    print("\033[2J\033[H", end='')
+
+    thread_safe_print(f"PROFILEDASH {__version__} - with Learning Memory")
     thread_safe_print("="*60)
     
     # Pre-flight checks
@@ -926,32 +945,32 @@ if __name__ == "__main__":
 
     # Check 1: Verify API key is set
     if not os.environ.get("GEMINI_API_KEY"):
-        thread_safe_print("ERROR: GEMINI_API_KEY not configured")
+        thread_safe_print(f"{RED}ERROR:{RESET} GEMINI_API_KEY not configured")
         thread_safe_print("Please set your API key in .env file:")
         thread_safe_print("  echo 'GEMINI_API_KEY=your-key-here' > .env")
         sys.exit(1)
-    thread_safe_print("✓ API key configured")
+    thread_safe_print(f"{CYAN}{CHECK}{RESET} API key configured")
 
     # Check 2: Verify required dependencies
     try:
         # Check for Marker (PDF conversion)
         from marker.converters.pdf import PdfConverter
-        thread_safe_print("✓ PDF conversion ready (Marker)")
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} PDF conversion ready (Marker)")
         pdf_support = True
     except ImportError as e:
-        thread_safe_print("⚠ Marker not installed - PDF files cannot be processed")
-        thread_safe_print("  Install with: pip install marker-pdf")
+        thread_safe_print(f"{WARNING} Marker not installed - PDF files cannot be processed")
+        thread_safe_print(f"  {DIM}Install with: pip install marker-pdf{RESET}")
         pdf_support = False
         # Don't exit - user might only want to use MD files
 
     # Check 3: Verify WeasyPrint (PDF report generation)
     try:
         from weasyprint import HTML
-        thread_safe_print("✓ PDF reports ready (WeasyPrint)")
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} PDF reports ready (WeasyPrint)")
         pdf_generation_support = True
     except ImportError:
-        thread_safe_print("⚠ WeasyPrint not installed - HTML only")
-        thread_safe_print("  Install with: pip install weasyprint")
+        thread_safe_print(f"{WARNING} WeasyPrint not installed - HTML only")
+        thread_safe_print(f"  {DIM}Install with: pip install weasyprint{RESET}")
         pdf_generation_support = False
         # Don't exit - HTML reports will still be generated
 
@@ -959,7 +978,7 @@ if __name__ == "__main__":
     base_dirs = ["runs", "memory", "quality_metrics"]
     for dir_path in base_dirs:
         os.makedirs(dir_path, exist_ok=True)
-    thread_safe_print("✓ Directories verified")
+    thread_safe_print(f"{CYAN}{CHECK}{RESET} Directories verified")
     thread_safe_print("="*60 + "\n")
     
     # Model selection
@@ -977,9 +996,9 @@ if __name__ == "__main__":
     try:
         model = genai.GenerativeModel(selected_model, generation_config=genai.types.GenerationConfig(temperature=0.0))
         _ = retry_with_backoff(lambda: model.generate_content("ping").text)
-        thread_safe_print("✓ LLM warm-up completed")
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} LLM warm-up completed")
     except Exception as e:
-        thread_safe_print(f"LLM warm-up skipped/failed: {e}")
+        thread_safe_print(f"{WARNING} LLM warm-up skipped/failed: {e}")
     
     # Step 1: Select source files (PDF and/or MD) with retry capability
     source_file_selection = select_source_files()

@@ -136,10 +136,9 @@ def validate_and_fix_tables(content: str) -> str:
             fixes_made += 1
         fixed_lines.extend(fixed_table)
         table_count += 1
-    
-    if fixes_made > 0:
-        thread_safe_print(f"Fixed {fixes_made} tables to meet size constraints")
-    
+
+    # Silent table fixes - no output needed
+
     return '\n'.join(fixed_lines)
 
 

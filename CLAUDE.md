@@ -3,7 +3,7 @@
 This file provides guidance to AI assistants when working with code in this repository.
 
 ## Project Overview
-ProfileDash 2.0 is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 33 analytical sections using Google's Gemini API.
+ProfileDash 2.1 is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 33 analytical sections using Google's Gemini API.
 
 ## Architecture Principles
 The system follows a clean modular architecture with separation of concerns:

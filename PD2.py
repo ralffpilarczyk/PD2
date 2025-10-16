@@ -1075,7 +1075,10 @@ if __name__ == "__main__":
             break
     
     # Step 5: Now initialize ProfileDash with source files (includes PDF conversion)
-    thread_safe_print("\n" + "="*60)
+    # Clear terminal before starting processing
+    print("\033[2J\033[H", end='')
+
+    thread_safe_print("="*60)
     thread_safe_print("STARTING PROCESSING")
     thread_safe_print("="*60)
 

@@ -4,6 +4,9 @@ Intelligent Analyst - Modular Components
 This package contains the core components for the intelligent document analysis system.
 """
 
+# Version info
+__version__ = "2.1"
+
 from .core_analyzer import CoreAnalyzer
 from .insight_memory import InsightMemory
 from .quality_tracker import QualityTracker
@@ -14,13 +17,10 @@ from . import utils
 
 __all__ = [
     'CoreAnalyzer',
-    'InsightMemory', 
+    'InsightMemory',
     'QualityTracker',
     'FileManager',
     'ProfileGenerator',
     'sections',
     'utils'
 ]
-
-# Version info
-__version__ = "2.1"

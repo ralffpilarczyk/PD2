@@ -383,7 +383,7 @@ OUTPUT FORMAT (JSON):
   ]
 }}
 
-Extract principles that guide deeper analytical thinking.
+Extract principles that guide deeper analytical thinking."""
 
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,

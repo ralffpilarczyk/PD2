@@ -503,7 +503,7 @@ if __name__ == "__main__":
     # Clear terminal screen
     print("\033[2J\033[H", end='')
 
-    thread_safe_print(f"ONEPAGEPROFILE {__version__}")
+    thread_safe_print(f"ONEPAGEPROFILE {__opp_version__}")
     thread_safe_print("="*60)
 
     # Pre-flight checks

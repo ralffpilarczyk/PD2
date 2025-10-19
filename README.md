@@ -81,10 +81,18 @@ Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
 
 **Architecture:**
 - Multi-step analysis pipeline with progressive refinement
-- Learning system captures analytical patterns
+- Learning system captures analytical patterns (separate memories for PD2 and OPP)
 - Parallel processing with configurable workers
 - Automatic retry with exponential backoff for API limits
 - Thread-safe operations for concurrent processing
+
+**Learning System:**
+Both systems learn and improve over time, but maintain separate learning memories:
+- PD2: `memory/pd2_learning_memory.json` (33 sections, detailed analysis)
+- OPP: `memory/opp_learning_memory.json` (4 sections, M&A screening)
+- Archives: `memory/memory_library/{prefix}_memory_{timestamp}.json`
+
+Each system extracts universal analytical methodologies (9-10/10 quality only) and applies them to future runs.
 
 ## License
 

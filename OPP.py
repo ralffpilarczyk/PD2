@@ -233,7 +233,7 @@ class OnePageProfile:
         self.pdf_parts = None
 
         # Initialize learning system and file manager
-        self.insight_memory = InsightMemory(self.timestamp, model_name=model_name)
+        self.insight_memory = InsightMemory(self.timestamp, model_name=model_name, memory_prefix="opp")
         self.file_manager = FileManager(self.timestamp)
 
         # Setup directories and ensure memory file exists
@@ -568,7 +568,10 @@ Maximum 6 insights per section. Focus on methodologies suitable for manual revie
         # Apply memory updates
         try:
             # Archive current memory
-            self.file_manager.archive_memory(self.insight_memory.get_memory_data())
+            self.file_manager.archive_memory(
+                self.insight_memory.get_memory_data(),
+                memory_prefix="opp"
+            )
 
             # Process and add new insights (quality filtering happens here)
             self.insight_memory.process_new_insights(new_insights_text)

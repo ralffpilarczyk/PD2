@@ -75,17 +75,26 @@ class FileManager:
                 json.dump(memory_data, f, indent=2)
     
     
-    def archive_memory(self, memory_data: Dict, archive_name: str = None) -> str:
-        """Archive current memory and return archive path"""
+    def archive_memory(self, memory_data: Dict, archive_name: str = None, memory_prefix: str = None) -> str:
+        """Archive current memory and return archive path
+
+        Args:
+            memory_data: Memory data to archive
+            archive_name: Optional custom archive name
+            memory_prefix: Optional prefix (e.g., 'pd2', 'opp') to include in archive filename
+        """
         if archive_name is None:
             timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-            archive_name = f"memory_{timestamp}"
-        
+            if memory_prefix:
+                archive_name = f"{memory_prefix}_memory_{timestamp}"
+            else:
+                archive_name = f"memory_{timestamp}"
+
         archive_path = f"memory/memory_library/{archive_name}.json"
         os.makedirs("memory/memory_library", exist_ok=True)
         with open(archive_path, 'w', encoding='utf-8') as f:
             json.dump(memory_data, f, indent=2)
-        
+
         return archive_path
     
     def save_quality_metrics(self, quality_scores: Dict, run_number: int):

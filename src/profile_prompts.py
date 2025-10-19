@@ -20,13 +20,13 @@ def get_title_subtitle_prompt(company_name: str) -> str:
 
 CRITICAL RULES:
 - Title should be the company name: {company_name}
-- Subtitle should be a key message about the company for potential investors or buyers, in 4-8 words
+- Subtitle should be a key message about the company for potential investors or buyers, in 4-8 words, no period at the end
 - The subtitle should capture the key investment thesis or strategic positioning
 - Keep it concise and impactful
 
 OUTPUT FORMAT:
 # {company_name}
-# Your compelling 4-8 word subtitle here
+Your compelling 4-8 word subtitle here
 
 Now generate the title and subtitle based on the documents provided."""
 
@@ -92,7 +92,6 @@ PART B: INVESTOR PERSPECTIVE COMPLETENESS
 Consider adding statements (but only if they are not already present) underpinned by numbers and supported by source documents if they meet one of the following criteria:
 - They fulfill an item in the ORIGINAL REQUIREMENTS that was skipped
 - They are fundamental to a reader's understanding of the company as an investment or acquisition target
-- They are fundamental to the company's competitive positioning
 - They are fundamental to the company's prospects
 
 CRITICAL CONSTRAINT:
@@ -155,7 +154,6 @@ INSTRUCTIONS:
 5. Preserve all existing content - do not remove anything
 6. Keep the same format: bullets with bold keywords using **word** syntax
 7. If an ADD item duplicates existing content, enhance rather than duplicate
-8. Maintain short sentences (max 20 words) with numbers where possible
 
 FORMATTING RULES:
 - Keep bullet format with **bold** keywords (1-2 most important words per bullet)
@@ -183,13 +181,13 @@ def get_section_polish_prompt(section: dict, section_content: str, word_limit: i
     """
     word_count = len(section_content.split())
 
-    return f"""You are an expert analyst condensing content to its most essential elements for M&A evaluation.
+    return f"""You are an M&A Managing Director condensing content to its most essential elements for M&A evaluation by the chairman of the potential buyer.
 
-Polish this text like an M&A Managing Director would when preparing observations for the chairman of a potential buyer. The polished text must be:
-- **Concise**: Maximum {word_limit} words
-- **Coherent**: Always full sentences, no cryptic half-sentences
-- **Highly relevant**: Each statement must matter to the investment decision
-- **Fact-based**: Each statement underpinned with numbers or, absent that, hard facts
+Polish this text accordingly. The polished text must be:
+- **Concise**: Maximum {word_limit} words.
+- **Coherent**: Always full sentences, no cryptic half-sentences, consider the order of the sentences and the flow of the text.
+- **Highly relevant**: Each statement must matter to the investment decision.  
+- **Fact-based**: Each statement underpinned with numbers or, absent that, hard facts.
 
 SECTION: {section['title']}
 
@@ -206,11 +204,11 @@ FINAL TARGET: **Maximum {word_limit} words - absolutely no exceptions.**
 
 CONDENSING INSTRUCTIONS:
 
-1. **PRESERVE STRUCTURE** - The original requirements above define what this section should contain. Preserve coverage of those elements while condensing.
+1. **PRESERVE STRUCTURE** - The original requirements above define what this section should contain. Preserve coverage of those elements while condensing. Re-ordering to create a coherent flow is allowed.
 
 2. **RELEVANCE FILTER** - Keep only content that meets BOTH criteria:
    - Addresses the original requirements for this section
-   - Critical to investment/acquisition decision-making
+   - Critical to investment/acquisition decision-making (targeted to the chairman of the potential buyer)
 
 3. **DATA DENSITY**:
    - Preserve specific numbers, percentages, and trends
@@ -222,11 +220,12 @@ CONDENSING INSTRUCTIONS:
    - Cut repetitive points - state each insight once
    - Eliminate elaborate explanations - let the data speak
    - Focus on what's surprising, notable, or value-affecting
-   - Be brutal yet constructive
+   - Deliver deep insights
+   - Be brutal yet constructive when condensing
 
 5. **FORMAT PRESERVATION**:
    - Keep bullet format with **bold** keywords (1-2 words per bullet)
-   - Each bullet is one sentence (max 20 words)
+   - Each bullet is one sentence
    - Prioritize bullets with numbers and specific facts
 
 WHAT TO PRESERVE:

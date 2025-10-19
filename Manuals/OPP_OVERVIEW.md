@@ -353,7 +353,7 @@ def _conduct_memory_review(self):
     # Collects all step5_learning.json files
     # Synthesizes universal methodologies with LLM
     # Applies quality filtering (9-10/10 only)
-    # Updates memory/learning_memory.json
+    # Updates memory/opp_learning_memory.json
 ```
 
 **Learning System Architecture**:
@@ -368,7 +368,7 @@ def _conduct_memory_review(self):
   - Quality scoring: 6-10 scale
   - Harsh filtering: Only 9-10/10 insights persist in memory
   - Maximum 6 insights per section
-  - Saved to memory/learning_memory.json
+  - Saved to memory/opp_learning_memory.json (separate from PD2's memory)
 
 - **Memory Application** (next run):
   - Step 1 retrieves top 5 relevant insights for each section
@@ -379,6 +379,14 @@ def _conduct_memory_review(self):
   - Insights phrased as section requirement additions
   - Suitable for manual insertion into opp_sections.py
   - Universal principles, not specific findings
+
+**Why Separate from PD2?**
+
+OPP and PD2 use completely different analytical approaches:
+- **OPP Section 1**: "Company Overview" (concise M&A screening)
+- **PD2 Section 1**: "Operating Footprint" (detailed extraction with tables/history)
+
+Sharing learning memory would cause cross-contamination - OPP's learnings for "Company Overview" would incorrectly apply to PD2's "Operating Footprint" analysis, and vice versa. Separate memories ensure each system learns methodologies appropriate to its specific analytical tasks.
 
 ---
 
@@ -774,7 +782,7 @@ Memory Review & Learning
      │  • Collect all step5_learning.json files
      │  • Synthesize universal methodologies with LLM
      │  • Apply quality filtering (9-10/10 only)
-     │  • Update memory/learning_memory.json
+     │  • Update memory/opp_learning_memory.json
      │  • Archive old memory, save new memory
                                ↓
 PowerPoint Generation

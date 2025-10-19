@@ -207,7 +207,7 @@ class IntelligentAnalyst:
         
         # Initialize other components
         self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp, model_name=model_name)
-        self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name)
+        self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name, memory_prefix="pd2")
         self.quality_tracker = QualityTracker()
         
         # Ensure memory file exists
@@ -725,7 +725,10 @@ Generate comprehensive methodology candidates - subsequent harsh filtering will 
         # Apply memory updates
         try:
             # Archive current memory
-            archive_path = self.file_manager.archive_memory(self.insight_memory.get_memory_data())
+            archive_path = self.file_manager.archive_memory(
+                self.insight_memory.get_memory_data(),
+                memory_prefix="pd2"
+            )
             # Silent archival - no output
 
             # Process and add new insights

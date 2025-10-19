@@ -44,7 +44,7 @@ python OPP.py
 **Format:**
 - Title and subtitle
 - 4 sections: Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations
-- Each section limited to 500 words with bullet points
+- Each section limited to 100 words with bullet points
 
 ## ProfileDash 2.1 (PD2)
 

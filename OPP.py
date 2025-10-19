@@ -1,13 +1,17 @@
 import os
 import base64
 import google.generativeai as genai
-from typing import List, Optional
+from typing import List, Optional, Dict
 import sys
 from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog
 import tkinter as tk
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+import re
+import json
 
 # Load environment variables
 load_dotenv()
@@ -19,16 +23,19 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 __opp_version__ = "1.0"
 
 # Import utilities from PD2
-from src.utils import thread_safe_print
+from src.utils import thread_safe_print, retry_with_backoff
+from src.opp_sections import sections
 from src.profile_prompts import (
     COMPANY_NAME_EXTRACTION_PROMPT,
-    get_profile_generation_prompt,
-    get_completeness_check_prompt,
-    get_enhancement_prompt,
-    get_polish_prompt
+    get_title_subtitle_prompt,
+    get_section_generation_prompt,
+    get_section_completeness_check_prompt,
+    get_section_enhancement_prompt,
+    get_section_polish_prompt
 )
 from src.pptx_generator import create_profile_pptx
-import re
+from src.insight_memory import InsightMemory
+from src.file_manager import FileManager
 
 # ANSI Color Codes and Styling
 RESET = '\033[0m'
@@ -137,14 +144,80 @@ def select_pdf_files() -> Optional[List[str]]:
         return list(pdf_files)
 
 
-class OnePageProfile:
-    """Generates one-page company profiles from PDF documents with refinement loop"""
+class WorkerDisplay:
+    """Thread-safe display manager for parallel worker status"""
 
-    def __init__(self, pdf_files: List[str], model_name: str):
+    def __init__(self, num_workers: int):
+        self.num_workers = num_workers
+        self.worker_status = {}  # {worker_id: (section_num, action)}
+        self.lock = threading.Lock()
+        self.next_worker_id = 1
+        self.worker_ids = {}  # {section_num: worker_id}
+
+    def update(self, section_num: int, action: str):
+        """Update a worker's status and redraw the line
+
+        Args:
+            section_num: Section number being processed
+            action: One of "Draft", "Check", "Enhance", "Polish", "Learn"
+        """
+        with self.lock:
+            # Assign worker ID if this is a new section
+            if section_num not in self.worker_ids:
+                self.worker_ids[section_num] = self.next_worker_id
+                self.next_worker_id += 1
+
+            worker_id = self.worker_ids[section_num]
+            self.worker_status[worker_id] = (section_num, action)
+            self._redraw()
+
+    def complete(self, section_num: int, completed: int, total: int):
+        """Mark a section as complete (silent - no output)"""
+        with self.lock:
+            # Remove from active workers
+            if section_num in self.worker_ids:
+                worker_id = self.worker_ids[section_num]
+                if worker_id in self.worker_status:
+                    del self.worker_status[worker_id]
+
+            # Silent completion - no progress output needed
+
+    def _remove_silent(self, section_num: int):
+        """Immediately remove section from display without output"""
+        with self.lock:
+            if section_num in self.worker_ids:
+                worker_id = self.worker_ids[section_num]
+                if worker_id in self.worker_status:
+                    del self.worker_status[worker_id]
+
+    def _redraw(self):
+        """Redraw the worker status line (only active workers)"""
+        if not self.worker_status:
+            return
+
+        # Sort by worker ID and format each active worker
+        parts = []
+        for wid in sorted(self.worker_status.keys()):
+            sec_num, action = self.worker_status[wid]
+
+            # Format with minimal styling: "Sec. 5 → Draft"
+            status = f"{DIM}Sec.{RESET} {BOLD}{sec_num}{RESET} {ARROW} {action}"
+            parts.append(status)
+
+        # Join with separator and print
+        line = f" {DIM}|{RESET} ".join(parts)
+        thread_safe_print(line)
+
+
+class OnePageProfile:
+    """Generates one-page company profiles from PDF documents with parallel section processing"""
+
+    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2):
         self.pdf_files = pdf_files
         self.model_name = model_name
+        self.workers = workers
 
-        # Create models with different temperatures for different phases
+        # Create models with different temperatures
         self.model_low_temp = genai.GenerativeModel(
             model_name,
             generation_config=genai.types.GenerationConfig(temperature=0.2)
@@ -156,9 +229,17 @@ class OnePageProfile:
 
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Create run directory
-        self.run_dir = Path("runs") / f"opp_{self.timestamp}"
-        self.run_dir.mkdir(parents=True, exist_ok=True)
+        # PDF parts will be prepared once and reused
+        self.pdf_parts = None
+
+        # Initialize learning system and file manager
+        self.insight_memory = InsightMemory(self.timestamp, model_name=model_name)
+        self.file_manager = FileManager(self.timestamp)
+
+        # Setup directories and ensure memory file exists
+        self.file_manager.setup_directories(sections)
+        os.makedirs("memory", exist_ok=True)
+        self.file_manager.ensure_memory_file_exists(self.insight_memory.get_memory_data())
 
     def encode_pdf_to_base64(self, pdf_path: str) -> str:
         """Encode PDF file to base64 string"""
@@ -201,178 +282,322 @@ class OnePageProfile:
             thread_safe_print(f"{RED}{CROSS}{RESET} Failed to extract company name: {e}")
             return "Company Profile"
 
-    def generate_profile(self, pdf_parts: List, company_name: str) -> str:
-        """Generate the initial profile page content"""
-        thread_safe_print(f"{CYAN}{ARROW}{RESET} Generating profile page...")
+    def generate_title_subtitle(self, company_name: str) -> str:
+        """Generate title and subtitle separately"""
+        thread_safe_print(f"{CYAN}{ARROW}{RESET} Generating title and subtitle...")
 
-        prompt = get_profile_generation_prompt(company_name)
+        prompt = get_title_subtitle_prompt(company_name)
 
         try:
-            response = self.model_medium_temp.generate_content(pdf_parts + [prompt])
-            profile_content = response.text.strip()
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Initial profile complete")
-            return profile_content
-
+            response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
+            title_subtitle = response.text.strip()
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Title and subtitle complete")
+            return title_subtitle
         except Exception as e:
-            thread_safe_print(f"{RED}{CROSS}{RESET} Failed to generate profile: {e}")
-            return None
+            thread_safe_print(f"{RED}{CROSS}{RESET} Title generation failed: {e}")
+            return f"# {company_name}\n[Company Profile]"
 
-    def run_completeness_check(self, initial_profile: str, pdf_parts: List) -> str:
-        """Step 2: Check for missing data and investor perspectives"""
-        thread_safe_print(f"\n{CYAN}Step 2: Completeness Check{RESET}")
-        thread_safe_print(f"{CYAN}{ARROW}{RESET} Analyzing profile against source documents...")
-        thread_safe_print(f"{CYAN}{ARROW}{RESET} Checking investor perspective completeness...")
+    def _generate_section(self, section: dict) -> str:
+        """Step 1: Generate initial section content"""
+        # Get relevant learning memory for this section
+        relevant_memory = self.insight_memory.get_relevant_memory(section['number'])
+        prompt = get_section_generation_prompt(section, relevant_memory)
+        response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
+        return response.text.strip()
 
-        # Generate prompt with profile and section requirements
-        prompt = get_completeness_check_prompt(initial_profile)
-        # Replace placeholder with note about PDFs
+    def _check_section_completeness(self, section: dict, content: str) -> str:
+        """Step 2: Check section completeness"""
+        prompt = get_section_completeness_check_prompt(section, content)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
+        response = self.model_low_temp.generate_content(self.pdf_parts + [prompt])
+        return response.text.strip()
 
-        try:
-            response = self.model_low_temp.generate_content(pdf_parts + [prompt])
-            add_list = response.text.strip()
-
-            # Count items in ADD list
-            critical_count = add_list.count("[CRITICAL]")
-            important_count = add_list.count("[IMPORTANT]")
-            useful_count = add_list.count("[USEFUL]")
-            total_items = critical_count + important_count + useful_count
-
-            if "No critical gaps identified" in add_list or total_items == 0:
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} No critical gaps identified")
-            else:
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Identified {total_items} items to add")
-
-            return add_list
-
-        except Exception as e:
-            thread_safe_print(f"{RED}{CROSS}{RESET} Completeness check failed: {e}")
-            return "No additions needed due to error."
-
-    def apply_enhancements(self, initial_profile: str, add_list: str, pdf_parts: List) -> str:
-        """Step 3: Add missing content from ADD list"""
-        thread_safe_print(f"\n{CYAN}Step 3: Enhancement{RESET}")
-        thread_safe_print(f"{CYAN}{ARROW}{RESET} Adding missing content...")
-
-        # Format the enhancement prompt
-        prompt = get_enhancement_prompt(initial_profile, add_list)
-        # Replace placeholder with note about PDFs
+    def _enhance_section(self, section: dict, content: str, add_list: str) -> str:
+        """Step 3: Enhance section with missing items"""
+        prompt = get_section_enhancement_prompt(section, content, add_list)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
+        response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
+        enhanced = response.text.strip()
 
-        try:
-            response = self.model_medium_temp.generate_content(pdf_parts + [prompt])
-            enhanced_profile = response.text.strip()
-
-            # Check for empty output
-            if not enhanced_profile or len(enhanced_profile) < 100:
-                thread_safe_print(f"{YELLOW}{WARNING}{RESET} Enhancement produced minimal output, using initial profile")
-                return initial_profile
-
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Enhanced profile complete")
-            return enhanced_profile
-
-        except Exception as e:
-            thread_safe_print(f"{RED}{CROSS}{RESET} Enhancement failed: {e}")
-            return initial_profile
-
-    def parse_sections(self, markdown: str) -> dict:
-        """Parse markdown profile into sections"""
-        sections = {}
-
-        # Extract title and subtitle (everything before first ##)
-        title_match = re.search(r'^(#\s+.+?\n.+?)(?=\n##)', markdown, re.MULTILINE | re.DOTALL)
-        if title_match:
-            sections['title_subtitle'] = title_match.group(1).strip()
-
-        # Extract each ## section
-        section_pattern = r'##\s+(.+?)\n(.*?)(?=\n##|\Z)'
-        for match in re.finditer(section_pattern, markdown, re.MULTILINE | re.DOTALL):
-            section_name = match.group(1).strip()
-            section_content = match.group(2).strip()
-            sections[section_name] = section_content
-
-        return sections
-
-    def count_words(self, text: str) -> int:
-        """Count all words in text"""
-        return len(text.split())
-
-    def polish_section(self, section_name: str, content: str, word_limit: int) -> str:
-        """Polish a single section to target word count"""
-        if section_name == "title_subtitle":
-            display_name = "Title & Subtitle"
-        else:
-            display_name = section_name
-
-        word_count = self.count_words(content)
-
-        if word_limit == 0:
-            thread_safe_print(f"{CYAN}{ARROW}{RESET} Polishing {display_name}...")
-        else:
-            thread_safe_print(f"{CYAN}{ARROW}{RESET} Polishing {display_name} ({word_limit} words)...")
-
-        prompt = get_polish_prompt(section_name, content, word_limit)
-
-        try:
-            response = self.model_medium_temp.generate_content(prompt)
-            polished = response.text.strip()
-
-            # Post-processing: Strip LLM preambles and duplicate section titles
-            # Remove common preambles like "Here is the condensed X section:"
-            polished = re.sub(r'^Here is .*?section:?\s*\n+', '', polished, flags=re.IGNORECASE)
-            polished = re.sub(r'^This is .*?section:?\s*\n+', '', polished, flags=re.IGNORECASE)
-
-            # Remove duplicate bold section name (e.g., "**Financial KPIs**")
-            polished = re.sub(r'^\*\*' + re.escape(section_name) + r'\*\*\s*\n+', '', polished, flags=re.MULTILINE)
-
-            # Remove "**SECTION: X**" pattern
-            polished = re.sub(r'^\*\*SECTION:\s*' + re.escape(section_name) + r'\*\*\s*\n+', '', polished, flags=re.MULTILINE | re.IGNORECASE)
-
-            # Strip any remaining leading/trailing whitespace
-            polished = polished.strip()
-
-            # Check for empty output
-            if not polished or len(polished) < 50:
-                thread_safe_print(f"{YELLOW}{WARNING}{RESET} Polish produced minimal output, using original")
-                return content
-
-            # Verify word limit for content sections
-            if word_limit > 0:
-                final_count = self.count_words(polished)
-                if final_count > word_limit * 1.1:  # Allow 10% overage
-                    thread_safe_print(f"{YELLOW}{WARNING}{RESET} Section exceeds limit ({final_count} words)")
-
-            return polished
-
-        except Exception as e:
-            thread_safe_print(f"{RED}{CROSS}{RESET} Polish failed for {display_name}: {e}")
+        # Fallback to original if enhancement fails
+        if not enhanced or len(enhanced) < 50:
             return content
+        return enhanced
 
-    def recombine_sections(self, sections: dict) -> str:
-        """Recombine polished sections into final profile"""
+    def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
+        """Step 4: Polish section to word limit"""
+        prompt = get_section_polish_prompt(section, content, word_limit)
+        response = self.model_medium_temp.generate_content(prompt)
+        polished = response.text.strip()
+
+        # Fallback to original if polish fails
+        if not polished or len(polished) < 50:
+            return content
+        return polished
+
+    def _extract_learning(self, section: dict, final_output: str) -> str:
+        """Step 5: Extract universal analytical methodologies"""
+        prompt = f"""You are a methodology curator extracting UNIVERSAL analytical techniques that apply to ANY company in ANY sector.
+
+CRITICAL: Extract only general analytical principles that could be manually inserted into section requirements as best practices.
+
+SECTION TYPE: {section['title']}
+
+COMPLETED ANALYSIS:
+---
+{final_output}
+---
+
+Extract UNIVERSAL analytical methodologies - NOT company-specific or sector-specific findings.
+
+METHODOLOGY EXTRACTION:
+1. **Analytical Techniques**: What calculation methods, ratio analysis, or data relationships proved most revealing ACROSS ALL COMPANIES?
+2. **Red Flag Patterns**: What general warning signs or contradiction patterns apply UNIVERSALLY?
+3. **Data Quality Checks**: What validation methods would work for ANY company analysis?
+
+CRITICAL CONSTRAINTS:
+- NO company names, NO sector names, NO specific numbers
+- Each technique must work for pharmaceutical, industrial, tech, financial services, retail - ALL sectors
+- Phrased as general analytical principles suitable for section requirements
+- Maximum 2 items per category - only breakthrough universal methodologies
+
+OUTPUT FORMAT (JSON):
+{{
+  "analytical_techniques": [
+    "When analyzing [universal context], calculate [general metric/ratio] to reveal [insight type]",
+    "Look for [universal pattern] in [data type] to identify [risk/opportunity]"
+  ],
+  "red_flag_patterns": [
+    "Warning sign: [general pattern] often indicates [business risk]",
+    "Contradiction: [claim type] vs [data type] reveals [underlying issue]"
+  ],
+  "data_validation": [
+    "Cross-check [data source A] against [data source B] to verify [accuracy]",
+    "Calculate [derived metric] to validate [reported claim]"
+  ]
+}}
+
+Extract only the most universally applicable analytical approaches that could become standard section requirements."""
+
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(prompt).text,
+            context=section['number']
+        )
+
+    def process_section_main(self, section: dict, worker_display: WorkerDisplay) -> dict:
+        """Process a single section through Steps 1-4 (main content generation)"""
+        section_num = section['number']
+        section_title = section['title']
+
+        # Get section directory (already created by FileManager)
+        section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+
+        try:
+            # Step 1: Initial Draft
+            worker_display.update(section_num, "Draft")
+            draft = self._generate_section(section)
+            (section_dir / "step1_draft.md").write_text(f"## {section_title}\n{draft}", encoding='utf-8')
+
+            # Step 2: Completeness Check
+            worker_display.update(section_num, "Check")
+            add_list = self._check_section_completeness(section, draft)
+            (section_dir / "step2_add_list.txt").write_text(add_list, encoding='utf-8')
+
+            # Step 3: Enhancement
+            worker_display.update(section_num, "Enhance")
+            enhanced = self._enhance_section(section, draft, add_list)
+            (section_dir / "step3_enhanced.md").write_text(f"## {section_title}\n{enhanced}", encoding='utf-8')
+
+            # Step 4: Polish (100 words)
+            worker_display.update(section_num, "Polish")
+            polished = self._polish_section(section, enhanced, word_limit=100)
+            (section_dir / "step4_polished.md").write_text(f"## {section_title}\n{polished}", encoding='utf-8')
+
+            # Remove from display immediately after Step 4 completes
+            worker_display._remove_silent(section_num)
+
+            return {
+                'number': section_num,
+                'title': section_title,
+                'content': polished,
+                'success': True
+            }
+
+        except Exception as e:
+            thread_safe_print(f"{RED}{CROSS}{RESET} Section {section_num} failed: {e}")
+            worker_display._remove_silent(section_num)
+            return {
+                'number': section_num,
+                'title': section_title,
+                'content': '',
+                'success': False,
+                'error': str(e)
+            }
+
+    def process_section_learn(self, section: dict) -> bool:
+        """Process Step 5 (Learning Extraction) for a section - silent background work"""
+        section_num = section['number']
+        section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+
+        try:
+            # Load polished content from Step 4
+            polished_file = section_dir / "step4_polished.md"
+            if not polished_file.exists():
+                return False
+
+            polished = polished_file.read_text(encoding='utf-8')
+
+            # Step 5: Learning Extraction (silent)
+            learning = self._extract_learning(section, polished)
+            (section_dir / "step5_learning.json").write_text(learning, encoding='utf-8')
+
+            return True
+
+        except Exception as e:
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Learning extraction failed for Section {section_num}: {e}")
+            return False
+
+    def generate_profile(self, company_name: str, worker_display: WorkerDisplay) -> str:
+        """Generate profile with parallel section processing (Steps 1-4 only)"""
+        thread_safe_print(f"\n{CYAN}Phase 1: Generating content (parallel workers: {self.workers})...{RESET}\n")
+
+        results = []
+        completed_count = 0
+
+        # Process sections in parallel (Steps 1-4)
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            # Submit all section tasks
+            future_to_section = {
+                executor.submit(self.process_section_main, section, worker_display): section
+                for section in sections
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_section):
+                section = future_to_section[future]
+                result = future.result()
+                results.append(result)
+                completed_count += 1
+                worker_display.complete(result['number'], completed_count, len(sections))
+
+        # Sort results by section number
+        results.sort(key=lambda x: x['number'])
+
+        # Assemble final markdown
         parts = []
+        for result in results:
+            if result['success']:
+                parts.append(f"## {result['title']}\n{result['content']}")
 
-        # Add title and subtitle
-        if 'title_subtitle' in sections:
-            parts.append(sections['title_subtitle'])
+        return '\n\n'.join(parts)
 
-        # Add content sections in order
-        section_order = ['Company Overview', 'Competitive Positioning', 'Financial KPIs', 'Strategic Considerations']
-        for section_name in section_order:
-            if section_name in sections:
-                parts.append(f"\n## {section_name}\n{sections[section_name]}")
+    def _assemble_final_markdown(self, title_subtitle: str, section_content: str) -> str:
+        """Combine title/subtitle with section content"""
+        return f"{title_subtitle}\n\n{section_content}"
 
-        return '\n'.join(parts)
+    def _conduct_memory_review(self):
+        """Review and update learning memory with UNIVERSAL methodologies only"""
+        thread_safe_print(f"\n{CYAN}{ARROW}{RESET} Extracting universal insights...")
 
-    def save_step(self, step_name: str, content: str):
-        """Save a step output to the run directory"""
-        filepath = self.run_dir / f"{step_name}"
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
+        # Collect all learning extractions
+        learning_files = []
+        for section in sections:
+            learning_file = Path(self.file_manager.run_dir) / f"section_{section['number']}" / "step5_learning.json"
+            if learning_file.exists():
+                learning_files.append(learning_file.read_text(encoding='utf-8'))
+
+        if not learning_files:
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} No learning extractions found")
+            return
+
+        combined_learning = "\n\n".join(learning_files)
+
+        # Generate UNIVERSAL analytical methodology candidates
+        prompt = f"""Analyze these methodology extractions to identify UNIVERSAL analytical techniques applicable to ANY company in ANY sector.
+
+METHODOLOGY EXTRACTIONS:
+{combined_learning}
+
+CURRENT ANALYTICAL MEMORY STATS:
+{json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
+
+Extract UNIVERSAL analytical methodologies - techniques that work equally well for pharmaceutical, industrial, tech, financial services, retail, and ALL other sectors.
+
+CRITICAL CONSTRAINTS:
+1. NO company names, NO sector names, NO specific numbers
+2. Each technique must be a general analytical principle
+3. Phrased as instructions suitable for manual insertion into section requirements
+4. Must enhance M&A evaluation quality across ALL company types
+
+METHODOLOGY CRITERIA:
+1. Formulated as specific analytical techniques that work across ALL companies/industries
+2. Focus on calculation methods, ratio analysis, pattern recognition, and contradiction detection
+3. Applicable to multiple contexts within the same section type
+4. Range from solid practices (6/10) to breakthrough methodologies (9-10/10)
+
+For each methodology, provide:
+- instruction: "When analyzing [universal context], [specific analytical method] to [reveal insight type]"
+- section_number: [the section number this methodology applies to]
+- quality_score: [6-10, be realistic about distribution]
+
+QUALITY DISTRIBUTION GUIDANCE:
+- 9-10/10: Only breakthrough analytical methodologies that consistently reveal material insights ACROSS ALL SECTORS
+- 7-8/10: Solid analytical techniques that meaningfully improve analysis quality across companies
+- 6/10: Standard but useful analytical practices
+
+OUTPUT FORMAT:
+NEW_INSIGHTS:
+- instruction: "[universal analytical methodology for future runs]"
+  section_number: [section number]
+  quality_score: [6-10, realistic distribution]
+
+- instruction: "[another universal analytical methodology]"
+  section_number: [section number]
+  quality_score: [6-10, realistic distribution]
+
+Generate comprehensive UNIVERSAL methodology candidates - subsequent harsh filtering will select only the best transferable techniques.
+Maximum 6 insights per section. Focus on methodologies suitable for manual review and insertion into section specifications."""
+
+        new_insights_text = retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(prompt).text,
+            context="memory_review"
+        )
+
+        self.file_manager.save_memory_state({"new_insights": new_insights_text}, "new_insights.txt")
+
+        # Apply memory updates
+        try:
+            # Archive current memory
+            self.file_manager.archive_memory(self.insight_memory.get_memory_data())
+
+            # Process and add new insights (quality filtering happens here)
+            self.insight_memory.process_new_insights(new_insights_text)
+
+            # Clean up and diversify memory
+            self.insight_memory.cleanup_and_diversify()
+
+            # Update metadata
+            self.insight_memory.update_metadata()
+
+            # Save updated memory
+            self.insight_memory.save_memory()
+
+            # Save post-run memory state
+            self.file_manager.save_memory_state(
+                self.insight_memory.get_memory_data(),
+                "post_run_memory.json"
+            )
+
+            # Show memory stats
+            memory_stats = self.insight_memory.get_memory_stats()
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Learning complete: {memory_stats['total_insights']} universal insights")
+
+        except Exception as e:
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Memory update failed: {e}")
 
     def save_run_log(self, company_name: str, status: str = "Success", pptx_path: str = None):
         """Save run log to the run directory"""
-        log_path = self.run_dir / "run_log.txt"
+        log_path = Path(self.file_manager.run_dir) / "run_log.txt"
 
         pptx_info = f"\n  - PowerPoint: {pptx_path}" if pptx_path else ""
 
@@ -381,17 +606,20 @@ class OnePageProfile:
 
 Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 Model: {self.model_name}
+Workers: {self.workers}
 Company: {company_name}
-Run Directory: {self.run_dir}
+Run Directory: {self.file_manager.run_dir}
 
 Source Files:
 {chr(10).join(f"  - {Path(pdf).name}" for pdf in self.pdf_files)}
 
-Pipeline Steps:
-  1. step1_initial.md
-  2. step2_completeness_check.txt
-  3. step3_enhanced.md
-  4. step4_final.md{pptx_info}
+Processing:
+  - Title/Subtitle generation
+  - Phase 1: 4 sections processed in parallel (Steps 1-4: Draft/Check/Enhance/Polish)
+  - PowerPoint generated after Phase 1
+  - Phase 2: Learning extraction for universal methodologies (background)
+  - Memory review and synthesis
+  - See section_N/ subdirectories for intermediate outputs{pptx_info}
 
 Status: {status}
 """
@@ -400,70 +628,38 @@ Status: {status}
             f.write(log_content)
 
     def run(self) -> Optional[Path]:
-        """Execute the full 4-step profile generation and refinement pipeline"""
+        """Execute the full profile generation pipeline with parallel section processing"""
         try:
-            # Prepare PDFs
-            pdf_parts = self.prepare_pdf_parts()
+            # Prepare PDFs once (will be reused by all workers)
+            self.pdf_parts = self.prepare_pdf_parts()
 
             # Extract company name
-            company_name = self.extract_company_name(pdf_parts)
+            company_name = self.extract_company_name(self.pdf_parts)
 
-            # ===== STEP 1: Initial Generation =====
-            thread_safe_print(f"\n{CYAN}Step 1: Initial Generation{RESET}")
-            initial_profile = self.generate_profile(pdf_parts, company_name)
+            # Generate title and subtitle
+            title_subtitle = self.generate_title_subtitle(company_name)
 
-            if not initial_profile:
-                thread_safe_print(f"{RED}{CROSS}{RESET} Initial profile generation failed")
-                self.save_run_log(company_name, "Failed at Step 1")
-                return None
+            # Create worker display
+            worker_display = WorkerDisplay(self.workers)
 
-            self.save_step("step1_initial.md", initial_profile)
+            # Generate all sections in parallel
+            section_content = self.generate_profile(company_name, worker_display)
 
-            # ===== STEP 2: Completeness Check =====
-            add_list = self.run_completeness_check(initial_profile, pdf_parts)
-            self.save_step("step2_completeness_check.txt", add_list)
+            # Assemble final markdown
+            final_profile = self._assemble_final_markdown(title_subtitle, section_content)
 
-            # ===== STEP 3: Enhancement =====
-            enhanced_profile = self.apply_enhancements(initial_profile, add_list, pdf_parts)
-            self.save_step("step3_enhanced.md", enhanced_profile)
+            # Save final profile
+            final_path = Path(self.file_manager.run_dir) / "final_profile.md"
+            final_path.write_text(final_profile, encoding='utf-8')
 
-            # ===== STEP 4: Polish (Section-by-Section) =====
-            thread_safe_print(f"\n{CYAN}Step 4: Polish (Section-by-Section){RESET}")
+            thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Content generation complete")
 
-            # Parse into sections
-            sections = self.parse_sections(enhanced_profile)
-
-            # Polish title and subtitle (no word limit)
-            if 'title_subtitle' in sections:
-                sections['title_subtitle'] = self.polish_section(
-                    'title_subtitle',
-                    sections['title_subtitle'],
-                    word_limit=0
-                )
-
-            # Polish each content section (500 words each)
-            section_order = ['Company Overview', 'Competitive Positioning', 'Financial KPIs', 'Strategic Considerations']
-            for section_name in section_order:
-                if section_name in sections:
-                    sections[section_name] = self.polish_section(
-                        section_name,
-                        sections[section_name],
-                        word_limit=500
-                    )
-
-            # Recombine sections
-            final_profile = self.recombine_sections(sections)
-            self.save_step("step4_final.md", final_profile)
-
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Final profile complete")
-
-            # Generate PowerPoint
+            # Generate PowerPoint (deliver to user ASAP)
             thread_safe_print(f"\n{CYAN}{ARROW}{RESET} Generating PowerPoint...")
-            final_md_path = self.run_dir / "step4_final.md"
 
             try:
                 pptx_path = create_profile_pptx(
-                    md_path=str(final_md_path),
+                    md_path=str(final_path),
                     company_name=company_name,
                     timestamp=self.timestamp
                 )
@@ -472,20 +668,31 @@ Status: {status}
                 thread_safe_print(f"{YELLOW}{WARNING}{RESET} PowerPoint generation failed: {e}")
                 pptx_path = None
 
+            # Phase 2: Learning extraction (background work)
+            thread_safe_print(f"\n{CYAN}Phase 2: Extracting learnings (background)...{RESET}")
+
+            with ThreadPoolExecutor(max_workers=self.workers) as executor:
+                futures = [
+                    executor.submit(self.process_section_learn, section)
+                    for section in sections
+                ]
+                # Wait for all to complete
+                for future in as_completed(futures):
+                    future.result()  # Silent - just wait for completion
+
+            # Conduct memory review (synthesize universal learnings)
+            self._conduct_memory_review()
+
             # Save run log
             self.save_run_log(company_name, "Success", pptx_path)
 
-            # Return path to final output
-            final_path = self.run_dir / "step4_final.md"
-
+            # Display summary
             thread_safe_print(f"\n{CYAN}{'='*60}{RESET}")
             thread_safe_print(f"{CYAN}{BOLD}Profile generation complete!{RESET}")
             thread_safe_print(f"{CYAN}{'='*60}{RESET}")
-            thread_safe_print(f"\nOutput saved to: {self.run_dir}/")
-            thread_safe_print(f"  - step1_initial.md")
-            thread_safe_print(f"  - step2_completeness_check.txt")
-            thread_safe_print(f"  - step3_enhanced.md")
-            thread_safe_print(f"  - step4_final.md")
+            thread_safe_print(f"\nOutput saved to: {self.file_manager.run_dir}/")
+            thread_safe_print(f"  - final_profile.md")
+            thread_safe_print(f"  - section_1/ through section_4/ (intermediate steps)")
 
             if pptx_path:
                 thread_safe_print(f"\n{CYAN}Final deliverable:{RESET}")
@@ -531,6 +738,13 @@ if __name__ == "__main__":
     selected_model = 'gemini-2.5-flash' if choice == "1" else 'gemini-2.5-pro'
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Selected: {selected_model}\n")
 
+    # Worker selection
+    thread_safe_print("Select number of parallel workers:")
+    thread_safe_print("  1-4 workers (default 2)")
+    workers_choice = prompt_single_digit("Choose workers [1-4] (default 2): ", valid_digits="1234", default_digit="2")
+    num_workers = int(workers_choice)
+    thread_safe_print(f"{CYAN}{CHECK}{RESET} Workers: {num_workers}\n")
+
     # File selection
     pdf_files = select_pdf_files()
     if not pdf_files:
@@ -541,7 +755,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60 + "\n")
 
     # Generate profile
-    maker = OnePageProfile(pdf_files, selected_model)
+    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers)
     profile_path = maker.run()
 
     if not profile_path:

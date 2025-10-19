@@ -2,45 +2,6 @@
 Prompt templates for OnePageProfile (OPP.py)
 """
 
-# Section requirements - single source of truth for what each section should contain
-SECTION_REQUIREMENTS = {
-    "Company Overview": [
-        "one sentence where the company is based (city and country) and what its primary business is (key subsector, not high level like 'technology company')",
-        "one sentence on the company's primary operating footprint, i.e. where its people are based, with numbers",
-        "one sentence on the company's asset base, i.e. where its key assets are based, and if they are owned or leased",
-        "one sentence on the mix of products and services and their value proposition, indicating what's most important",
-        "one sentence on the mix of geography, indicating what's most important",
-        "one sentence on the mix of customers, indicating what's most important, and highlight key customers, if any, and customer relationships, e.g. long term relationships, exclusivity, etc.",
-        "one sentence on the company's key suppliers and concentration risk, but only if there is a critical exposure"
-    ],
-    "Competitive Positioning": [
-        "one sentence on the company's position in the value chain, i.e. what is the company's core competency and how does it compare to competitors",
-        "one sentence on the company's 3 most important strategic objectives",
-        "one sentence on market structure and the company's competitive positioning",
-        "one sentence on market position and market share by products and services",
-        "one sentence on market position and market share by geography",
-        "one sentence on market position and market share by customer segment",
-        "in case the data is missing, then use the company's narrative"
-    ],
-    "Financial KPIs": [
-        "one sentence on most recent revenue and recent growth",
-        "one sentence on EBITDA or, absent that, operating profit or, absent that, profit in absolute terms, as well as recent growth or margins, whatever is more important for the reader",
-        "for each segment, one sentence on the segment financials, with numbers, and the percentage contribution to revenues and profits, if possible",
-        "one sentence on balance sheet highlights, i.e. what's the single most important thing about the company's balance sheet, sometimes that's about net debt, sometimes about impairments, you need to judge",
-        "one sentence on the single most important MD&A highlight, including numbers"
-    ],
-    "Strategic Considerations": [
-        "one sentence on material recent strategic initiatives or transactions, including dates and numbers",
-        "one sentence on the company's history of partnerships, including dates and numbers",
-        "one sentence on the key decision makers at the management level and their strategic agenda",
-        "one sentence on the key decision makers at the shareholder level and their strategic agenda towards the company, including if they have indicated willingness to sell or if they have any relevant track record in the sector",
-        "one sentence on a strategic observation that would be highly interesting to a potential buyer, including strategic disconnects that warrant further analysis before proceeding with an acquisition",
-        "one sentence on what is the key attraction of the company to a potential buyer, but this needs to sound deeply sophisticated and be backed up by numbers",
-        "again, if you don't have the data then stick with the company's narrative"
-    ]
-}
-
-
 COMPANY_NAME_EXTRACTION_PROMPT = """Extract the primary company name from these documents.
 
 Look for the company name in:
@@ -53,52 +14,70 @@ Return ONLY the company name, nothing else. Keep it short (2-50 characters).
 If unclear, return "Company Profile"."""
 
 
-def get_profile_generation_prompt(company_name: str) -> str:
-    """Generate the main profile generation prompt with company name"""
-
-    # Format section requirements for the prompt
-    sections_formatted = ""
-    for section_name, requirements in SECTION_REQUIREMENTS.items():
-        sections_formatted += f"\n## {section_name}\n"
-        for req in requirements:
-            sections_formatted += f"[{req}]\n"
-
-    return f"""You are creating a company profile page for M&A bankers. Analyze the provided documents and generate a structured profile following these EXACT instructions.
+def get_title_subtitle_prompt(company_name: str) -> str:
+    """Generate prompt for creating title and subtitle"""
+    return f"""You are creating a company profile title and subtitle for M&A bankers.
 
 CRITICAL RULES:
-- Keep each sentence as short as possible, no longer than 20 words
-- Ideally, each sentence should have at least one number
-- If there is no meaningful data to write a sentence as instructed, skip it silently
-- Do not make up information
-- A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded
-- Bold the 1-2 most important words in each bullet point using **word** syntax
+- Title should be the company name: {company_name}
+- Subtitle should be a key message about the company for potential investors or buyers, in 4-8 words
+- The subtitle should capture the key investment thesis or strategic positioning
+- Keep it concise and impactful
 
 OUTPUT FORMAT:
-
 # {company_name}
-[Subtitle: key message about the company for the potential investor or potential buyer, in 4-8 words]
-{sections_formatted}
-Now generate the profile based on the documents provided."""
+# Your compelling 4-8 word subtitle here
+
+Now generate the title and subtitle based on the documents provided."""
 
 
-def get_completeness_check_prompt(initial_profile: str) -> str:
-    """Generate completeness check prompt with section requirements"""
+def get_section_generation_prompt(section: dict, relevant_memory: str = "") -> str:
+    """Generate the initial section generation prompt
 
-    # Format section requirements for the prompt
-    requirements_formatted = ""
-    for section_name, requirements in SECTION_REQUIREMENTS.items():
-        requirements_formatted += f"\n{section_name}:\n"
-        for req in requirements:
-            requirements_formatted += f"  - {req}\n"
+    Args:
+        section: Section dictionary from opp_sections.py
+        relevant_memory: Optional learned analytical instructions from previous runs
 
-    return f"""You are a meticulous completeness auditor evaluating a company profile for M&A purposes. Your job is to identify critical gaps in both DATA and INVESTOR PERSPECTIVE.
+    Returns:
+        Prompt string for generating this section
+    """
+    memory_block = ""
+    if relevant_memory:
+        memory_block = f"\n{relevant_memory}\n\n"
 
-ORIGINAL REQUIREMENTS FOR THE PROFILE:
-{requirements_formatted}
+    return f"""You are creating a company profile section for M&A bankers. Analyze the provided documents and generate content for the "{section['title']}" section.
 
-INITIAL PROFILE:
+SECTION REQUIREMENTS:
+{section['specs']}
+{memory_block}OUTPUT FORMAT:
+## {section['title']}
+[Your bullet points here, following the requirements above]
+
+CRITICAL: Do NOT include page numbers, footnotes, or source citations in your output.
+
+Now generate this section based on the documents provided."""
+
+
+def get_section_completeness_check_prompt(section: dict, section_content: str) -> str:
+    """Generate completeness check prompt for a section
+
+    Args:
+        section: Section dictionary from opp_sections.py
+        section_content: Current section content to check
+
+    Returns:
+        Prompt string for completeness check
+    """
+    return f"""You are a meticulous completeness auditor evaluating a company profile section for M&A purposes. Your job is to identify critical gaps in both DATA and INVESTOR PERSPECTIVE.
+
+SECTION: {section['title']}
+
+ORIGINAL REQUIREMENTS FOR THIS SECTION:
+{section['specs']}
+
+CURRENT SECTION CONTENT:
 ---
-{initial_profile}
+{section_content}
 ---
 
 SOURCE DOCUMENTS:
@@ -107,10 +86,10 @@ SOURCE DOCUMENTS:
 YOUR DUAL ASSESSMENT:
 
 PART A: DATA COMPLETENESS
-Check if the profile is missing specific data points from source documents that are required by the ORIGINAL REQUIREMENTS above.
+Check if the section is missing specific data points from source documents that are required by the ORIGINAL REQUIREMENTS above.
 
 PART B: INVESTOR PERSPECTIVE COMPLETENESS
-For each section, consider adding statements (but only if they are not already present) underpinned by numbers and supported by source documents if they meet one of the following criteria:
+Consider adding statements (but only if they are not already present) underpinned by numbers and supported by source documents if they meet one of the following criteria:
 - They fulfill an item in the ORIGINAL REQUIREMENTS that was skipped
 - They are fundamental to a reader's understanding of the company as an investment or acquisition target
 - They are fundamental to the company's competitive positioning
@@ -125,27 +104,39 @@ Each addition must pass TWO tests:
 2. "Do the source documents contain sufficient data to support this addition?"
 
 ADD LIST FORMAT:
-- [CRITICAL] Missing item that would materially affect investment decision (include exact source location with page/section reference)
-- [IMPORTANT] Relevant item that would improve completeness (include exact source location with page/section reference)
-- [USEFUL] Supporting item that adds investor value (include exact source location with page/section reference)
+- [CRITICAL] Missing item that would materially affect investment decision
+- [IMPORTANT] Relevant item that would improve completeness
+- [USEFUL] Supporting item that adds investor value
 
 STRICT RULES:
-1. Be EXTREMELY specific - include exact data points and source locations (page numbers, section names)
+1. Be EXTREMELY specific - include exact data points (numbers, percentages, names)
 2. Only suggest items where source documents contain the data - do NOT suggest items if data is missing
 3. Focus on quantified, factual data where available
-4. Maximum 5 suggestions per section - focus on the most critical gaps only
-5. If the profile is complete, state "No critical gaps identified"
+4. Maximum 5 suggestions - focus on the most critical gaps only
+5. If the section is complete, state "No critical gaps identified"
+6. Do NOT include page numbers, footnotes, or source citations in your suggestions
 
-Output ONLY the ADD list. No preamble or explanation."""
+Output ONLY the ADD list for this section. No preamble or explanation."""
 
 
-def get_enhancement_prompt(initial_profile: str, add_list: str) -> str:
-    """Generate the enhancement prompt"""
-    return f"""You are a precise editor. Add missing content to create a more complete profile for M&A evaluation.
+def get_section_enhancement_prompt(section: dict, section_content: str, add_list: str) -> str:
+    """Generate enhancement prompt for a section
 
-CURRENT PROFILE:
+    Args:
+        section: Section dictionary from opp_sections.py
+        section_content: Current section content
+        add_list: ADD list from completeness check
+
+    Returns:
+        Prompt string for enhancement
+    """
+    return f"""You are a precise editor. Add missing content to create a more complete section for M&A evaluation.
+
+SECTION: {section['title']}
+
+CURRENT SECTION CONTENT:
 ---
-{initial_profile}
+{section_content}
 ---
 
 ADD THESE ITEMS:
@@ -160,7 +151,7 @@ INSTRUCTIONS:
 1. Add ALL items from the ADD list ONLY if the source documents contain supporting data
 2. If an ADD item cannot be supported by source document data, skip it silently - do NOT add placeholder text like "metrics not disclosed" or "data unavailable"
 3. Use exact data from source documents with numbers and specifics
-4. Maintain narrative flow - integrate additions smoothly into appropriate sections
+4. Maintain narrative flow - integrate additions smoothly
 5. Preserve all existing content - do not remove anything
 6. Keep the same format: bullets with bold keywords using **word** syntax
 7. If an ADD item duplicates existing content, enhance rather than duplicate
@@ -169,51 +160,41 @@ INSTRUCTIONS:
 FORMATTING RULES:
 - Keep bullet format with **bold** keywords (1-2 most important words per bullet)
 - Each bullet is one sentence maximum
-- Maintain section structure: Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations
 - ALWAYS put a blank line before starting any list
 - Use consistent markdown formatting
 
 CRITICAL:
 - Do NOT add unhelpful statements about missing data
+- Do NOT include page numbers, footnotes, or source citations
 - Only add content that provides real investor value with specific facts/numbers
-- Output ONLY the enhanced profile markdown content. No preamble, no postamble."""
+- Output ONLY the enhanced section content (## Section Name + bullets). No preamble, no postamble."""
 
 
-def get_polish_prompt(section_name: str, section_content: str, word_limit: int) -> str:
-    """Generate the polish prompt for a specific section"""
+def get_section_polish_prompt(section: dict, section_content: str, word_limit: int) -> str:
+    """Generate the polish prompt for a specific section
+
+    Args:
+        section: Section dictionary from opp_sections.py
+        section_content: Current section content
+        word_limit: Maximum words for polished section
+
+    Returns:
+        Prompt string for polishing
+    """
     word_count = len(section_content.split())
 
-    if word_limit == 0:  # Title and subtitle - no word limit
-        return f"""You are an expert editor polishing a company profile title and subtitle for M&A presentation.
+    return f"""You are an expert analyst condensing content to its most essential elements for M&A evaluation.
 
-CURRENT CONTENT:
----
-{section_content}
----
+Polish this text like an M&A Managing Director would when preparing observations for the chairman of a potential buyer. The polished text must be:
+- **Concise**: Maximum {word_limit} words
+- **Coherent**: Always full sentences, no cryptic half-sentences
+- **Highly relevant**: Each statement must matter to the investment decision
+- **Fact-based**: Each statement underpinned with numbers or, absent that, hard facts
 
-CURRENT WORD COUNT: {word_count} words
-
-POLISHING INSTRUCTIONS:
-1. Ensure the company name is clear and accurate
-2. Refine the subtitle to be compelling and investor-focused (4-8 words)
-3. The subtitle should capture the key investment thesis or strategic positioning
-4. Keep it concise and impactful
-
-Output ONLY the polished title and subtitle. No explanations."""
-
-    else:  # Content sections with word limits
-        # Format section requirements from SECTION_REQUIREMENTS dictionary
-        section_reqs = ""
-        if section_name in SECTION_REQUIREMENTS:
-            for req in SECTION_REQUIREMENTS[section_name]:
-                section_reqs += f"- {req}\n"
-
-        return f"""You are an expert analyst condensing content to its most essential elements for M&A evaluation.
-
-SECTION: {section_name}
+SECTION: {section['title']}
 
 ORIGINAL REQUIREMENTS FOR THIS SECTION:
-{section_reqs}
+{section['specs']}
 
 CURRENT CONTENT:
 ---
@@ -225,10 +206,10 @@ FINAL TARGET: **Maximum {word_limit} words - absolutely no exceptions.**
 
 CONDENSING INSTRUCTIONS:
 
-1. **PRESERVE STRUCTURE** - The original requirements (title and sentences)above define what this section should contain. Preserve coverage of those elements while condensing.
+1. **PRESERVE STRUCTURE** - The original requirements above define what this section should contain. Preserve coverage of those elements while condensing.
 
 2. **RELEVANCE FILTER** - Keep only content that meets BOTH criteria:
-   - Addresses the original requirements for this section (section title or sentences)
+   - Addresses the original requirements for this section
    - Critical to investment/acquisition decision-making
 
 3. **DATA DENSITY**:
@@ -241,6 +222,7 @@ CONDENSING INSTRUCTIONS:
    - Cut repetitive points - state each insight once
    - Eliminate elaborate explanations - let the data speak
    - Focus on what's surprising, notable, or value-affecting
+   - Be brutal yet constructive
 
 5. **FORMAT PRESERVATION**:
    - Keep bullet format with **bold** keywords (1-2 words per bullet)
@@ -260,6 +242,7 @@ WHAT TO REMOVE:
 - Obvious statements without data
 - Elaborate explanations of simple facts
 - Content that doesn't address the original section requirements
+- Page numbers, footnotes, or source citations
 
 CONSTRAINTS:
 - Maximum {word_limit} words total (count everything)

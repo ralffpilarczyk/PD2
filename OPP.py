@@ -336,10 +336,10 @@ class OnePageProfile:
         return polished
 
     def _extract_learning(self, section: dict, final_output: str) -> str:
-        """Step 5: Extract universal analytical methodologies"""
-        prompt = f"""You are a methodology curator extracting UNIVERSAL analytical techniques that apply to ANY company in ANY sector.
+        """Step 5: Extract universal analytical principles"""
+        prompt = f"""You are extracting WISE ANALYTICAL PRINCIPLES that apply to ANY company in ANY sector.
 
-CRITICAL: Extract only general analytical principles that could be manually inserted into section requirements as best practices.
+Think like a seasoned M&A director advising a junior analyst: What fundamental truths guide effective analysis?
 
 SECTION TYPE: {section['title']}
 
@@ -348,36 +348,45 @@ COMPLETED ANALYSIS:
 {final_output}
 ---
 
-Extract UNIVERSAL analytical methodologies - NOT company-specific or sector-specific findings.
+Extract 2-4 timeless PRINCIPLES - NOT company-specific findings or technical methodologies.
 
-METHODOLOGY EXTRACTION:
-1. **Analytical Techniques**: What calculation methods, ratio analysis, or data relationships proved most revealing ACROSS ALL COMPANIES?
-2. **Red Flag Patterns**: What general warning signs or contradiction patterns apply UNIVERSALLY?
-3. **Data Quality Checks**: What validation methods would work for ANY company analysis?
+PRINCIPLE EXTRACTION GUIDANCE:
+
+Principles should be:
+- **Fundamental truths** about analysis, not specific calculation methods
+- **Memorable and quotable** - something an analyst would remember and apply
+- **Focus on WHAT matters**, not HOW to calculate it
+- **8-15 words maximum** - brevity forces clarity
+- **Universally applicable** across ALL sectors (pharma, tech, industrial, retail, finance)
+
+GOOD EXAMPLES (the style to emulate):
+- "Actions speak louder than words - watch where capital actually goes"
+- "Cash flow quality reveals more truth than reported profits"
+- "Verify management's narrative against primary source data"
+- "Contradictions between claims and results expose reality"
+- "Past patterns are the best predictor of future behavior"
+- "Numbers should tell consistent stories from different angles"
+
+BAD EXAMPLES (too technical/specific - avoid this style):
+- "When analyzing capital allocation, correlate major investment events with subsequent segmental growth..."
+- "Calculate Operating Cash Flow / EBITDA ratio to assess earnings quality..."
 
 CRITICAL CONSTRAINTS:
-- NO company names, NO sector names, NO specific numbers
-- Each technique must work for pharmaceutical, industrial, tech, financial services, retail - ALL sectors
-- Phrased as general analytical principles suitable for section requirements
-- Maximum 2 items per category - only breakthrough universal methodologies
+- NO company names, NO sector names, NO specific numbers, NO calculation formulas
+- Maximum 15 words per principle
+- Phrased as wise guidance, not technical instructions
+- Must work for ALL sectors and company types
 
 OUTPUT FORMAT (JSON):
 {{
-  "analytical_techniques": [
-    "When analyzing [universal context], calculate [general metric/ratio] to reveal [insight type]",
-    "Look for [universal pattern] in [data type] to identify [risk/opportunity]"
-  ],
-  "red_flag_patterns": [
-    "Warning sign: [general pattern] often indicates [business risk]",
-    "Contradiction: [claim type] vs [data type] reveals [underlying issue]"
-  ],
-  "data_validation": [
-    "Cross-check [data source A] against [data source B] to verify [accuracy]",
-    "Calculate [derived metric] to validate [reported claim]"
+  "principles": [
+    "First wise principle (8-15 words)",
+    "Second wise principle (8-15 words)",
+    "Third wise principle if applicable (8-15 words)"
   ]
 }}
 
-Extract only the most universally applicable analytical approaches that could become standard section requirements."""
+Extract only the most universally applicable wisdom that would guide analysis of any company."""
 
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,
@@ -512,73 +521,79 @@ Extract only the most universally applicable analytical approaches that could be
 
         combined_learning = "\n\n".join(learning_files)
 
-        # Generate UNIVERSAL analytical methodology candidates
-        prompt = f"""Analyze these methodology extractions to identify UNIVERSAL analytical techniques applicable to ANY company in ANY sector.
+        # Synthesize WISE analytical principles from learnings
+        prompt = f"""You are synthesizing WISE ANALYTICAL PRINCIPLES from individual section learnings.
 
-METHODOLOGY EXTRACTIONS:
+Think like a seasoned M&A director mentoring analysts: What fundamental truths emerge from these analyses?
+
+INDIVIDUAL SECTION LEARNINGS:
 {combined_learning}
 
-CURRENT ANALYTICAL MEMORY STATS:
+CURRENT MEMORY STATS:
 {json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
 
-Extract UNIVERSAL analytical methodologies - techniques that work equally well for pharmaceutical, industrial, tech, financial services, retail, and ALL other sectors.
+Your task: Extract timeless PRINCIPLES that apply to ANY company in ANY sector - NOT technical methodologies or calculation formulas.
 
-CRITICAL CONSTRAINTS:
-1. NO company names, NO sector names, NO specific numbers
-2. Each technique must be a general analytical principle
-3. Phrased as instructions suitable for manual insertion into section requirements
-4. Must enhance M&A evaluation quality across ALL company types
+PRINCIPLE SYNTHESIS GUIDANCE:
 
-METHODOLOGY CRITERIA:
-1. Formulated as specific analytical techniques that work across ALL companies/industries
-2. Focus on calculation methods, ratio analysis, pattern recognition, and contradiction detection
-3. Applicable to multiple contexts within the same section type
-4. Range from solid practices (6/10) to breakthrough methodologies (9-10/10)
+Principles should be:
+- **Fundamental truths** about analysis, not calculation methods
+- **Memorable and quotable** - something an analyst would remember and apply
+- **Focus on WHAT matters**, not HOW to calculate it
+- **8-15 words maximum** - brevity forces clarity
+- **Universally applicable** across ALL sectors
+
+GOOD EXAMPLES (the style to emulate):
+- "Actions speak louder than words - watch where capital actually goes"
+- "Cash flow quality reveals more truth than reported profits"
+- "Verify management's narrative against primary source data"
+- "Customer concentration creates fragility in revenue continuity"
+- "Cost growth outpacing revenue growth signals broken unit economics"
+
+BAD EXAMPLES (avoid these patterns):
+- "When analyzing capital allocation, correlate major investment events with subsequent changes in segmental growth..." (Too technical, too long)
+- "Calculate cash conversion ratios (Operating Cash Flow / EBITDA) to assess earnings quality..." (Too procedural)
+- "Cross-check operational data against financial data to test for logical consistency..." (Focuses on HOW not WHAT)
 
 CRITICAL REQUIREMENT:
-You MUST analyze learnings from ALL 4 SECTIONS (1, 2, 3, 4) separately.
-For EACH section, extract up to 6 universal methodologies.
+You MUST synthesize principles from ALL 4 SECTIONS (1, 2, 3, 4) separately.
+Extract up to 6 principles per section.
 DO NOT skip Section 4 - it is as important as the other sections.
 
-For each methodology, provide:
-- instruction: "When analyzing [universal context], [specific analytical method] to [reveal insight type]"
-- section_number: [the section number this methodology applies to]
-- quality_score: [6-10, be realistic about distribution]
-
 QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Only breakthrough analytical methodologies that consistently reveal material insights ACROSS ALL SECTORS
-- 7-8/10: Solid analytical techniques that meaningfully improve analysis quality across companies
-- 6/10: Standard but useful analytical practices
+- 9-10/10: Profound insights that fundamentally shift how analysts think - the "aha moments"
+- 7-8/10: Solid principles that meaningfully improve analytical judgment
+- 6/10: Standard but useful reminders of what matters
 
 OUTPUT FORMAT:
 NEW_INSIGHTS:
 
-[Section 1 - Company Overview methodologies]
-- instruction: "[universal analytical methodology]"
+[Section 1 - Company Overview principles]
+- instruction: "[wise principle in 8-15 words]"
   section_number: 1
   quality_score: [6-10]
 ...
 
-[Section 2 - Competitive Positioning methodologies]
-- instruction: "[universal analytical methodology]"
+[Section 2 - Competitive Positioning principles]
+- instruction: "[wise principle in 8-15 words]"
   section_number: 2
   quality_score: [6-10]
 ...
 
-[Section 3 - Financial KPIs methodologies]
-- instruction: "[universal analytical methodology]"
+[Section 3 - Financial KPIs principles]
+- instruction: "[wise principle in 8-15 words]"
   section_number: 3
   quality_score: [6-10]
 ...
 
-[Section 4 - Strategic Considerations methodologies]
-- instruction: "[universal analytical methodology]"
+[Section 4 - Strategic Considerations principles]
+- instruction: "[wise principle in 8-15 words]"
   section_number: 4
   quality_score: [6-10]
 ...
 
-Generate comprehensive UNIVERSAL methodology candidates for ALL 4 SECTIONS - subsequent harsh filtering will select only the best transferable techniques.
-Up to 6 insights per section. Focus on methodologies suitable for manual review and insertion into section specifications."""
+Generate comprehensive principle candidates for ALL 4 SECTIONS - subsequent harsh filtering will select only the best (9-10/10 only).
+Up to 6 principles per section. Focus on what changes how an analyst thinks, not what they calculate."""
 
         new_insights_text = retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,

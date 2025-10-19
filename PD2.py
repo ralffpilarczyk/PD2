@@ -675,44 +675,62 @@ class IntelligentAnalyst:
         
         combined_learning = "\n\n".join(learning_files)
         
-        # Generate new analytical methodology candidates from learning extractions
-        prompt = f"""Analyze these methodology extractions to identify transferable analytical techniques for future analysis runs.
+        # Synthesize WISE analytical principles from learning extractions
+        prompt = f"""You are synthesizing WISE ANALYTICAL PRINCIPLES from individual section learnings.
 
-METHODOLOGY EXTRACTIONS:
+Think like a seasoned investor mentoring analysts: What fundamental truths emerge from these analyses?
+
+INDIVIDUAL SECTION LEARNINGS:
 {combined_learning}
 
-CURRENT ANALYTICAL MEMORY STATS:
+CURRENT MEMORY STATS:
 {json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
 
-Extract transferable analytical methodologies that could enhance future analysis of ANY company. Focus on techniques, not company-specific findings.
+Your task: Extract timeless PRINCIPLES that apply to ANY company in ANY sector - NOT technical methodologies or calculation formulas.
 
-METHODOLOGY CRITERIA:
-1. Formulated as specific analytical techniques that work across companies/industries
-2. Focus on calculation methods, ratio analysis, and pattern recognition
-3. Applicable to multiple contexts within the same section type
-4. Range from solid practices (6/10) to breakthrough methodologies (9-10/10)
+PRINCIPLE SYNTHESIS GUIDANCE:
 
-For each methodology, provide:
-- instruction: "When analyzing [context type], [specific analytical method] to [reveal insight type]"
-- section_number: [the section number this methodology applies to]
+Principles should be:
+- **Fundamental truths** about analysis, not calculation methods
+- **Memorable and quotable** - something an analyst would remember and apply
+- **Focus on WHAT matters**, not HOW to calculate it
+- **8-15 words maximum** - brevity forces clarity
+- **Universally applicable** across ALL sectors
+
+GOOD EXAMPLES (the style to emulate):
+- "Actions speak louder than words - watch where capital actually goes"
+- "Cash flow quality reveals more truth than reported profits"
+- "Verify management's narrative against primary source data"
+- "Customer concentration creates fragility in revenue continuity"
+- "Cost growth outpacing revenue growth signals broken unit economics"
+
+BAD EXAMPLES (avoid these patterns):
+- "When analyzing capital allocation, correlate major investment events with subsequent changes in segmental growth..." (Too technical, too long)
+- "Calculate cash conversion ratios (Operating Cash Flow / EBITDA) to assess earnings quality..." (Too procedural)
+- "Cross-check operational data against financial data to test for logical consistency..." (Focuses on HOW not WHAT)
+
+For each principle, provide:
+- instruction: "[wise principle in 8-15 words]"
+- section_number: [the section number this principle applies to]
 - quality_score: [6-10, be realistic about distribution]
 
 QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Only breakthrough analytical methodologies that consistently reveal material insights
-- 7-8/10: Solid analytical techniques that meaningfully improve analysis quality across companies
-- 6/10: Standard but useful analytical practices
+- 9-10/10: Profound insights that fundamentally shift how analysts think - the "aha moments"
+- 7-8/10: Solid principles that meaningfully improve analytical judgment
+- 6/10: Standard but useful reminders of what matters
 
 OUTPUT FORMAT:
 NEW_INSIGHTS:
-- instruction: "[analytical methodology for future runs]"
+- instruction: "[wise principle in 8-15 words]"
   section_number: [section number]
   quality_score: [6-10, realistic distribution]
 
-- instruction: "[another analytical methodology]"
-  section_number: [section number]  
+- instruction: "[another wise principle in 8-15 words]"
+  section_number: [section number]
   quality_score: [6-10, realistic distribution]
 
-Generate comprehensive methodology candidates - subsequent harsh filtering will select only the best transferable techniques.
+Generate comprehensive principle candidates - subsequent harsh filtering will select only the best (9-10/10 only).
+Focus on what changes how an analyst thinks, not what they calculate.
 """
         
         model = genai.GenerativeModel(self.core_analyzer.model_name)

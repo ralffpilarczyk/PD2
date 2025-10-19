@@ -265,9 +265,11 @@ Generate the condensed version that respects the section's specific focus."""
         return result
     
     def extract_learning(self, section: Dict, final_output: str) -> str:
-        """Extract analytical methodologies and frameworks that can improve future analysis."""
-        
-        prompt = f"""You are a methodology curator. Extract analytical techniques and frameworks from this analysis that could improve future analysis of ANY company.
+        """Extract wise analytical principles that can improve future analysis."""
+
+        prompt = f"""You are extracting WISE ANALYTICAL PRINCIPLES that apply to ANY company in ANY sector.
+
+Think like a seasoned investor advising a junior analyst: What fundamental truths guide effective analysis?
 
 SECTION TYPE: {section['title']}
 
@@ -276,36 +278,44 @@ COMPLETED ANALYSIS:
 {final_output}
 ---
 
-Extract transferable analytical methodologies, not company-specific findings.
+Extract 2-4 timeless PRINCIPLES from this analysis - NOT company-specific findings or technical methodologies.
 
-METHODOLOGY EXTRACTION:
-1. **Analytical Techniques**: What calculation methods, ratio analysis, or data relationships proved most revealing?
-2. **Red Flag Patterns**: What general warning signs or contradiction patterns were identified?  
-3. **Data Quality Checks**: What validation methods or cross-references were most effective?
+PRINCIPLE EXTRACTION GUIDANCE:
+
+Principles should be:
+- **Fundamental truths** about analysis, not specific calculation methods
+- **Memorable and quotable** - something an analyst would remember and apply
+- **Focus on WHAT matters**, not HOW to calculate it
+- **8-15 words maximum** - brevity forces clarity
+- **Universally applicable** across ALL sectors
+
+GOOD EXAMPLES (the style to emulate):
+- "Actions speak louder than words - watch where capital actually goes"
+- "Cash flow quality reveals more truth than reported profits"
+- "Verify management's narrative against primary source data"
+- "Customer concentration creates fragility in revenue continuity"
+- "Cost growth outpacing revenue growth signals broken unit economics"
+
+BAD EXAMPLES (avoid these patterns):
+- "When analyzing capital allocation, correlate major investment events with subsequent changes in segmental growth..." (Too technical, too long)
+- "Calculate cash conversion ratios (Operating Cash Flow / EBITDA) to assess earnings quality..." (Too procedural)
+- "Cross-check operational data against financial data to test for logical consistency..." (Focuses on HOW not WHAT)
 
 OUTPUT FORMAT (JSON):
 {{
-  "analytical_techniques": [
-    "When analyzing [context], calculate [specific ratio/metric] to reveal [insight type]",
-    "Look for [pattern] in [data type] to identify [risk/opportunity]"
-  ],
-  "red_flag_patterns": [
-    "Warning sign: [general pattern] often indicates [business risk]",
-    "Contradiction: [claim type] vs [data type] reveals [underlying issue]"
-  ],
-  "data_validation": [
-    "Cross-check [data source A] against [data source B] to verify [accuracy]",
-    "Calculate [derived metric] to validate [reported claim]"
+  "principles": [
+    "First wise principle (8-15 words)",
+    "Second wise principle (8-15 words)"
   ]
 }}
 
 RULES:
-- Focus on methodology, not specific company details
-- Each technique should apply across multiple companies/industries
-- Be specific about analytical steps and calculations
-- Maximum 2 items per category - focus on most valuable methods
+- Focus on what matters, not how to calculate it
+- Each principle should apply across multiple companies/industries
+- Maximum 4 principles - focus on most valuable insights
+- No company names, sector names, or specific numbers
 
-Extract only the most transferable and valuable analytical approaches."""
+Extract only the most transferable and memorable analytical principles."""
         # Low temperature for structured, precise data extraction.
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,

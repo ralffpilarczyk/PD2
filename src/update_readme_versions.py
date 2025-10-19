@@ -7,9 +7,13 @@ from pathlib import Path
 import re
 
 
+# Get project root (parent directory of this script's location)
+PROJECT_ROOT = Path(__file__).parent.parent
+
+
 def get_pd2_version():
     """Extract PD2 version from src/__init__.py"""
-    init_path = Path("src/__init__.py")
+    init_path = PROJECT_ROOT / "src" / "__init__.py"
     with open(init_path, 'r') as f:
         for line in f:
             if line.startswith('__version__'):
@@ -19,7 +23,7 @@ def get_pd2_version():
 
 def get_opp_version():
     """Extract OPP version from OPP.py"""
-    opp_path = Path("OPP.py")
+    opp_path = PROJECT_ROOT / "OPP.py"
     with open(opp_path, 'r') as f:
         for line in f:
             if line.startswith('__opp_version__'):
@@ -29,7 +33,7 @@ def get_opp_version():
 
 def update_readme():
     """Update README.md with current version numbers"""
-    readme_path = Path("README.md")
+    readme_path = PROJECT_ROOT / "README.md"
 
     pd2_version = get_pd2_version()
     opp_version = get_opp_version()

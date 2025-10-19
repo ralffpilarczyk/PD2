@@ -535,6 +535,11 @@ METHODOLOGY CRITERIA:
 3. Applicable to multiple contexts within the same section type
 4. Range from solid practices (6/10) to breakthrough methodologies (9-10/10)
 
+CRITICAL REQUIREMENT:
+You MUST analyze learnings from ALL 4 SECTIONS (1, 2, 3, 4) separately.
+For EACH section, extract up to 6 universal methodologies.
+DO NOT skip Section 4 - it is as important as the other sections.
+
 For each methodology, provide:
 - instruction: "When analyzing [universal context], [specific analytical method] to [reveal insight type]"
 - section_number: [the section number this methodology applies to]
@@ -547,16 +552,33 @@ QUALITY DISTRIBUTION GUIDANCE:
 
 OUTPUT FORMAT:
 NEW_INSIGHTS:
-- instruction: "[universal analytical methodology for future runs]"
-  section_number: [section number]
-  quality_score: [6-10, realistic distribution]
 
-- instruction: "[another universal analytical methodology]"
-  section_number: [section number]
-  quality_score: [6-10, realistic distribution]
+[Section 1 - Company Overview methodologies]
+- instruction: "[universal analytical methodology]"
+  section_number: 1
+  quality_score: [6-10]
+...
 
-Generate comprehensive UNIVERSAL methodology candidates - subsequent harsh filtering will select only the best transferable techniques.
-Maximum 6 insights per section. Focus on methodologies suitable for manual review and insertion into section specifications."""
+[Section 2 - Competitive Positioning methodologies]
+- instruction: "[universal analytical methodology]"
+  section_number: 2
+  quality_score: [6-10]
+...
+
+[Section 3 - Financial KPIs methodologies]
+- instruction: "[universal analytical methodology]"
+  section_number: 3
+  quality_score: [6-10]
+...
+
+[Section 4 - Strategic Considerations methodologies]
+- instruction: "[universal analytical methodology]"
+  section_number: 4
+  quality_score: [6-10]
+...
+
+Generate comprehensive UNIVERSAL methodology candidates for ALL 4 SECTIONS - subsequent harsh filtering will select only the best transferable techniques.
+Up to 6 insights per section. Focus on methodologies suitable for manual review and insertion into section specifications."""
 
         new_insights_text = retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,

@@ -675,10 +675,8 @@ class IntelligentAnalyst:
         
         combined_learning = "\n\n".join(learning_files)
         
-        # Synthesize WISE analytical principles from learning extractions
-        prompt = f"""You are synthesizing WISE ANALYTICAL PRINCIPLES from individual section learnings.
-
-Think like a seasoned investor mentoring analysts: What fundamental truths emerge from these analyses?
+        # Synthesize practical patterns from learning extractions
+        prompt = f"""Synthesize concrete red flags and patterns from these section learnings.
 
 INDIVIDUAL SECTION LEARNINGS:
 {combined_learning}
@@ -686,51 +684,53 @@ INDIVIDUAL SECTION LEARNINGS:
 CURRENT MEMORY STATS:
 {json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
 
-Your task: Extract timeless PRINCIPLES that apply to ANY company in ANY sector - NOT technical methodologies or calculation formulas.
+Your task: Extract specific PATTERNS and RED FLAGS that apply to ANY company - NOT vague wisdom or calculation procedures.
 
-PRINCIPLE SYNTHESIS GUIDANCE:
+WHAT TO EXTRACT:
 
-Principles should be:
-- **Fundamental truths** about analysis, not calculation methods
-- **Memorable and quotable** - something an analyst would remember and apply
-- **Focus on WHAT matters**, not HOW to calculate it
-- **8-15 words maximum** - brevity forces clarity
-- **Universally applicable** across ALL sectors
+Focus on:
+- **Specific red flags** with concrete thresholds or indicators
+- **Observable patterns** that signal risk or opportunity
+- **Contradictions** between different data points that reveal problems
+- **Direct business observations** that drive valuation
 
-GOOD EXAMPLES (the style to emulate):
-- "Actions speak louder than words - watch where capital actually goes"
-- "Cash flow quality reveals more truth than reported profits"
-- "Verify management's narrative against primary source data"
-- "Customer concentration creates fragility in revenue continuity"
-- "Cost growth outpacing revenue growth signals broken unit economics"
+GOOD EXAMPLES (direct and specific):
+- "Revenue concentration above 30% means customer controls pricing"
+- "Margin decline during revenue growth signals pricing pressure"
+- "Rising DSO indicates collection problems or aggressive revenue recognition"
+- "Customer concentration creates revenue fragility regardless of relationship length"
+- "Declining organic growth masked by acquisitions signals core business problems"
+- "High capex relative to depreciation indicates maintenance backlog or expansion pressure"
 
-BAD EXAMPLES (avoid these patterns):
-- "When analyzing capital allocation, correlate major investment events with subsequent changes in segmental growth..." (Too technical, too long)
-- "Calculate cash conversion ratios (Operating Cash Flow / EBITDA) to assess earnings quality..." (Too procedural)
-- "Cross-check operational data against financial data to test for logical consistency..." (Focuses on HOW not WHAT)
+BAD EXAMPLES (vague poetry):
+- "To see the future, analyze the growth segments"
+- "The seller's motivation is the most important term"
+- "Actions speak louder than words"
+- "Look for what's not being said"
+- "Cash flow quality reveals more truth than profits"
 
-For each principle, provide:
-- instruction: "[wise principle in 8-15 words]"
-- section_number: [the section number this principle applies to]
+For each pattern, provide:
+- instruction: "[specific pattern or red flag in 10-20 words]"
+- section_number: [the section number this pattern applies to]
 - quality_score: [6-10, be realistic about distribution]
 
 QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Profound insights that fundamentally shift how analysts think - the "aha moments"
-- 7-8/10: Solid principles that meaningfully improve analytical judgment
-- 6/10: Standard but useful reminders of what matters
+- 9-10/10: Specific patterns that consistently reveal material risks across companies
+- 7-8/10: Solid red flags that meaningfully improve due diligence
+- 6/10: Standard but useful warning signs
 
 OUTPUT FORMAT:
 NEW_INSIGHTS:
-- instruction: "[wise principle in 8-15 words]"
+- instruction: "[specific pattern or red flag in 10-20 words]"
   section_number: [section number]
   quality_score: [6-10, realistic distribution]
 
-- instruction: "[another wise principle in 8-15 words]"
+- instruction: "[another specific pattern or red flag in 10-20 words]"
   section_number: [section number]
   quality_score: [6-10, realistic distribution]
 
-Generate comprehensive principle candidates - subsequent harsh filtering will select only the best (9-10/10 only).
-Focus on what changes how an analyst thinks, not what they calculate.
+Generate comprehensive pattern candidates - subsequent harsh filtering will select only the best (9-10/10 only).
+Focus on concrete, actionable red flags and patterns.
 """
         
         model = genai.GenerativeModel(self.core_analyzer.model_name)

@@ -336,10 +336,8 @@ class OnePageProfile:
         return polished
 
     def _extract_learning(self, section: dict, final_output: str) -> str:
-        """Step 5: Extract universal analytical principles"""
-        prompt = f"""You are extracting WISE ANALYTICAL PRINCIPLES that apply to ANY company in ANY sector.
-
-Think like a seasoned M&A director advising a junior analyst: What fundamental truths guide effective analysis?
+        """Step 5: Extract practical analytical patterns"""
+        prompt = f"""Extract practical red flags and patterns from this analysis that apply to ANY company.
 
 SECTION TYPE: {section['title']}
 
@@ -348,45 +346,45 @@ COMPLETED ANALYSIS:
 {final_output}
 ---
 
-Extract 2-4 timeless PRINCIPLES - NOT company-specific findings or technical methodologies.
+Extract 2-4 concrete PATTERNS or RED FLAGS - NOT company-specific findings.
 
-PRINCIPLE EXTRACTION GUIDANCE:
+WHAT TO EXTRACT:
 
-Principles should be:
-- **Fundamental truths** about analysis, not specific calculation methods
-- **Memorable and quotable** - something an analyst would remember and apply
-- **Focus on WHAT matters**, not HOW to calculate it
-- **8-15 words maximum** - brevity forces clarity
-- **Universally applicable** across ALL sectors (pharma, tech, industrial, retail, finance)
+Focus on:
+- **Specific red flags** with concrete thresholds or indicators
+- **Observable patterns** that signal risk or opportunity
+- **Contradictions** between different data points that reveal problems
+- **Direct business observations** that drive valuation
 
-GOOD EXAMPLES (the style to emulate):
-- "Actions speak louder than words - watch where capital actually goes"
-- "Cash flow quality reveals more truth than reported profits"
-- "Verify management's narrative against primary source data"
-- "Contradictions between claims and results expose reality"
-- "Past patterns are the best predictor of future behavior"
-- "Numbers should tell consistent stories from different angles"
+GOOD EXAMPLES (direct and specific):
+- "Revenue concentration above 30% means customer controls pricing"
+- "Margin decline during revenue growth signals pricing pressure"
+- "Rising DSO indicates collection problems or aggressive revenue recognition"
+- "Customer concentration creates revenue fragility regardless of relationship length"
+- "Declining organic growth masked by acquisitions signals core business problems"
+- "High capex relative to depreciation indicates maintenance backlog or expansion pressure"
 
-BAD EXAMPLES (too technical/specific - avoid this style):
-- "When analyzing capital allocation, correlate major investment events with subsequent segmental growth..."
-- "Calculate Operating Cash Flow / EBITDA ratio to assess earnings quality..."
+BAD EXAMPLES (vague poetry):
+- "To see the future, analyze the growth segments"
+- "The seller's motivation is the most important term"
+- "Actions speak louder than words"
+- "Look for what's not being said"
 
-CRITICAL CONSTRAINTS:
-- NO company names, NO sector names, NO specific numbers, NO calculation formulas
-- Maximum 15 words per principle
-- Phrased as wise guidance, not technical instructions
+CONSTRAINTS:
+- NO company names, NO sector names, NO specific company numbers
+- 10-20 words per pattern (enough to be specific)
+- Direct observations, not philosophical statements
 - Must work for ALL sectors and company types
 
 OUTPUT FORMAT (JSON):
 {{
   "principles": [
-    "First wise principle (8-15 words)",
-    "Second wise principle (8-15 words)",
-    "Third wise principle if applicable (8-15 words)"
+    "First specific pattern or red flag (10-20 words)",
+    "Second specific pattern or red flag (10-20 words)"
   ]
 }}
 
-Extract only the most universally applicable wisdom that would guide analysis of any company."""
+Extract only concrete patterns and red flags that are immediately actionable."""
 
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,
@@ -521,10 +519,8 @@ Extract only the most universally applicable wisdom that would guide analysis of
 
         combined_learning = "\n\n".join(learning_files)
 
-        # Synthesize WISE analytical principles from learnings
-        prompt = f"""You are synthesizing WISE ANALYTICAL PRINCIPLES from individual section learnings.
-
-Think like a seasoned M&A director mentoring analysts: What fundamental truths emerge from these analyses?
+        # Synthesize practical patterns from learnings
+        prompt = f"""Synthesize concrete red flags and patterns from these section learnings.
 
 INDIVIDUAL SECTION LEARNINGS:
 {combined_learning}
@@ -532,68 +528,70 @@ INDIVIDUAL SECTION LEARNINGS:
 CURRENT MEMORY STATS:
 {json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
 
-Your task: Extract timeless PRINCIPLES that apply to ANY company in ANY sector - NOT technical methodologies or calculation formulas.
+Your task: Extract specific PATTERNS and RED FLAGS that apply to ANY company - NOT vague wisdom or calculation procedures.
 
-PRINCIPLE SYNTHESIS GUIDANCE:
+WHAT TO EXTRACT:
 
-Principles should be:
-- **Fundamental truths** about analysis, not calculation methods
-- **Memorable and quotable** - something an analyst would remember and apply
-- **Focus on WHAT matters**, not HOW to calculate it
-- **8-15 words maximum** - brevity forces clarity
-- **Universally applicable** across ALL sectors
+Focus on:
+- **Specific red flags** with concrete thresholds or indicators
+- **Observable patterns** that signal risk or opportunity
+- **Contradictions** between different data points that reveal problems
+- **Direct business observations** that drive valuation
 
-GOOD EXAMPLES (the style to emulate):
-- "Actions speak louder than words - watch where capital actually goes"
-- "Cash flow quality reveals more truth than reported profits"
-- "Verify management's narrative against primary source data"
-- "Customer concentration creates fragility in revenue continuity"
-- "Cost growth outpacing revenue growth signals broken unit economics"
+GOOD EXAMPLES (direct and specific):
+- "Revenue concentration above 30% means customer controls pricing"
+- "Margin decline during revenue growth signals pricing pressure"
+- "Rising DSO indicates collection problems or aggressive revenue recognition"
+- "Customer concentration creates revenue fragility regardless of relationship length"
+- "Declining organic growth masked by acquisitions signals core business problems"
+- "High capex relative to depreciation indicates maintenance backlog or expansion pressure"
 
-BAD EXAMPLES (avoid these patterns):
-- "When analyzing capital allocation, correlate major investment events with subsequent changes in segmental growth..." (Too technical, too long)
-- "Calculate cash conversion ratios (Operating Cash Flow / EBITDA) to assess earnings quality..." (Too procedural)
-- "Cross-check operational data against financial data to test for logical consistency..." (Focuses on HOW not WHAT)
+BAD EXAMPLES (vague poetry):
+- "To see the future, analyze the growth segments"
+- "The seller's motivation is the most important term"
+- "Actions speak louder than words"
+- "Look for what's not being said"
+- "Cash flow quality reveals more truth than profits"
 
 CRITICAL REQUIREMENT:
-You MUST synthesize principles from ALL 4 SECTIONS (1, 2, 3, 4) separately.
-Extract up to 6 principles per section.
+You MUST extract patterns from ALL 4 SECTIONS (1, 2, 3, 4) separately.
+Extract up to 6 patterns per section.
 DO NOT skip Section 4 - it is as important as the other sections.
 
 QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Profound insights that fundamentally shift how analysts think - the "aha moments"
-- 7-8/10: Solid principles that meaningfully improve analytical judgment
-- 6/10: Standard but useful reminders of what matters
+- 9-10/10: Specific patterns that consistently reveal material risks across companies
+- 7-8/10: Solid red flags that meaningfully improve due diligence
+- 6/10: Standard but useful warning signs
 
 OUTPUT FORMAT:
 NEW_INSIGHTS:
 
-[Section 1 - Company Overview principles]
-- instruction: "[wise principle in 8-15 words]"
+[Section 1 - Company Overview patterns]
+- instruction: "[specific pattern or red flag in 10-20 words]"
   section_number: 1
   quality_score: [6-10]
 ...
 
-[Section 2 - Competitive Positioning principles]
-- instruction: "[wise principle in 8-15 words]"
+[Section 2 - Competitive Positioning patterns]
+- instruction: "[specific pattern or red flag in 10-20 words]"
   section_number: 2
   quality_score: [6-10]
 ...
 
-[Section 3 - Financial KPIs principles]
-- instruction: "[wise principle in 8-15 words]"
+[Section 3 - Financial KPIs patterns]
+- instruction: "[specific pattern or red flag in 10-20 words]"
   section_number: 3
   quality_score: [6-10]
 ...
 
-[Section 4 - Strategic Considerations principles]
-- instruction: "[wise principle in 8-15 words]"
+[Section 4 - Strategic Considerations patterns]
+- instruction: "[specific pattern or red flag in 10-20 words]"
   section_number: 4
   quality_score: [6-10]
 ...
 
-Generate comprehensive principle candidates for ALL 4 SECTIONS - subsequent harsh filtering will select only the best (9-10/10 only).
-Up to 6 principles per section. Focus on what changes how an analyst thinks, not what they calculate."""
+Generate comprehensive pattern candidates for ALL 4 SECTIONS - subsequent harsh filtering will select only the best (9-10/10 only).
+Up to 6 patterns per section. Focus on concrete, actionable red flags and patterns."""
 
         new_insights_text = retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,

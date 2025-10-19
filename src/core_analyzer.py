@@ -265,11 +265,9 @@ Generate the condensed version that respects the section's specific focus."""
         return result
     
     def extract_learning(self, section: Dict, final_output: str) -> str:
-        """Extract wise analytical principles that can improve future analysis."""
+        """Extract practical analytical patterns that can improve future analysis."""
 
-        prompt = f"""You are extracting WISE ANALYTICAL PRINCIPLES that apply to ANY company in ANY sector.
-
-Think like a seasoned investor advising a junior analyst: What fundamental truths guide effective analysis?
+        prompt = f"""Extract practical red flags and patterns from this analysis that apply to ANY company.
 
 SECTION TYPE: {section['title']}
 
@@ -278,44 +276,45 @@ COMPLETED ANALYSIS:
 {final_output}
 ---
 
-Extract 2-4 timeless PRINCIPLES from this analysis - NOT company-specific findings or technical methodologies.
+Extract 2-4 concrete PATTERNS or RED FLAGS - NOT company-specific findings.
 
-PRINCIPLE EXTRACTION GUIDANCE:
+WHAT TO EXTRACT:
 
-Principles should be:
-- **Fundamental truths** about analysis, not specific calculation methods
-- **Memorable and quotable** - something an analyst would remember and apply
-- **Focus on WHAT matters**, not HOW to calculate it
-- **8-15 words maximum** - brevity forces clarity
-- **Universally applicable** across ALL sectors
+Focus on:
+- **Specific red flags** with concrete thresholds or indicators
+- **Observable patterns** that signal risk or opportunity
+- **Contradictions** between different data points that reveal problems
+- **Direct business observations** that drive valuation
 
-GOOD EXAMPLES (the style to emulate):
-- "Actions speak louder than words - watch where capital actually goes"
-- "Cash flow quality reveals more truth than reported profits"
-- "Verify management's narrative against primary source data"
-- "Customer concentration creates fragility in revenue continuity"
-- "Cost growth outpacing revenue growth signals broken unit economics"
+GOOD EXAMPLES (direct and specific):
+- "Revenue concentration above 30% means customer controls pricing"
+- "Margin decline during revenue growth signals pricing pressure"
+- "Rising DSO indicates collection problems or aggressive revenue recognition"
+- "Customer concentration creates revenue fragility regardless of relationship length"
+- "Declining organic growth masked by acquisitions signals core business problems"
+- "High capex relative to depreciation indicates maintenance backlog or expansion pressure"
 
-BAD EXAMPLES (avoid these patterns):
-- "When analyzing capital allocation, correlate major investment events with subsequent changes in segmental growth..." (Too technical, too long)
-- "Calculate cash conversion ratios (Operating Cash Flow / EBITDA) to assess earnings quality..." (Too procedural)
-- "Cross-check operational data against financial data to test for logical consistency..." (Focuses on HOW not WHAT)
+BAD EXAMPLES (vague poetry):
+- "To see the future, analyze the growth segments"
+- "The seller's motivation is the most important term"
+- "Actions speak louder than words"
+- "Look for what's not being said"
 
 OUTPUT FORMAT (JSON):
 {{
   "principles": [
-    "First wise principle (8-15 words)",
-    "Second wise principle (8-15 words)"
+    "First specific pattern or red flag (10-20 words)",
+    "Second specific pattern or red flag (10-20 words)"
   ]
 }}
 
 RULES:
-- Focus on what matters, not how to calculate it
-- Each principle should apply across multiple companies/industries
-- Maximum 4 principles - focus on most valuable insights
-- No company names, sector names, or specific numbers
+- NO company names, NO sector names, NO specific company numbers
+- 10-20 words per pattern (enough to be specific)
+- Direct observations, not philosophical statements
+- Must work for ALL sectors and company types
 
-Extract only the most transferable and memorable analytical principles."""
+Extract only concrete patterns and red flags that are immediately actionable."""
         # Low temperature for structured, precise data extraction.
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,

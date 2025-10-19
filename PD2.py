@@ -726,8 +726,8 @@ Generate comprehensive methodology candidates - subsequent harsh filtering will 
         try:
             # Archive current memory
             archive_path = self.file_manager.archive_memory(self.insight_memory.get_memory_data())
-            thread_safe_print(f"Memory archived to: {archive_path}")
-            
+            # Silent archival - no output
+
             # Process and add new insights
             self.insight_memory.process_new_insights(new_insights_text)
 

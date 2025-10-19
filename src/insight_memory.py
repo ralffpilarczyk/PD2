@@ -128,7 +128,7 @@ class InsightMemory:
                     
                     # Skip if instruction exceeds 30 words
                     if actual_word_count > 30:
-                        thread_safe_print(f"Skipping instruction (too long): {instruction[:50]}... ({actual_word_count} words)")
+                        # Silent skip - no output
                         continue
                     
                     insight = {
@@ -167,8 +167,8 @@ class InsightMemory:
         
         if not is_duplicate:
             self.learning_memory["insights"][section_key].append(insight)
-            thread_safe_print(f"Added instruction for Section {section_num}: {insight['instruction'][:60]}...")
-            
+            # Silent addition - no output
+
             # Keep only top insights per section
             if len(self.learning_memory["insights"][section_key]) > self.MAX_INSIGHTS_PER_SECTION:
                 self.learning_memory["insights"][section_key].sort(

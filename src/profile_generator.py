@@ -30,8 +30,7 @@ class ProfileGenerator:
         
         # Extract company name
         company_name = self._extract_company_name(full_context)
-        thread_safe_print(f"Company: {company_name}")
-        
+
         # Collect markdown from existing section files
         combined_markdown, processed_sections = self._collect_section_markdown()
         
@@ -89,8 +88,7 @@ class ProfileGenerator:
                 # If no final file found, use the first one
                 md_file = final_file if final_file else md_files[0]
 
-                thread_safe_print(f"→ Section {section_num}: {section_title}")
-
+                # Silent collection - no output per section
                 with open(md_file, 'r', encoding='utf-8') as f:
                     content = f.read()
 

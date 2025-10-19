@@ -2,7 +2,7 @@
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.1): Comprehensive 33-section company profiles with deep analytical insights
-- **OPP** (OnePageProfile): Concise one-page profiles for quick M&A evaluation
+- **OPP** (OnePageProfile v1.0): Concise one-page profiles for quick M&A evaluation
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ Intelligent document analysis tools for M&A and investment analysis:
    python OPP.py      # For one-page M&A profiles
    ```
 
-## OnePageProfile (OPP)
+## OnePageProfile v1.0 (OPP)
 
 Quick one-page company profiles for M&A evaluation.
 

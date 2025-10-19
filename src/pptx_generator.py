@@ -12,18 +12,18 @@ from typing import Dict, List
 from datetime import datetime
 
 
-def _get_version():
+def _get_opp_version():
     """Get version from OPP.py by reading the file directly (avoid circular import)"""
     opp_path = Path(__file__).parent.parent / "OPP.py"
     with open(opp_path, 'r') as f:
         for line in f:
-            if line.startswith('__version__'):
-                # Extract version string from line like: __version__ = "1.0"
+            if line.startswith('__opp_version__'):
+                # Extract version string from line like: __opp_version__ = "1.0"
                 return line.split('=')[1].strip().strip('"').strip("'")
     return "1.0"  # Fallback
 
 
-VERSION = _get_version()
+OPP_VERSION = _get_opp_version()
 
 
 # Color scheme (matching PD2)
@@ -294,7 +294,7 @@ def _add_footnote(slide):
         Inches(0.2)    # height
     )
     footnote_frame = footnote_box.text_frame
-    footnote_frame.text = f"Note: Generated with OnePageProfile v{VERSION} as of {date_str}."
+    footnote_frame.text = f"Note: Generated with OnePageProfile v{OPP_VERSION} as of {date_str}."
     footnote_frame.paragraphs[0].font.name = 'Arial'
     footnote_frame.paragraphs[0].font.size = Pt(7)
     footnote_frame.paragraphs[0].font.color.rgb = DARK_BLUE

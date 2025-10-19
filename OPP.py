@@ -16,7 +16,7 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Version
-__version__ = "1.0"
+__opp_version__ = "1.0"
 
 # Import utilities from PD2
 from src.utils import thread_safe_print

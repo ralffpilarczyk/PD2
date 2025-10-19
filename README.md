@@ -1,4 +1,4 @@
-# ProfileDash 2.1 & OnePageProfile
+# ProfileDash 2.1 & OnePageProfile 1.0
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.1): Comprehensive 33-section company profiles with deep analytical insights

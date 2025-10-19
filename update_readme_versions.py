@@ -39,8 +39,8 @@ def update_readme():
 
     # Update title line
     content = re.sub(
-        r'# ProfileDash \d+\.\d+ & OnePageProfile',
-        f'# ProfileDash {pd2_version} & OnePageProfile',
+        r'# ProfileDash \d+\.\d+ & OnePageProfile.*',
+        f'# ProfileDash {pd2_version} & OnePageProfile {opp_version}',
         content
     )
 

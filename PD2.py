@@ -675,8 +675,8 @@ class IntelligentAnalyst:
         
         combined_learning = "\n\n".join(learning_files)
         
-        # Synthesize practical patterns from learning extractions
-        prompt = f"""Synthesize concrete red flags and patterns from these section learnings.
+        # Synthesize analytical principles from learning extractions
+        prompt = f"""Synthesize analytical principles from these section learnings that help sharpen and deepen company analysis.
 
 INDIVIDUAL SECTION LEARNINGS:
 {combined_learning}
@@ -684,53 +684,51 @@ INDIVIDUAL SECTION LEARNINGS:
 CURRENT MEMORY STATS:
 {json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
 
-Your task: Extract specific PATTERNS and RED FLAGS that apply to ANY company - NOT vague wisdom or calculation procedures.
+Your task: Extract analytical PRINCIPLES that apply to ANY company - NOT vague wisdom, NOT just red flags, NOT calculation procedures.
 
 WHAT TO EXTRACT:
 
-Focus on:
-- **Specific red flags** with concrete thresholds or indicators
-- **Observable patterns** that signal risk or opportunity
-- **Contradictions** between different data points that reveal problems
-- **Direct business observations** that drive valuation
+Analytical principles that guide HOW to analyze more deeply:
+- **Comparative techniques** - what to compare against what to reveal hidden truths
+- **Decomposition approaches** - how to break down aggregates to expose real drivers
+- **Verification methods** - how to test claims using different data sources
+- **Relationship patterns** - what metrics or trends to correlate for deeper insight
 
-GOOD EXAMPLES (direct and specific):
-- "Revenue concentration above 30% means customer controls pricing"
-- "Margin decline during revenue growth signals pricing pressure"
-- "Rising DSO indicates collection problems or aggressive revenue recognition"
-- "Customer concentration creates revenue fragility regardless of relationship length"
-- "Declining organic growth masked by acquisitions signals core business problems"
-- "High capex relative to depreciation indicates maintenance backlog or expansion pressure"
+GOOD EXAMPLES (analytical principles):
+- "Compare stated strategy against actual capital allocation to reveal true management priorities"
+- "Decompose aggregate growth into organic versus inorganic components to assess core business health"
+- "Calculate implied operational metrics from management claims to test their plausibility"
+- "Trace revenue recognition through to cash collection to verify business quality"
+- "Compare segment economics to corporate average to identify where value is actually created"
+- "Map capital deployment to subsequent margin changes to evaluate management effectiveness"
 
-BAD EXAMPLES (vague poetry):
-- "To see the future, analyze the growth segments"
-- "The seller's motivation is the most important term"
-- "Actions speak louder than words"
-- "Look for what's not being said"
-- "Cash flow quality reveals more truth than profits"
+BAD EXAMPLES (too vague or too specific):
+- "To see the future, analyze the growth segments" (too vague)
+- "Revenue concentration above 30% means customer controls pricing" (specific red flag, not analytical principle)
+- "Actions speak louder than words" (corporate poetry)
 
-For each pattern, provide:
-- instruction: "[specific pattern or red flag in 10-20 words]"
-- section_number: [the section number this pattern applies to]
+For each principle, provide:
+- instruction: "[analytical principle in 12-20 words]"
+- section_number: [the section number this principle applies to]
 - quality_score: [6-10, be realistic about distribution]
 
 QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Specific patterns that consistently reveal material risks across companies
-- 7-8/10: Solid red flags that meaningfully improve due diligence
-- 6/10: Standard but useful warning signs
+- 9-10/10: Analytical approaches that consistently reveal material insights across companies
+- 7-8/10: Solid principles that meaningfully deepen analysis
+- 6/10: Standard but useful analytical techniques
 
 OUTPUT FORMAT:
 NEW_INSIGHTS:
-- instruction: "[specific pattern or red flag in 10-20 words]"
+- instruction: "[analytical principle in 12-20 words]"
   section_number: [section number]
   quality_score: [6-10, realistic distribution]
 
-- instruction: "[another specific pattern or red flag in 10-20 words]"
+- instruction: "[another analytical principle in 12-20 words]"
   section_number: [section number]
   quality_score: [6-10, realistic distribution]
 
-Generate comprehensive pattern candidates - subsequent harsh filtering will select only the best (9-10/10 only).
-Focus on concrete, actionable red flags and patterns.
+Generate comprehensive principle candidates - subsequent harsh filtering will select only the best (9-10/10 only).
+Focus on analytical approaches that sharpen and deepen analysis.
 """
         
         model = genai.GenerativeModel(self.core_analyzer.model_name)

@@ -2,6 +2,7 @@ marker-pdf
 python-dotenv
 google-generativeai
 markdown
+python-pptx
 requests
 pdfminer.six
 weasyprint

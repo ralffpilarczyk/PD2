@@ -48,11 +48,24 @@ old/
 
 .cursorignore
 
-runs/
+# Working directories - ignore contents but keep folder structure
+runs/*
+!runs/.gitkeep
 
-# Data and metrics
-quality_metrics/
-memory/
+quality_metrics/*
+!quality_metrics/.gitkeep
+
+memory/*
+!memory/.gitkeep
+
+SourceFiles/*
+!SourceFiles/.gitkeep
+
+ReportFiles/*
+!ReportFiles/.gitkeep
+
+ProfileFiles/*
+!ProfileFiles/.gitkeep
 
 # Documentation
 PLAN.md
@@ -67,10 +80,3 @@ test_6agents.py
 
 # Claude Code
 .claude/
-
-# Source files
-SourceFiles/
-
-# Report files
-ReportFiles/
-ProfileFiles/

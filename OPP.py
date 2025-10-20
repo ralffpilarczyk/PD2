@@ -213,10 +213,11 @@ class WorkerDisplay:
 class OnePageProfile:
     """Generates one-page company profiles from PDF documents with parallel section processing"""
 
-    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2):
+    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2, enable_learning: bool = False):
         self.pdf_files = pdf_files
         self.model_name = model_name
         self.workers = workers
+        self.enable_learning = enable_learning
 
         # Create models with different temperatures
         self.model_low_temp = genai.GenerativeModel(
@@ -233,13 +234,17 @@ class OnePageProfile:
         # PDF parts will be prepared once and reused
         self.pdf_parts = None
 
-        # Initialize learning system and file manager
-        self.insight_memory = InsightMemory(self.timestamp, model_name=model_name, memory_prefix="opp")
+        # Initialize learning system (if enabled) and file manager
+        if self.enable_learning:
+            self.insight_memory = InsightMemory(self.timestamp, model_name=model_name, memory_prefix="opp")
+            os.makedirs("memory", exist_ok=True)
+        else:
+            self.insight_memory = None
+
         self.file_manager = FileManager(self.timestamp)
 
         # Setup directories
         self.file_manager.setup_directories(sections)
-        os.makedirs("memory", exist_ok=True)
 
     def encode_pdf_to_base64(self, pdf_path: str) -> str:
         """Encode PDF file to base64 string"""
@@ -299,8 +304,8 @@ class OnePageProfile:
 
     def _generate_section(self, section: dict) -> str:
         """Step 1: Generate initial section content"""
-        # Get relevant learning memory for this section
-        relevant_memory = self.insight_memory.get_relevant_memory(section['number'])
+        # Get relevant learning memory for this section (if enabled)
+        relevant_memory = self.insight_memory.get_relevant_memory(section['number']) if self.enable_learning else ""
         prompt = get_section_generation_prompt(section, relevant_memory)
         response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
         return response.text.strip()
@@ -722,20 +727,21 @@ Status: {status}
                 thread_safe_print(f"{YELLOW}{WARNING}{RESET} PowerPoint generation failed: {e}")
                 pptx_path = None
 
-            # Phase 2: Learning extraction (background work)
-            thread_safe_print(f"\n{CYAN}Phase 2: Extracting learnings (background)...{RESET}")
+            # Phase 2: Learning extraction (background work) - only if enabled
+            if self.enable_learning:
+                thread_safe_print(f"\n{CYAN}Phase 2: Extracting learnings (background)...{RESET}")
 
-            with ThreadPoolExecutor(max_workers=self.workers) as executor:
-                futures = [
-                    executor.submit(self.process_section_learn, section)
-                    for section in sections
-                ]
-                # Wait for all to complete
-                for future in as_completed(futures):
-                    future.result()  # Silent - just wait for completion
+                with ThreadPoolExecutor(max_workers=self.workers) as executor:
+                    futures = [
+                        executor.submit(self.process_section_learn, section)
+                        for section in sections
+                    ]
+                    # Wait for all to complete
+                    for future in as_completed(futures):
+                        future.result()  # Silent - just wait for completion
 
-            # Conduct memory review (synthesize universal learnings)
-            self._conduct_memory_review()
+                # Conduct memory review (synthesize universal learnings)
+                self._conduct_memory_review()
 
             # Save run log
             self.save_run_log(company_name, "Success", pptx_path)
@@ -794,10 +800,19 @@ if __name__ == "__main__":
 
     # Worker selection
     thread_safe_print("Select number of parallel workers:")
-    thread_safe_print("  1-4 workers (default 2)")
-    workers_choice = prompt_single_digit("Choose workers [1-4] (default 2): ", valid_digits="1234", default_digit="2")
+    thread_safe_print("  1-4 workers (default 4)")
+    workers_choice = prompt_single_digit("Choose workers [1-4] (default 4): ", valid_digits="1234", default_digit="4")
     num_workers = int(workers_choice)
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Workers: {num_workers}\n")
+
+    # Learning toggle
+    thread_safe_print("Enable learning extraction:")
+    thread_safe_print("  1) Exclude learnings (default)")
+    thread_safe_print("  2) Include learnings")
+    learning_choice = prompt_single_digit("Choose learning mode [1/2] (default 1): ", valid_digits="12", default_digit="1")
+    enable_learning = learning_choice == "2"
+    learning_status = "enabled" if enable_learning else "disabled"
+    thread_safe_print(f"{CYAN}{CHECK}{RESET} Learning: {learning_status}\n")
 
     # File selection
     pdf_files = select_pdf_files()
@@ -809,7 +824,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60 + "\n")
 
     # Generate profile
-    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers)
+    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers, enable_learning=enable_learning)
     profile_path = maker.run()
 
     if not profile_path:

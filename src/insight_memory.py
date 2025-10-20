@@ -231,7 +231,7 @@ QUALITY STANDARDS - Be brutally selective:
 - 1-5/10: Obvious or routine practices
 
 EVALUATION CRITERIA:
-1. UNIVERSAL APPLICABILITY: Works across different companies/industries?
+1. UNIVERSAL APPLICABILITY: Applies to 80%+ of companies, not just niche situations (parent-subsidiary, multi-entity, captives)?
 2. INSIGHT DEPTH: Reveals hidden relationships vs. surface-level checks?
 3. CONCISENESS: Instruction is clear and actionable?
 4. GAME-CHANGING: Would this genuinely improve analytical quality?
@@ -260,6 +260,7 @@ DIVERSITY RULES:
 - If all eligible techniques are diverse, choose highest scores
 - Stay within the eligible pool (>= MAX-2) even if lower-scored insights are more diverse
 - Cap selection at 3 insights maximum
+- FALLBACK: If all insights are too similar to achieve diversity, select the top 1-2 by score anyway (never leave section empty)
 
 RESPONSE FORMAT:
 SCORES:
@@ -319,9 +320,30 @@ Be ruthless on quality, strategic on diversity."""
                     # Enhanced logging with eligibility info
                     thread_safe_print(f"Harsh filter - {section_key}: {original_count} total → {eligible_count} eligible (≥{max_score-2}) → {kept_count} selected (diversity)")
                 else:
-                    # No instructions passed harsh filter - keep empty
-                    thread_safe_print(f"Harsh filter - {section_key}: All instructions rejected (max score: {max_score})")
-                    self.learning_memory["insights"][section_key] = []
+                    # No instructions passed diversity filter - apply fallback
+                    if eligible_count > 0:
+                        # Fallback: All insights too similar, pick top 1-2 by score
+                        eligible_insights = [
+                            (scores.get(i['instruction'].lower(), 0), i)
+                            for i in insights
+                            if scores.get(i['instruction'].lower(), 0) >= max_score - 2
+                        ]
+                        eligible_insights.sort(key=lambda x: x[0], reverse=True)
+                        top_insights = eligible_insights[:2]
+
+                        filtered_insights = []
+                        for score, insight in top_insights:
+                            insight['harsh_reeval'] = True
+                            insight['original_score'] = insight.get('quality_score', 0)
+                            insight['quality_score'] = score
+                            filtered_insights.append(insight)
+
+                        self.learning_memory["insights"][section_key] = filtered_insights
+                        thread_safe_print(f"Harsh filter - {section_key}: Diversity fallback, keeping top {len(filtered_insights)} by score")
+                    else:
+                        # No eligible insights at all
+                        thread_safe_print(f"Harsh filter - {section_key}: All instructions rejected (max score: {max_score})")
+                        self.learning_memory["insights"][section_key] = []
 
             except Exception as e:
                 thread_safe_print(f"Warning: Could not apply harsh filter to {section_key}: {e}")

@@ -63,7 +63,7 @@ sections = [
                 "• For each segment, one sentence on the segment financials, with numbers, and the percentage contribution to revenues and profits, if possible\\n"
                 "• One sentence on the company's capital expenditure and any important trends\\n"
                 "• One sentence on balance sheet highlights, i.e. what's the single most important thing about the company's balance sheet, sometimes that's about net debt, sometimes about impairments, you need to judge\\n"
-                "• One sentence on the 2 most important MD&A highlights, including numbers\\n"
+                "• One sentence on unit economics and the 2 most important financial performance drivers, including numbers\\n"
                 "\\n"
                 "Critical rules:\\n"
                 "• Keep each sentence as concise as possible. no corporate poetry, but chairman-friendly language\\n"

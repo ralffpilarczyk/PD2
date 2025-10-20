@@ -25,49 +25,23 @@ Intelligent document analysis tools for M&A and investment analysis:
    python OPP.py      # For one-page M&A profiles
    ```
 
-## OnePageProfile v1.0 (OPP)
-
-Quick one-page company profiles for M&A evaluation.
-
-**Usage:**
-```bash
-python OPP.py
-```
-
-1. Select PDFs when prompted
-2. Wait for processing (~5-10 minutes)
-
-**Output:**
-- Markdown: `runs/opp_TIMESTAMP/step4_final.md`
-- PowerPoint: `ProfileFiles/[Company]_TIMESTAMP.pptx`
-
-**Format:**
-- Title and subtitle
-- 4 sections: Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations
-- Each section limited to 100 words with bullet points
-
 ## ProfileDash 2.1 (PD2)
 
-Comprehensive 33-section company analysis.
-
-## Requirements
-
-- Python 3.8+
-- Gemini API key (free at https://makersuite.google.com/app/apikey)
-- 8GB RAM minimum
+Comprehensive 33-section company analysis for deep M&A and investment evaluation.
 
 **Usage:**
 
 1. Run `python PD2.py`
-2. Select PDFs when prompted
-3. Choose section groups to analyze:
+2. Select model: Gemini Flash or Pro
+3. Select PDFs when prompted
+4. Choose section groups to analyze:
    - Company Profile (sections 1-13)
    - Strategy and SWOT (sections 14-19)
    - Sellside Positioning (sections 20-26)
    - Buyside Due Diligence (sections 27-32)
    - Data Book (section 33)
-4. Set parallel workers (1-5, default 2)
-5. Wait for processing (~30-60 minutes for full profile)
+5. Set parallel workers (1-5, default 2)
+6. Wait for processing (~30-60 minutes for full profile)
 
 **Output:**
 
@@ -85,6 +59,49 @@ Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
 - Parallel processing with configurable workers
 - Automatic retry with exponential backoff for API limits
 - Thread-safe operations for concurrent processing
+
+## OnePageProfile v1.0 (OPP)
+
+Concise one-page company profiles for rapid M&A screening and evaluation.
+
+**Interactive Usage:**
+```bash
+python OPP.py
+```
+
+1. Select model: Gemini Flash or Pro
+2. Set parallel workers (1-4, default 4)
+3. Choose learning mode: exclude (default) or include learnings
+4. Select PDFs when prompted
+5. Wait for processing (~5-10 minutes)
+
+**Batch Processing:**
+
+For processing multiple PDFs sequentially:
+```bash
+python batch_opp.py
+```
+
+Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
+- Model: Gemini Pro
+- Workers: 4
+- Learning: disabled
+- Progress tracking and summary report
+
+**Output:**
+- Markdown: `runs/run_TIMESTAMP/final_profile.md`
+- PowerPoint: `ReportFiles/[Company]_TIMESTAMP.pptx`
+
+**Format:**
+- Title and subtitle
+- 4 sections: Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations
+- Each section limited to ~120 words with bullet points
+
+## Requirements
+
+- Python 3.8+
+- Gemini API key (free at https://makersuite.google.com/app/apikey)
+- 8GB RAM minimum
 
 **Learning System:**
 Both systems learn and improve over time, but maintain separate learning memories:

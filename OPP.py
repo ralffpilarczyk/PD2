@@ -237,10 +237,9 @@ class OnePageProfile:
         self.insight_memory = InsightMemory(self.timestamp, model_name=model_name, memory_prefix="opp")
         self.file_manager = FileManager(self.timestamp)
 
-        # Setup directories and ensure memory file exists
+        # Setup directories
         self.file_manager.setup_directories(sections)
         os.makedirs("memory", exist_ok=True)
-        self.file_manager.ensure_memory_file_exists(self.insight_memory.get_memory_data())
 
     def encode_pdf_to_base64(self, pdf_path: str) -> str:
         """Encode PDF file to base64 string"""

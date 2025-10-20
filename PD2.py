@@ -209,10 +209,7 @@ class IntelligentAnalyst:
         self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp, model_name=model_name)
         self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name, memory_prefix="pd2")
         self.quality_tracker = QualityTracker()
-        
-        # Ensure memory file exists
-        self.file_manager.ensure_memory_file_exists(self.insight_memory.get_memory_data())
-        
+
         # Save pre-run memory state
         self.file_manager.save_memory_state(
             self.insight_memory.get_memory_data(), 

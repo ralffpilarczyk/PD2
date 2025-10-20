@@ -66,15 +66,7 @@ class FileManager:
         except Exception as e:
             thread_safe_print(f"Error: Failed to save memory state to {filepath}: {e}")
             raise
-    
-    def ensure_memory_file_exists(self, memory_data: Dict):
-        """Ensure the main learning memory file exists"""
-        memory_path = "memory/learning_memory.json"
-        if not os.path.exists(memory_path):
-            with open(memory_path, 'w', encoding='utf-8') as f:
-                json.dump(memory_data, f, indent=2)
-    
-    
+
     def archive_memory(self, memory_data: Dict, archive_name: str = None, memory_prefix: str = None) -> str:
         """Archive current memory and return archive path
 

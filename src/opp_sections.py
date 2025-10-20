@@ -88,7 +88,7 @@ sections = [
                 "• If you don't have the data then stick with the company's narrative\\n"
                 "\\n"
                 "Critical rules:\\n"
-                "• Keep each sentence as concise as possible. no corporate poetry, but chairman-friendly language\\n"
+                "• Keep each sentence as concise as possible. no corporate poetry, no consulting buzz words,but chairman-friendly language\\n"
                 "• Ideally, each sentence should have at least one number\\n"
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded\\n"

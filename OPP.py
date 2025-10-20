@@ -31,7 +31,8 @@ from src.profile_prompts import (
     get_section_generation_prompt,
     get_section_completeness_check_prompt,
     get_section_enhancement_prompt,
-    get_section_polish_prompt
+    get_section_polish_prompt,
+    _get_section_boundaries
 )
 from src.pptx_generator import create_profile_pptx
 from src.insight_memory import InsightMemory
@@ -345,6 +346,20 @@ COMPLETED ANALYSIS:
 ---
 {final_output}
 ---
+
+SECTION SCOPE: {section['title']}
+
+SECTION REQUIREMENTS (extract principles that help fulfill THESE ONLY):
+{section['specs']}
+
+SECTION BOUNDARIES - STAY IN SCOPE:
+This is the "{section['title']}" section. Do NOT extract principles that belong in other sections:
+{_get_section_boundaries(section['number'])}
+
+PRINCIPLES SHOULD TRIGGER INSIGHTS, NOT FORCE CALCULATIONS:
+Good principles guide toward observations that work with available data.
+Avoid principles that require specific calculations or data that might not exist.
+Keep principles generic - no company-specific or sector-specific language.
 
 Extract 2-4 analytical PRINCIPLES - NOT company-specific findings, NOT vague wisdom, NOT just red flags.
 

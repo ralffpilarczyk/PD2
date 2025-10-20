@@ -242,7 +242,7 @@ CURRENT CONTENT:
 ---
 
 CURRENT WORD COUNT: {word_count} words
-FINAL TARGET: **Aim for {word_limit} words** (exceeding is acceptable if needed for comprehensive coverage).
+FINAL TARGET: **Aim for {word_limit} words** (exceeding by up to 20 words is acceptable if needed for deeply insightful coverage).
 
 CONDENSING INSTRUCTIONS:
 
@@ -264,7 +264,7 @@ CONDENSING INSTRUCTIONS:
    - Focus on what's surprising, notable, or value-affecting
    - Deliver deep insights
    - Be brutal yet constructive when condensing
-
+   
 5. **FORMAT PRESERVATION**:
    - Keep bullet format with **bold** keywords (1-2 words per bullet)
    - Each bullet is one sentence
@@ -297,5 +297,7 @@ CRITICAL OUTPUT RULES:
 - Output ONLY the bullet points for this section
 - Start directly with the first bullet point (starting with *)
 - No commentary about what you are doing - just output the bullets
+- No corporate poetry, no consulting buzz words, but chairman-friendly language
+- No statements about missing data or need to analyse further, but factual observations
 
 Generate the condensed version of this section only."""

@@ -24,7 +24,7 @@ sections = [
                 "• Ideally, each sentence should have at least one number\\n"
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded\\n"
-                "• Bold the 1-2 most important words in each bullet point using **word** syntax"
+                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
                 "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
     },
     {
@@ -47,7 +47,7 @@ sections = [
                 "• Ideally, each sentence should have at least one number\\n"
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded\\n"
-                "• Bold the 1-2 most important words in each bullet point using **word** syntax"
+                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
                 "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
     },
     {
@@ -70,7 +70,7 @@ sections = [
                 "• Ideally, each sentence should have at least one number\\n"
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded\\n"
-                "• Bold the 1-2 most important words in each bullet point using **word** syntax"
+                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
                 "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
     },
     {
@@ -92,7 +92,7 @@ sections = [
                 "• Ideally, each sentence should have at least one number\\n"
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded\\n"
-                "• Bold the 1-2 most important words in each bullet point using **word** syntax"
+                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
                 "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
     }
 ]

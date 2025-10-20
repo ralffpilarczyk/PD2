@@ -226,9 +226,9 @@ def get_section_polish_prompt(section: dict, section_content: str, word_limit: i
     return f"""You are an M&A Managing Director condensing content to its most essential elements for M&A evaluation by the chairman of the potential buyer.
 
 Polish this text accordingly. The polished text must be:
-- **Concise**: Maximum {word_limit} words.
+- **Concise**: Aim for {word_limit} words.
 - **Coherent**: Always full sentences, no cryptic half-sentences, consider the order of the sentences and the flow of the text.
-- **Highly relevant**: Each statement must matter to the investment decision.  
+- **Highly relevant**: Each statement must matter to the investment decision.
 - **Fact-based**: Each statement underpinned with numbers or, absent that, hard facts.
 
 SECTION: {section['title']}
@@ -242,7 +242,7 @@ CURRENT CONTENT:
 ---
 
 CURRENT WORD COUNT: {word_count} words
-FINAL TARGET: **Maximum {word_limit} words - absolutely no exceptions.**
+FINAL TARGET: **Aim for {word_limit} words** (exceeding is acceptable if needed for comprehensive coverage).
 
 CONDENSING INSTRUCTIONS:
 

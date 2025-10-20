@@ -1,7 +1,7 @@
 import os
 import json
 import re
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from datetime import datetime
 import google.generativeai as genai
 from .utils import retry_with_backoff, thread_safe_print
@@ -230,7 +230,7 @@ QUALITY STANDARDS - Be brutally selective:
 - 6-7/10: Standard due diligence (useful but not transformative)
 - 1-5/10: Obvious or routine practices
 
-SELECTION CRITERIA:
+EVALUATION CRITERIA:
 1. UNIVERSAL APPLICABILITY: Works across different companies/industries?
 2. INSIGHT DEPTH: Reveals hidden relationships vs. surface-level checks?
 3. CONCISENESS: Instruction is clear and actionable?
@@ -241,27 +241,60 @@ HARSH REALITY CHECK:
 - Only 1-2 instructions per section deserve 9-10/10
 - Expect to reject 60-80% of instructions as routine
 
-TASK: Select only the TOP 2-3 instructions that score 9-10/10 for Section {section_num}.
+TWO-PHASE TASK:
+
+PHASE 1 - SCORE EACH INSTRUCTION:
+Score each instruction individually from 1-10. Be brutally honest.
+
+PHASE 2 - DIVERSITY-AWARE SELECTION:
+1. Identify the highest score (MAX)
+2. Eligible pool = all instructions scoring >= (MAX - 2)
+3. From the eligible pool, select UP TO 3 instructions that MAXIMIZE DIVERSITY:
+   - Different analytical approaches (quantitative vs qualitative, forward vs backward-looking)
+   - Different business aspects (customers vs margins vs strategy vs operations)
+   - Different mental models (compare/contrast vs decompose vs correlate vs validate)
+   - Complementary techniques, NOT variations of the same idea
+
+DIVERSITY RULES:
+- If eligible pool contains similar techniques, choose the most diverse ones
+- If all eligible techniques are diverse, choose highest scores
+- Stay within the eligible pool (>= MAX-2) even if lower-scored insights are more diverse
+- Cap selection at 3 insights maximum
 
 RESPONSE FORMAT:
-SELECTED_INSTRUCTIONS:
-- [instruction 1 - only if it's genuinely game-changing]
-- [instruction 2 - only if it's genuinely game-changing]
-- [instruction 3 - only if it's genuinely game-changing]
+SCORES:
+1. [Full text of instruction 1] - Score: X/10
+2. [Full text of instruction 2] - Score: Y/10
+...
 
-RATIONALE:
-Briefly explain why each selected instruction deserves 9-10/10.
+ELIGIBLE_POOL:
+(List all instructions that scored >= MAX-2)
+- [Instruction A] - Score: X/10
+- [Instruction B] - Score: Y/10
+...
 
-Be ruthless - most instructions should NOT make the cut. Only keep true analytical breakthroughs."""
+SELECTED (up to 3, prioritizing diversity from eligible pool):
+- [Full text of selected instruction 1]
+- [Full text of selected instruction 2]
+- [Full text of selected instruction 3]
+
+DIVERSITY_RATIONALE:
+Briefly explain why these selections provide a diverse, complementary analytical toolkit.
+
+Be ruthless on quality, strategic on diversity."""
 
             try:
                 response_text = retry_with_backoff(
                     lambda: model.generate_content(prompt).text
                 )
-                selected_instructions = self._parse_selected_instructions(response_text)
-                
+                scores, selected_instructions = self._parse_scored_and_selected_instructions(response_text)
+
+                # Calculate eligibility metrics for logging
+                max_score = max(scores.values()) if scores else 0
+                eligible_count = sum(1 for s in scores.values() if s >= max_score - 2) if max_score > 0 else 0
+
                 if selected_instructions:
-                    # Keep only the harshly selected instructions
+                    # Keep only the selected instructions
                     filtered_insights = []
                     for insight in insights:
                         instruction_text = insight['instruction']
@@ -273,51 +306,82 @@ Be ruthless - most instructions should NOT make the cut. Only keep true analytic
                             # Update the insight with harsh re-evaluation flag
                             insight['harsh_reeval'] = True
                             insight['original_score'] = insight.get('quality_score', 0)
-                            insight['quality_score'] = 10  # Harsh filter passed
+                            # Store the new score if we have it, otherwise default to 10
+                            new_score = scores.get(instruction_text.lower(), 10)
+                            insight['quality_score'] = new_score
                             filtered_insights.append(insight)
-                    
-                    # Update to keep only harshly selected insights
+
+                    # Update to keep only selected insights
                     original_count = len(self.learning_memory["insights"][section_key])
                     self.learning_memory["insights"][section_key] = filtered_insights
                     kept_count = len(filtered_insights)
-                    
-                    thread_safe_print(f"Harsh filter - {section_key}: {original_count} → {kept_count} instructions (kept {kept_count/original_count*100:.1f}%)")
+
+                    # Enhanced logging with eligibility info
+                    thread_safe_print(f"Harsh filter - {section_key}: {original_count} total → {eligible_count} eligible (≥{max_score-2}) → {kept_count} selected (diversity)")
                 else:
                     # No instructions passed harsh filter - keep empty
-                    thread_safe_print(f"Harsh filter - {section_key}: All instructions rejected (0/10 quality)")
+                    thread_safe_print(f"Harsh filter - {section_key}: All instructions rejected (max score: {max_score})")
                     self.learning_memory["insights"][section_key] = []
-                
+
             except Exception as e:
                 thread_safe_print(f"Warning: Could not apply harsh filter to {section_key}: {e}")
                 # Keep original insights as fallback
                 continue
     
-    def _parse_selected_instructions(self, response_text: str) -> List[str]:
-        """Parse selected instructions from LLM response"""
+    def _parse_scored_and_selected_instructions(self, response_text: str) -> Tuple[Dict[str, int], List[str]]:
+        """Parse both scores and selected instructions from LLM response
+
+        Returns:
+            Tuple of (scores_dict, selected_list)
+            - scores_dict: Maps instruction text to score (1-10)
+            - selected_list: List of selected instruction texts
+        """
         lines = response_text.split('\n')
-        instructions = []
-        
-        in_selected_section = False
+        scores = {}
+        selected = []
+
+        current_section = None
+
         for line in lines:
-            line = line.strip()
-            # Handle both old and new formats
-            if 'SELECTED_INSTRUCTIONS:' in line.upper() or 'SELECTED:' in line.upper():
-                in_selected_section = True
+            line_stripped = line.strip()
+
+            # Identify sections
+            if 'SCORES:' in line_stripped.upper():
+                current_section = 'scores'
                 continue
-            
-            # Stop at RATIONALE section
-            if 'RATIONALE:' in line.upper():
-                break
-            
-            if in_selected_section and line.startswith('-'):
-                instruction = line[1:].strip()  # Remove the '- ' prefix
-                # Clean up any additional formatting
+            elif 'ELIGIBLE_POOL:' in line_stripped.upper() or 'ELIGIBLE POOL:' in line_stripped.upper():
+                current_section = 'eligible'
+                continue
+            elif 'SELECTED' in line_stripped.upper() and ':' in line_stripped:
+                current_section = 'selected'
+                continue
+            elif 'DIVERSITY_RATIONALE:' in line_stripped.upper() or 'RATIONALE:' in line_stripped.upper():
+                current_section = 'rationale'
+                continue
+
+            # Parse SCORES section
+            if current_section == 'scores' and line_stripped:
+                # Format: "1. [instruction text] - Score: X/10"
+                # Also handle: "- [instruction text] - Score: X/10"
+                score_match = re.search(r'(?:\d+\.\s*|\-\s*)(.+?)\s*-\s*Score:\s*(\d+)', line_stripped, re.IGNORECASE)
+                if score_match:
+                    instruction_text = score_match.group(1).strip()
+                    # Remove brackets if present
+                    if instruction_text.startswith('[') and instruction_text.endswith(']'):
+                        instruction_text = instruction_text[1:-1].strip()
+                    score = int(score_match.group(2))
+                    scores[instruction_text.lower()] = score
+
+            # Parse SELECTED section
+            elif current_section == 'selected' and line_stripped.startswith('-'):
+                instruction = line_stripped[1:].strip()  # Remove '- ' prefix
+                # Remove brackets if present
                 if instruction.startswith('[') and instruction.endswith(']'):
-                    instruction = instruction[1:-1]  # Remove brackets if present
+                    instruction = instruction[1:-1].strip()
                 if instruction:
-                    instructions.append(instruction)
-        
-        return instructions
+                    selected.append(instruction)
+
+        return scores, selected
     
     def update_metadata(self):
         """Update memory metadata"""

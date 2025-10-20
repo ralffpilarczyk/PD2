@@ -416,7 +416,7 @@ Extract principles that guide deeper analytical thinking."""
 
             # Step 4: Polish (100 words)
             worker_display.update(section_num, "Polish")
-            polished = self._polish_section(section, enhanced, word_limit=100)
+            polished = self._polish_section(section, enhanced, word_limit=120)
             (section_dir / "step4_polished.md").write_text(f"## {section_title}\n{polished}", encoding='utf-8')
 
             # Remove from display immediately after Step 4 completes

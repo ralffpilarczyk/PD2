@@ -2,6 +2,36 @@
 Prompt templates for OnePageProfile (OPP.py)
 """
 
+def _get_section_boundaries(section_num: int) -> str:
+    """Generate section boundary warnings based on actual section specs from opp_sections.py
+
+    Args:
+        section_num: Section number (1-4)
+
+    Returns:
+        Formatted string listing what content belongs in OTHER sections (max 20 words per section)
+    """
+    boundaries = {
+        1: """- Section 2: value chain position, strategic objectives, market rankings/share, competitive positioning, accolades/awards
+- Section 3: revenue/cost drivers and trends, revenue/EBITDA numbers/growth, margins, segment financials, capex, balance sheet, MD&A highlights
+- Section 4: strategic initiatives/transactions, partnerships, management/shareholder agendas, strategic observations, investment thesis""",
+
+        2: """- Section 1: company location, operating/asset footprint, key products and services, product/service value propositions, customer/supplier relationships
+- Section 3: revenue/cost drivers and trends, revenue/EBITDA numbers/growth, margins, segment financials, capex, balance sheet, MD&A highlights
+- Section 4: strategic initiatives/transactions, partnerships, management/shareholder agendas, strategic observations, investment thesis""",
+
+        3: """- Section 1: company location, operating/asset footprint, key products and services, product/service value propositions, customer/supplier relationships
+- Section 2: value chain position, strategic objectives, market rankings/share, competitive positioning, accolades/awards
+- Section 4: strategic initiatives/transactions, partnerships, management/shareholder agendas, strategic observations, investment thesis""",
+
+        4: """- Section 1: company location, operating/asset footprint, key products and services, product/service value propositions, customer/supplier relationships
+- Section 2: value chain position, strategic objectives, market rankings/share, competitive positioning, accolades/ awards
+- Section 3: revenue/cost drivers and trends, revenue/EBITDA numbers/growth, margins, segment financials, capex, balance sheet, MD&A highlights"""
+    }
+
+    return boundaries.get(section_num, "")
+
+
 COMPANY_NAME_EXTRACTION_PROMPT = """Extract the primary company name from these documents.
 
 Look for the company name in:
@@ -49,6 +79,10 @@ def get_section_generation_prompt(section: dict, relevant_memory: str = "") -> s
 
 SECTION REQUIREMENTS:
 {section['specs']}
+
+SECTION BOUNDARIES - STAY FOCUSED:
+This is the "{section['title']}" section. DO NOT include content that belongs in other sections:
+{_get_section_boundaries(section['number'])}
 {memory_block}OUTPUT FORMAT:
 ## {section['title']}
 [Your bullet points here, following the requirements above]
@@ -147,6 +181,9 @@ SOURCE DOCUMENTS (for looking up ADD items):
 {{source_documents}}
 
 INSTRUCTIONS:
+0. RESPECT SECTION BOUNDARIES: Only add content relevant to "{section['title']}".
+   Do NOT add content belonging in other sections:
+   {_get_section_boundaries(section['number'])}
 1. Add ALL items from the ADD list ONLY if the source documents contain supporting data
 2. If an ADD item cannot be supported by source document data, skip it silently - do NOT add placeholder text like "metrics not disclosed" or "data unavailable"
 3. Use exact data from source documents with numbers and specifics

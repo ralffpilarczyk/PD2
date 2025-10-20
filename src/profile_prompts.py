@@ -131,6 +131,11 @@ Consider adding statements (but only if they are not already present) underpinne
 CRITICAL CONSTRAINT:
 ONLY suggest additions where the source documents contain relevant data to support the addition. Do NOT suggest perspective gaps if the source documents lack the necessary data.
 
+SECTION BOUNDARIES - STAY IN SCOPE:
+This completeness check is for the "{section['title']}" section ONLY.
+Do NOT suggest additions that belong in other sections:
+{_get_section_boundaries(section['number'])}
+
 MATERIALITY FILTER:
 Each addition must pass TWO tests:
 1. "Is this data/perspective CRITICAL to evaluating this company as an investment or acquisition target?"

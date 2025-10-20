@@ -311,7 +311,12 @@ RULES:
 - NO company names, NO sector names, NO specific company numbers
 - 12-20 words per principle
 - Focus on analytical APPROACHES that sharpen analysis
-- Must work for ALL sectors and company types
+- Must apply to MOST companies (80%+), not just specific situations like:
+  * Parent-subsidiary structures or transfer pricing scenarios
+  * Multi-entity groups or conglomerates
+  * Captive service centers
+  * Complex organizational structures
+- Avoid techniques that only work in rare or niche situations
 
 Extract principles that guide deeper analytical thinking."""
         # Low temperature for structured, precise data extraction.

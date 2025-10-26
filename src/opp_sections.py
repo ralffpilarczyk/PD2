@@ -25,7 +25,7 @@ sections = [
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded\\n"
                 "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
+                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     },
     {
         "number": 2,
@@ -48,7 +48,7 @@ sections = [
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded\\n"
                 "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
+                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     },
     {
         "number": 3,
@@ -71,7 +71,7 @@ sections = [
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded\\n"
                 "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
+                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     },
     {
         "number": 4,
@@ -93,6 +93,6 @@ sections = [
                 "• Do not make up information\\n"
                 "• A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded\\n"
                 "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently\\n"
+                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     }
 ]

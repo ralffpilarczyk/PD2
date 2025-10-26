@@ -82,7 +82,7 @@ sections = [
                 "• One sentence on the company's 2 most important strategic initiatives or transactions, including dates and numbers\\n"
                 "• One sentence on the company's history of partnerships, including dates and numbers\\n"
                 "• One sentence on the key decision makers at the management level and their strategic agenda\\n"
-                "• One sentence on the key shareholders and their ownership in the company, and their key decision makers at the shareholder level and their strategic agenda towards the company, any indications of their willingness to sell, or any relevant track record\\n"
+                "• One sentence on the key shareholders and their ownership in the company (in %), and their key decision makers at the shareholder level and their strategic agenda towards the company, any indications of their willingness to sell, or any relevant track record\\n"
                 "• One sentence on 2 strategic observations that would be highly interesting to a potential buyer, including strategic disconnects that warrant further analysis before proceeding with an acquisition\\n"
                 "• One sentence on what is the key attraction of the company to a potential buyer, but this needs to be deeply insightful and be backed up by numbers\\n"
                 "• If you don't have the data then stick with the company's narrative\\n"

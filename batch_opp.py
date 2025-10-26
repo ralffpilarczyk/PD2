@@ -12,7 +12,6 @@ from datetime import datetime
 # SETTINGS
 MODEL = "gemini-2.5-pro"
 WORKERS = 4
-ENABLE_LEARNING = False  # Disable learning extraction for batch processing
 PDF_DIRECTORY = "SourceFiles/SourceBatch"
 
 def main():
@@ -21,7 +20,6 @@ def main():
     print("="*60)
     print(f"Model: {MODEL}")
     print(f"Workers: {WORKERS}")
-    print(f"Learning: {'enabled' if ENABLE_LEARNING else 'disabled'}")
     print(f"Directory: {PDF_DIRECTORY}")
     print("="*60 + "\n")
 
@@ -52,7 +50,7 @@ def main():
 
         try:
             # Create OnePageProfile instance
-            maker = OnePageProfile([str(pdf)], MODEL, workers=WORKERS, enable_learning=ENABLE_LEARNING)
+            maker = OnePageProfile([str(pdf)], MODEL, workers=WORKERS)
 
             # Run the profile generation
             profile_path = maker.run()

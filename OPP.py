@@ -35,7 +35,6 @@ from src.profile_prompts import (
     _get_section_boundaries
 )
 from src.pptx_generator import create_profile_pptx
-from src.insight_memory import InsightMemory
 from src.file_manager import FileManager
 
 # ANSI Color Codes and Styling
@@ -160,7 +159,7 @@ class WorkerDisplay:
 
         Args:
             section_num: Section number being processed
-            action: One of "Draft", "Check", "Enhance", "Polish", "Learn"
+            action: One of "Draft", "Check", "Enhance", "Polish"
         """
         with self.lock:
             # Assign worker ID if this is a new section
@@ -213,11 +212,10 @@ class WorkerDisplay:
 class OnePageProfile:
     """Generates one-page company profiles from PDF documents with parallel section processing"""
 
-    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2, enable_learning: bool = False):
+    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2):
         self.pdf_files = pdf_files
         self.model_name = model_name
         self.workers = workers
-        self.enable_learning = enable_learning
 
         # Create models with different temperatures
         self.model_low_temp = genai.GenerativeModel(
@@ -234,13 +232,7 @@ class OnePageProfile:
         # PDF parts will be prepared once and reused
         self.pdf_parts = None
 
-        # Initialize learning system (if enabled) and file manager
-        if self.enable_learning:
-            self.insight_memory = InsightMemory(self.timestamp, model_name=model_name, memory_prefix="opp")
-            os.makedirs("memory", exist_ok=True)
-        else:
-            self.insight_memory = None
-
+        # Initialize file manager
         self.file_manager = FileManager(self.timestamp)
 
         # Setup directories
@@ -304,9 +296,7 @@ class OnePageProfile:
 
     def _generate_section(self, section: dict) -> str:
         """Step 1: Generate initial section content"""
-        # Get relevant learning memory for this section (if enabled)
-        relevant_memory = self.insight_memory.get_relevant_memory(section['number']) if self.enable_learning else ""
-        prompt = get_section_generation_prompt(section, relevant_memory)
+        prompt = get_section_generation_prompt(section)
         response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
         return response.text.strip()
 
@@ -339,80 +329,6 @@ class OnePageProfile:
         if not polished or len(polished) < 50:
             return content
         return polished
-
-    def _extract_learning(self, section: dict, final_output: str) -> str:
-        """Step 5: Extract analytical principles that sharpen analysis"""
-        prompt = f"""Extract analytical principles from this analysis that help sharpen and deepen future company analysis.
-
-SECTION TYPE: {section['title']}
-
-COMPLETED ANALYSIS:
----
-{final_output}
----
-
-SECTION SCOPE: {section['title']}
-
-SECTION REQUIREMENTS (extract principles that help fulfill THESE ONLY):
-{section['specs']}
-
-SECTION BOUNDARIES - STAY IN SCOPE:
-This is the "{section['title']}" section. Do NOT extract principles that belong in other sections:
-{_get_section_boundaries(section['number'])}
-
-PRINCIPLES SHOULD TRIGGER INSIGHTS, NOT FORCE CALCULATIONS:
-Good principles guide toward observations that work with available data.
-Avoid principles that require specific calculations or data that might not exist.
-Keep principles generic - no company-specific or sector-specific language.
-
-Extract 2-4 analytical PRINCIPLES - NOT company-specific findings, NOT vague wisdom, NOT just red flags.
-
-WHAT TO EXTRACT:
-
-Analytical principles that guide HOW to analyze more deeply:
-- **Comparative techniques** - what to compare against what to reveal hidden truths
-- **Decomposition approaches** - how to break down aggregates to expose real drivers
-- **Verification methods** - how to test claims using different data sources
-- **Relationship patterns** - what metrics or trends to correlate for deeper insight
-
-GOOD EXAMPLES (analytical principles):
-- "Compare stated strategy against actual capital allocation to reveal true management priorities"
-- "Decompose aggregate growth into organic versus inorganic components to assess core business health"
-- "Calculate implied operational metrics from management claims to test their plausibility"
-- "Trace revenue recognition through to cash collection to verify business quality"
-- "Compare segment economics to corporate average to identify where value is actually created"
-- "Map capital deployment to subsequent margin changes to evaluate management effectiveness"
-
-BAD EXAMPLES (too vague or too specific):
-- "To see the future, analyze the growth segments" (too vague)
-- "Revenue concentration above 30% means customer controls pricing" (specific red flag, not analytical principle)
-- "Actions speak louder than words" (corporate poetry)
-
-CONSTRAINTS:
-- NO company names, NO sector names, NO specific company numbers
-- 12-20 words per principle
-- Focus on analytical APPROACHES that sharpen analysis
-- Must apply to MOST companies (80%+), not just specific situations like:
-  * Parent-subsidiary structures or transfer pricing scenarios
-  * Multi-entity groups or conglomerates
-  * Captive service centers
-  * Complex organizational structures
-- Avoid techniques that only work in rare or niche situations
-
-OUTPUT FORMAT (JSON):
-{{
-  "principles": [
-    "First analytical principle (12-20 words)",
-    "Second analytical principle (12-20 words)"
-  ]
-}}
-
-Extract principles that guide deeper analytical thinking."""
-
-        return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text,
-            context=section['number']
-        )
 
     def process_section_main(self, section: dict, worker_display: WorkerDisplay) -> dict:
         """Process a single section through Steps 1-4 (main content generation)"""
@@ -464,29 +380,6 @@ Extract principles that guide deeper analytical thinking."""
                 'error': str(e)
             }
 
-    def process_section_learn(self, section: dict) -> bool:
-        """Process Step 5 (Learning Extraction) for a section - silent background work"""
-        section_num = section['number']
-        section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
-
-        try:
-            # Load polished content from Step 4
-            polished_file = section_dir / "step4_polished.md"
-            if not polished_file.exists():
-                return False
-
-            polished = polished_file.read_text(encoding='utf-8')
-
-            # Step 5: Learning Extraction (silent)
-            learning = self._extract_learning(section, polished)
-            (section_dir / "step5_learning.json").write_text(learning, encoding='utf-8')
-
-            return True
-
-        except Exception as e:
-            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Learning extraction failed for Section {section_num}: {e}")
-            return False
-
     def generate_profile(self, company_name: str, worker_display: WorkerDisplay) -> str:
         """Generate profile with parallel section processing (Steps 1-4 only)"""
         thread_safe_print(f"\n{CYAN}Phase 1: Generating content (parallel workers: {self.workers})...{RESET}\n")
@@ -525,135 +418,6 @@ Extract principles that guide deeper analytical thinking."""
         """Combine title/subtitle with section content"""
         return f"{title_subtitle}\n\n{section_content}"
 
-    def _conduct_memory_review(self):
-        """Review and update learning memory with UNIVERSAL methodologies only"""
-        thread_safe_print(f"\n{CYAN}{ARROW}{RESET} Extracting universal insights...")
-
-        # Collect all learning extractions
-        learning_files = []
-        for section in sections:
-            learning_file = Path(self.file_manager.run_dir) / f"section_{section['number']}" / "step5_learning.json"
-            if learning_file.exists():
-                learning_files.append(learning_file.read_text(encoding='utf-8'))
-
-        if not learning_files:
-            thread_safe_print(f"{YELLOW}{WARNING}{RESET} No learning extractions found")
-            return
-
-        combined_learning = "\n\n".join(learning_files)
-
-        # Synthesize analytical principles from learnings
-        prompt = f"""Synthesize analytical principles from these section learnings that help sharpen and deepen company analysis.
-
-INDIVIDUAL SECTION LEARNINGS:
-{combined_learning}
-
-CURRENT MEMORY STATS:
-{json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
-
-Your task: Extract analytical PRINCIPLES that apply to ANY company - NOT vague wisdom, NOT just red flags, NOT calculation procedures.
-
-WHAT TO EXTRACT:
-
-Analytical principles that guide HOW to analyze more deeply:
-- **Comparative techniques** - what to compare against what to reveal hidden truths
-- **Decomposition approaches** - how to break down aggregates to expose real drivers
-- **Verification methods** - how to test claims using different data sources
-- **Relationship patterns** - what metrics or trends to correlate for deeper insight
-
-GOOD EXAMPLES (analytical principles):
-- "Compare stated strategy against actual capital allocation to reveal true management priorities"
-- "Decompose aggregate growth into organic versus inorganic components to assess core business health"
-- "Calculate implied operational metrics from management claims to test their plausibility"
-- "Trace revenue recognition through to cash collection to verify business quality"
-- "Compare segment economics to corporate average to identify where value is actually created"
-- "Map capital deployment to subsequent margin changes to evaluate management effectiveness"
-
-BAD EXAMPLES (too vague or too specific):
-- "To see the future, analyze the growth segments" (too vague)
-- "Revenue concentration above 30% means customer controls pricing" (specific red flag, not analytical principle)
-- "Actions speak louder than words" (corporate poetry)
-
-CRITICAL REQUIREMENT:
-You MUST extract principles from ALL 4 SECTIONS (1, 2, 3, 4) separately.
-Extract up to 6 principles per section.
-DO NOT skip Section 4 - it is as important as the other sections.
-
-QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Analytical approaches that consistently reveal material insights across companies
-- 7-8/10: Solid principles that meaningfully deepen analysis
-- 6/10: Standard but useful analytical techniques
-
-OUTPUT FORMAT:
-NEW_INSIGHTS:
-
-[Section 1 - Company Overview principles]
-- instruction: "[analytical principle in 12-20 words]"
-  section_number: 1
-  quality_score: [6-10]
-...
-
-[Section 2 - Competitive Positioning principles]
-- instruction: "[analytical principle in 12-20 words]"
-  section_number: 2
-  quality_score: [6-10]
-...
-
-[Section 3 - Financial KPIs principles]
-- instruction: "[analytical principle in 12-20 words]"
-  section_number: 3
-  quality_score: [6-10]
-...
-
-[Section 4 - Strategic Considerations principles]
-- instruction: "[analytical principle in 12-20 words]"
-  section_number: 4
-  quality_score: [6-10]
-...
-
-Generate comprehensive principle candidates for ALL 4 SECTIONS - subsequent harsh filtering will select only the best (9-10/10 only).
-Up to 6 principles per section. Focus on analytical approaches that sharpen and deepen analysis."""
-
-        new_insights_text = retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text,
-            context="memory_review"
-        )
-
-        self.file_manager.save_memory_state({"new_insights": new_insights_text}, "new_insights.txt")
-
-        # Apply memory updates
-        try:
-            # Archive current memory
-            self.file_manager.archive_memory(
-                self.insight_memory.get_memory_data(),
-                memory_prefix="opp"
-            )
-
-            # Process and add new insights (quality filtering happens here)
-            self.insight_memory.process_new_insights(new_insights_text)
-
-            # Clean up and diversify memory
-            self.insight_memory.cleanup_and_diversify()
-
-            # Update metadata
-            self.insight_memory.update_metadata()
-
-            # Save updated memory
-            self.insight_memory.save_memory()
-
-            # Save post-run memory state
-            self.file_manager.save_memory_state(
-                self.insight_memory.get_memory_data(),
-                "post_run_memory.json"
-            )
-
-            # Show memory stats
-            memory_stats = self.insight_memory.get_memory_stats()
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Learning complete: {memory_stats['total_insights']} universal insights")
-
-        except Exception as e:
-            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Memory update failed: {e}")
-
     def save_run_log(self, company_name: str, status: str = "Success", pptx_path: str = None):
         """Save run log to the run directory"""
         log_path = Path(self.file_manager.run_dir) / "run_log.txt"
@@ -674,10 +438,8 @@ Source Files:
 
 Processing:
   - Title/Subtitle generation
-  - Phase 1: 4 sections processed in parallel (Steps 1-4: Draft/Check/Enhance/Polish)
-  - PowerPoint generated after Phase 1
-  - Phase 2: Learning extraction for universal methodologies (background)
-  - Memory review and synthesis
+  - 4 sections processed in parallel (Steps 1-4: Draft/Check/Enhance/Polish)
+  - PowerPoint generation
   - See section_N/ subdirectories for intermediate outputs{pptx_info}
 
 Status: {status}
@@ -726,22 +488,6 @@ Status: {status}
             except Exception as e:
                 thread_safe_print(f"{YELLOW}{WARNING}{RESET} PowerPoint generation failed: {e}")
                 pptx_path = None
-
-            # Phase 2: Learning extraction (background work) - only if enabled
-            if self.enable_learning:
-                thread_safe_print(f"\n{CYAN}Phase 2: Extracting learnings (background)...{RESET}")
-
-                with ThreadPoolExecutor(max_workers=self.workers) as executor:
-                    futures = [
-                        executor.submit(self.process_section_learn, section)
-                        for section in sections
-                    ]
-                    # Wait for all to complete
-                    for future in as_completed(futures):
-                        future.result()  # Silent - just wait for completion
-
-                # Conduct memory review (synthesize universal learnings)
-                self._conduct_memory_review()
 
             # Save run log
             self.save_run_log(company_name, "Success", pptx_path)
@@ -805,15 +551,6 @@ if __name__ == "__main__":
     num_workers = int(workers_choice)
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Workers: {num_workers}\n")
 
-    # Learning toggle
-    thread_safe_print("Enable learning extraction:")
-    thread_safe_print("  1) Exclude learnings (default)")
-    thread_safe_print("  2) Include learnings")
-    learning_choice = prompt_single_digit("Choose learning mode [1/2] (default 1): ", valid_digits="12", default_digit="1")
-    enable_learning = learning_choice == "2"
-    learning_status = "enabled" if enable_learning else "disabled"
-    thread_safe_print(f"{CYAN}{CHECK}{RESET} Learning: {learning_status}\n")
-
     # File selection
     pdf_files = select_pdf_files()
     if not pdf_files:
@@ -824,7 +561,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60 + "\n")
 
     # Generate profile
-    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers, enable_learning=enable_learning)
+    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers)
     profile_path = maker.run()
 
     if not profile_path:

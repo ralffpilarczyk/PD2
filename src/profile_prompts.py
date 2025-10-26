@@ -61,20 +61,15 @@ Your compelling 4-8 word subtitle here
 Now generate the title and subtitle based on the documents provided."""
 
 
-def get_section_generation_prompt(section: dict, relevant_memory: str = "") -> str:
+def get_section_generation_prompt(section: dict) -> str:
     """Generate the initial section generation prompt
 
     Args:
         section: Section dictionary from opp_sections.py
-        relevant_memory: Optional learned analytical instructions from previous runs
 
     Returns:
         Prompt string for generating this section
     """
-    memory_block = ""
-    if relevant_memory:
-        memory_block = f"\n{relevant_memory}\n\n"
-
     return f"""You are creating a company profile section for M&A bankers. Analyze the provided documents and generate content for the "{section['title']}" section.
 
 SECTION REQUIREMENTS:
@@ -83,7 +78,8 @@ SECTION REQUIREMENTS:
 SECTION BOUNDARIES - STAY FOCUSED:
 This is the "{section['title']}" section. DO NOT include content that belongs in other sections:
 {_get_section_boundaries(section['number'])}
-{memory_block}OUTPUT FORMAT:
+
+OUTPUT FORMAT:
 ## {section['title']}
 [Your bullet points here, following the requirements above]
 

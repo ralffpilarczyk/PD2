@@ -136,6 +136,8 @@ SECTION: {section['title']}
 ORIGINAL REQUIREMENTS FOR THIS SECTION:
 {section['specs']}
 
+{OPP_CRITICAL_RULES}
+
 CURRENT SECTION CONTENT:
 ---
 {section_content}
@@ -314,6 +316,8 @@ SECTION: {section['title']}
 
 ORIGINAL REQUIREMENTS FOR THIS SECTION:
 {section['specs']}
+
+{OPP_CRITICAL_RULES}
 
 CURRENT CONTENT:
 ---

@@ -2,6 +2,17 @@
 Prompt templates for OnePageProfile (OPP.py)
 """
 
+# Common critical rules for all OPP sections
+OPP_CRITICAL_RULES = """
+Critical rules:
+• Keep each sentence as concise as possible. no corporate poetry, no consulting buzz words, but chairman-friendly language
+• Ideally, each sentence should have at least one number
+• Do not make up information
+• A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded
+• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.
+• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics
+"""
+
 def _get_section_boundaries(section_num: int) -> str:
     """Generate section boundary warnings based on actual section specs from opp_sections.py
 
@@ -92,6 +103,8 @@ def get_section_generation_prompt(section: dict) -> str:
 
 SECTION REQUIREMENTS:
 {section['specs']}
+
+{OPP_CRITICAL_RULES}
 
 SECTION BOUNDARIES - STAY FOCUSED:
 This is the "{section['title']}" section. DO NOT include content that belongs in other sections:

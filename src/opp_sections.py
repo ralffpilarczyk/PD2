@@ -18,14 +18,6 @@ sections = [
                 "• One sentence on the key customers, including spread or concentration risk\\n"
                 "• One sentence on how the company sells (e.g. direct or indirect) and how it contracts with customers (e.g. long term contracts, purchase orders, etc.) and how it maintains relationships with customers (e.g. loyalty programs, etc.)\\n"
                 "• One sentence on the company's key suppliers, but only if there is significant concentration risk\\n"
-                "\\n"
-                "Critical rules:\\n"
-                "• Keep each sentence as concise as possible. no corporate poetry, but chairman-friendly language\\n"
-                "• Ideally, each sentence should have at least one number\\n"
-                "• Do not make up information\\n"
-                "• A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded\\n"
-                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     },
     {
         "number": 2,
@@ -41,14 +33,6 @@ sections = [
                 "• One sentence on market position (e.g. #2 in customer segment) and market share by customer segment\\n"
                 "• One sentence on on the 2 most important accolades and awards the company has received\\n"
                 "• In case the data is missing, then use the company's narrative\\n"
-                "\\n"
-                "Critical rules:\\n"
-                "• Keep each sentence as concise as possible. no corporate poetry, but chairman-friendly language\\n"
-                "• Ideally, each sentence should have at least one number\\n"
-                "• Do not make up information\\n"
-                "• A precise sentence which may not perfectly suit the purpose is better than a beautifully tailored sentence which is not grounded\\n"
-                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     },
     {
         "number": 3,
@@ -64,14 +48,6 @@ sections = [
                 "• One sentence on the company's capital expenditure and any important trends\\n"
                 "• One sentence on balance sheet highlights, i.e. what's the single most important thing about the company's balance sheet, sometimes that's about net debt, sometimes about impairments, you need to judge\\n"
                 "• One sentence on unit economics and the 2 most important financial performance drivers, including numbers\\n"
-                "\\n"
-                "Critical rules:\\n"
-                "• Keep each sentence as concise as possible. no corporate poetry, but chairman-friendly language\\n"
-                "• Ideally, each sentence should have at least one number\\n"
-                "• Do not make up information\\n"
-                "• A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded\\n"
-                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     },
     {
         "number": 4,
@@ -86,13 +62,5 @@ sections = [
                 "• One sentence on 2 strategic observations that would be highly interesting to a potential buyer, including strategic disconnects that warrant further analysis before proceeding with an acquisition\\n"
                 "• One sentence on what is the key attraction of the company to a potential buyer, but this needs to be deeply insightful and be backed up by numbers\\n"
                 "• If you don't have the data then stick with the company's narrative\\n"
-                "\\n"
-                "Critical rules:\\n"
-                "• Keep each sentence as concise as possible. no corporate poetry, no consulting buzz words,but chairman-friendly language\\n"
-                "• Ideally, each sentence should have at least one number\\n"
-                "• Do not make up information\\n"
-                "• A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded\\n"
-                "• Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.\\n"
-                "• If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics\\n"
     }
 ]

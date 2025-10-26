@@ -51,12 +51,30 @@ def get_title_subtitle_prompt(company_name: str) -> str:
 CRITICAL RULES:
 - Title should be the company name: {company_name}
 - Subtitle should be a key message about the company for potential investors or buyers, in 4-8 words, no period at the end
-- The subtitle should capture the key investment thesis or strategic positioning
-- Keep it concise and impactful
+- The subtitle must be an INVESTMENT THESIS, not a corporate tagline
+- Include at least ONE quantified element (scale, market position, or financial metric)
+- Professional M&A banker tone - no marketing hype, no superlatives without proof
+
+GOOD SUBTITLE PATTERNS:
+- "[Financial metric] [market position] with [strategic asset]"
+  Example: "Cash-generative market leader with regional platform"
+
+- "[Market position] in [geography] with [X% metric]"
+  Example: "Dominant PH distributor with 25% share"
+
+- "[Scale indicator] [sector] [business model] with [growth driver]"
+  Example: "$1.2B pharma manufacturer with acquisition pipeline"
+
+AVOID:
+- Corporate taglines without numbers: "Premier distributor," "Leading provider"
+- Unsubstantiated superlatives: "Best-in-class," "World-leading"
+- Vague descriptors: "Diversified, resilient, growing" (unless backed by numbers)
+
+TEST: Would this subtitle help a banker decide if deal merits further review?
 
 OUTPUT FORMAT:
 # {company_name}
-Your compelling 4-8 word subtitle here
+Your investment-focused 4-8 word subtitle here
 
 Now generate the title and subtitle based on the documents provided."""
 

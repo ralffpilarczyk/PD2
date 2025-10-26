@@ -206,6 +206,58 @@ CRITICAL:
 - Output ONLY the enhanced section content (## Section Name + bullets). No preamble, no postamble."""
 
 
+def get_section_deduplication_prompt(section: dict, section_content: str, previous_sections: list) -> str:
+    """Generate deduplication prompt to remove content overlapping with previous sections
+
+    Args:
+        section: Section dictionary from opp_sections.py
+        section_content: Current section content to deduplicate
+        previous_sections: List of dicts with 'title' and 'content' from already-processed sections
+
+    Returns:
+        Prompt string for deduplication
+    """
+    if not previous_sections:
+        # No previous sections to check against
+        return section_content
+
+    previous_content = "\n\n".join([
+        f"## {s['title']}\n{s['content']}"
+        for s in previous_sections
+    ])
+
+    return f"""Remove redundant content from this section that overlaps with already-finalized sections.
+
+CURRENT SECTION TO DEDUPLICATE:
+{section_content}
+
+ALREADY-FINALIZED SECTIONS (these take precedence):
+{previous_content}
+
+TASK:
+Remove any bullet points from the current section that cover topics already addressed in the finalized sections above.
+
+KEEP bullet points that:
+- Cover unique information not mentioned in finalized sections
+- Provide a different angle or focus appropriate to "{section['title']}"
+- Add material new insights even if touching on similar topics
+
+REMOVE bullet points that:
+- Duplicate facts or insights already stated in finalized sections
+- Overlap significantly with finalized section content
+- Repeat information without adding material new value
+
+CRITICAL RULES:
+- Maintain the section header: ## {section['title']}
+- Keep the bullet format with **bold** keywords
+- If a bullet is only partially redundant, keep the unique parts and remove the redundant parts
+- If ALL bullets are redundant, return just the section header with a note: "Content integrated into other sections"
+- Output ONLY the deduplicated section content (## Section Name + remaining bullets)
+- No preamble, no explanation, no commentary
+
+Generate the deduplicated version now."""
+
+
 def get_section_polish_prompt(section: dict, section_content: str, word_limit: int) -> str:
     """Generate the polish prompt for a specific section
 

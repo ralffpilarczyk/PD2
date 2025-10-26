@@ -20,7 +20,7 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Version
-__opp_version__ = "1.0"
+__opp_version__ = "1.1"
 
 # Import utilities from PD2
 from src.utils import thread_safe_print, retry_with_backoff
@@ -31,6 +31,7 @@ from src.profile_prompts import (
     get_section_generation_prompt,
     get_section_completeness_check_prompt,
     get_section_enhancement_prompt,
+    get_section_deduplication_prompt,
     get_section_polish_prompt,
     _get_section_boundaries
 )
@@ -159,7 +160,7 @@ class WorkerDisplay:
 
         Args:
             section_num: Section number being processed
-            action: One of "Draft", "Check", "Enhance", "Polish"
+            action: One of "Draft", "Check", "Enhance", "Dedup", "Polish"
         """
         with self.lock:
             # Assign worker ID if this is a new section
@@ -200,8 +201,11 @@ class WorkerDisplay:
         for wid in sorted(self.worker_status.keys()):
             sec_num, action = self.worker_status[wid]
 
-            # Format with minimal styling: "Sec. 5 → Draft"
-            status = f"{DIM}Sec.{RESET} {BOLD}{sec_num}{RESET} {ARROW} {action}"
+            # Pad action with dots to align all status words (longest is "Enhance" at 7 chars)
+            padded_action = action.ljust(7, '.')
+
+            # Format with minimal styling: "Sec. 5 → Draft.."
+            status = f"{DIM}Sec.{RESET} {BOLD}{sec_num}{RESET} {ARROW} {padded_action}"
             parts.append(status)
 
         # Join with separator and print
@@ -320,7 +324,7 @@ class OnePageProfile:
         return enhanced
 
     def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
-        """Step 4: Polish section to word limit"""
+        """Step 4b: Polish section to word limit"""
         prompt = get_section_polish_prompt(section, content, word_limit)
         response = self.model_medium_temp.generate_content(prompt)
         polished = response.text.strip()
@@ -330,8 +334,32 @@ class OnePageProfile:
             return content
         return polished
 
+    def _deduplicate_section(self, section: dict, content: str, previous_sections: list) -> str:
+        """Step 4a: Remove content that overlaps with previous sections
+
+        Args:
+            section: Current section dict
+            content: Enhanced content to deduplicate
+            previous_sections: List of dicts with 'title' and 'content' from already-processed sections
+
+        Returns:
+            Deduplicated content
+        """
+        if not previous_sections:
+            # First section (Section 4), nothing to deduplicate against
+            return content
+
+        prompt = get_section_deduplication_prompt(section, content, previous_sections)
+        response = self.model_medium_temp.generate_content(prompt)
+        deduplicated = response.text.strip()
+
+        # Fallback to original if deduplication fails
+        if not deduplicated or len(deduplicated) < 50:
+            return content
+        return deduplicated
+
     def process_section_main(self, section: dict, worker_display: WorkerDisplay) -> dict:
-        """Process a single section through Steps 1-4 (main content generation)"""
+        """Process a single section through Steps 1-3 (Draft/Check/Enhance)"""
         section_num = section['number']
         section_title = section['title']
 
@@ -354,18 +382,13 @@ class OnePageProfile:
             enhanced = self._enhance_section(section, draft, add_list)
             (section_dir / "step3_enhanced.md").write_text(f"## {section_title}\n{enhanced}", encoding='utf-8')
 
-            # Step 4: Polish (100 words)
-            worker_display.update(section_num, "Polish")
-            polished = self._polish_section(section, enhanced, word_limit=120)
-            (section_dir / "step4_polished.md").write_text(f"## {section_title}\n{polished}", encoding='utf-8')
-
-            # Remove from display immediately after Step 4 completes
+            # Remove from display after Step 3 completes
             worker_display._remove_silent(section_num)
 
             return {
                 'number': section_num,
                 'title': section_title,
-                'content': polished,
+                'content': enhanced,
                 'success': True
             }
 
@@ -381,34 +404,124 @@ class OnePageProfile:
             }
 
     def generate_profile(self, company_name: str, worker_display: WorkerDisplay) -> str:
-        """Generate profile with parallel section processing (Steps 1-4 only)"""
-        thread_safe_print(f"\n{CYAN}Phase 1: Generating content (parallel workers: {self.workers})...{RESET}\n")
+        """Generate profile with 3-phase processing: Parallel Steps 1-3, Sequential Dedup (reverse), Parallel Polish"""
 
-        results = []
+        # Phase 1: Parallel Steps 1-3 (Draft/Check/Enhance)
+        thread_safe_print(f"\n{CYAN}Phase 1: Draft/Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
+
+        enhanced_results = []
         completed_count = 0
 
-        # Process sections in parallel (Steps 1-4)
         with ThreadPoolExecutor(max_workers=self.workers) as executor:
-            # Submit all section tasks
             future_to_section = {
                 executor.submit(self.process_section_main, section, worker_display): section
                 for section in sections
             }
 
-            # Collect results as they complete
             for future in as_completed(future_to_section):
                 section = future_to_section[future]
                 result = future.result()
-                results.append(result)
+                enhanced_results.append(result)
                 completed_count += 1
                 worker_display.complete(result['number'], completed_count, len(sections))
 
-        # Sort results by section number
-        results.sort(key=lambda x: x['number'])
+        # Sort by section number for consistent processing
+        enhanced_results.sort(key=lambda x: x['number'])
+
+        # Phase 2: Sequential Deduplication in REVERSE order (4→3→2→1)
+        thread_safe_print(f"\n{CYAN}Phase 2: Deduplicating (reverse order: 4→3→2→1)...{RESET}\n")
+
+        deduplicated_results = {}
+        processed_sections = []  # Accumulates sections in reverse order
+
+        # Process in reverse: Section 4, then 3, then 2, then 1
+        for section_num in [4, 3, 2, 1]:
+            # Find the enhanced result for this section
+            enhanced_result = next(r for r in enhanced_results if r['number'] == section_num)
+
+            if not enhanced_result['success']:
+                # Skip failed sections
+                deduplicated_results[section_num] = enhanced_result
+                continue
+
+            section = next(s for s in sections if s['number'] == section_num)
+
+            # Display dedup progress
+            worker_display.update(section_num, "Dedup")
+
+            # Deduplicate against already-processed sections
+            deduplicated_content = self._deduplicate_section(
+                section,
+                enhanced_result['content'],
+                processed_sections
+            )
+
+            # Save deduplicated content for this section
+            deduplicated_results[section_num] = {
+                'number': section_num,
+                'title': enhanced_result['title'],
+                'content': deduplicated_content,
+                'success': True
+            }
+
+            # Add to processed sections (for next iteration)
+            processed_sections.append({
+                'title': enhanced_result['title'],
+                'content': deduplicated_content
+            })
+
+            # Remove from display after dedup
+            worker_display._remove_silent(section_num)
+
+        # Phase 3: Parallel Polish to 100 words
+        thread_safe_print(f"\n{CYAN}Phase 3: Polishing to 100 words (parallel)...{RESET}\n")
+
+        def polish_section_task(section_num):
+            """Polish a single section"""
+            dedup_result = deduplicated_results[section_num]
+
+            if not dedup_result['success']:
+                return dedup_result
+
+            section = next(s for s in sections if s['number'] == section_num)
+            section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+
+            # Display polish progress
+            worker_display.update(section_num, "Polish")
+
+            # Polish the deduplicated content
+            polished = self._polish_section(section, dedup_result['content'], word_limit=120)
+
+            # Save polished content
+            (section_dir / "step4_polished.md").write_text(
+                f"## {dedup_result['title']}\n{polished}",
+                encoding='utf-8'
+            )
+
+            # Remove from display after polish
+            worker_display._remove_silent(section_num)
+
+            return {
+                'number': section_num,
+                'title': dedup_result['title'],
+                'content': polished,
+                'success': True
+            }
+
+        polished_results = []
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            futures = {executor.submit(polish_section_task, num): num for num in [1, 2, 3, 4]}
+
+            for future in as_completed(futures):
+                result = future.result()
+                polished_results.append(result)
+
+        # Sort by section number for final assembly
+        polished_results.sort(key=lambda x: x['number'])
 
         # Assemble final markdown
         parts = []
-        for result in results:
+        for result in polished_results:
             if result['success']:
                 parts.append(f"## {result['title']}\n{result['content']}")
 
@@ -438,7 +551,9 @@ Source Files:
 
 Processing:
   - Title/Subtitle generation
-  - 4 sections processed in parallel (Steps 1-4: Draft/Check/Enhance/Polish)
+  - Phase 1: Steps 1-3 (Draft/Check/Enhance) processed in parallel
+  - Phase 2: Step 4a (Deduplication) processed sequentially in reverse (4→3→2→1)
+  - Phase 3: Step 4b (Polish to 100 words) processed in parallel
   - PowerPoint generation
   - See section_N/ subdirectories for intermediate outputs{pptx_info}
 

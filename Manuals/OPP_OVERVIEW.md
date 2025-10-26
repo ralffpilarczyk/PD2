@@ -1,16 +1,17 @@
-# OPP Code Overview - Complete Technical Documentation
+# OPP Code Overview - Complete Technical Documentation (v1.1)
 
 ## Executive Summary
 
-OnePageProfile (OPP) is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs parallel section processing with a 4-step refinement pipeline optimized for speed and clarity, generating both markdown and PowerPoint outputs with professional formatting.
+OnePageProfile (OPP) v1.1 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 3-phase architecture with parallel processing and sequential deduplication optimized for speed, clarity, and eliminating redundancy across sections.
 
 **Key Metrics**:
 - 4 analytical sections (Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations)
-- 4-step progressive refinement pipeline per section
+- 3-phase architecture: Parallel Draft/Check/Enhance → Sequential Dedup (reverse) → Parallel Polish
 - 100-word limit per section
 - Parallel processing with 1-4 configurable workers
 - Dual output: Markdown + PowerPoint
-- Processing time: ~3-7 minutes per profile (with 2 workers)
+- Processing time: ~3-5 minutes per profile (with 4 workers)
+- No learning system (removed in v1.1 for simplicity)
 
 ## Architecture Overview
 
@@ -49,9 +50,10 @@ OnePageProfile (OPP) is a focused document analysis tool that transforms PDF doc
 
 ### 1. Speed Over Depth
 - Optimized for quick M&A screening, not comprehensive analysis
-- 4 steps per section vs PD2's 6 steps (no discovery, no learning)
+- 3-phase architecture: Parallel Steps 1-3 → Sequential Dedup → Parallel Polish
+- No learning system (removed in v1.1 for simplicity)
 - Parallel processing with configurable workers (1-4)
-- Target: Under 7 minutes per profile (with 2 workers)
+- Target: Under 5 minutes per profile (with 4 workers)
 
 ### 2. Clarity Over Completeness
 - 100 words max per section (enforced at polish step)
@@ -70,11 +72,14 @@ OnePageProfile (OPP) is a focused document analysis tool that transforms PDF doc
 - Consistent color scheme (dark blue #2d5a87, dark grey #4a5568)
 - Auto-generated footnotes with version and date
 
-### 5. Parallel Section Processing
-- Each section processed independently through all 4 steps
-- ThreadPoolExecutor manages worker pool
+### 5. Three-Phase Processing with Deduplication (v1.1)
+- **Phase 1**: Parallel Draft/Check/Enhance for all 4 sections
+- **Phase 2**: Sequential deduplication in reverse priority (Section 4→3→2→1)
+  - Section 4 (Strategic Considerations) processes first, keeps richest content
+  - Earlier sections remove overlaps with later ones
+- **Phase 3**: Parallel polish to 100 words
+- ThreadPoolExecutor manages worker pools for parallel phases
 - WorkerDisplay provides real-time progress tracking
-- Architecture ready for future learning integration (like PD2)
 
 ## File Structure & Module Breakdown
 
@@ -154,15 +159,23 @@ class WorkerDisplay:
 - Real-time display of active workers
 - Completion tracking with progress counter
 
-#### The 4-Step Refinement Pipeline (Per Section)
+#### The 3-Phase Architecture (v1.1)
 
-**Architecture**: Each of the 4 sections is processed independently through all 4 steps in parallel.
+**Phase 1 - Parallel Steps 1-3**: All 4 sections process Draft/Check/Enhance simultaneously.
 
-**process_section(section: dict, worker_display: WorkerDisplay) -> dict**
+**Phase 2 - Sequential Deduplication**: Sections deduplicate in reverse order (4→3→2→1) to eliminate redundancy.
+
+**Phase 3 - Parallel Polish**: All 4 sections polish to 100 words simultaneously.
+
+---
+
+### Steps 1-3: Draft, Check, Enhance (Parallel Phase 1)
+
+**process_section_main(section: dict, worker_display: WorkerDisplay) -> dict**
 ```python
-# Orchestrates one section through all 4 steps
+# Orchestrates one section through Steps 1-3 (Phase 1)
 # Creates: runs/opp_TIMESTAMP/section_N/ directory
-# Returns: {'number': int, 'title': str, 'content': str, 'success': bool}
+# Returns: {'number': int, 'title': str, 'content': enhanced_content, 'success': bool}
 ```
 
 ---
@@ -269,10 +282,50 @@ def _enhance_section(self, section: dict, content: str, add_list: str) -> str:
 
 ---
 
-**Step 4: Polish**
+### Step 4a: Deduplication (Sequential Phase 2 - v1.1 NEW)
+
+**Architecture**: After Phase 1 completes, sections are deduplicated **sequentially in reverse order (4→3→2→1)** to eliminate overlaps while preserving the richest content.
+
+```python
+def _deduplicate_section(self, section: dict, content: str, previous_sections: list) -> str:
+    # Input: section dict + enhanced content + previously processed sections
+    # Temperature: 0.6 (balanced)
+    # Removes overlaps with higher-priority sections
+    # Output: deduplicated content (not saved separately, passed to polish)
+```
+
+**Processing Order**:
+1. **Section 4** (Strategic Considerations): Processes first, keeps all content
+2. **Section 3** (Financial KPIs): Removes overlap with Section 4
+3. **Section 2** (Competitive Positioning): Removes overlap with Sections 4, 3
+4. **Section 1** (Company Overview): Removes overlap with Sections 4, 3, 2
+
+**Detailed Input/Output**:
+- **Input**:
+  - `section`: Current section definition
+  - `content`: Enhanced content from Step 3
+  - `previous_sections`: List of already-deduplicated sections (in reverse order)
+- **Processing**:
+  - If first section (Section 4): Returns content unchanged
+  - Otherwise: LLM identifies and removes overlapping bullet points
+  - Keeps bullets with unique information or different angle
+  - Removes bullets duplicating facts from previous sections
+  - Preserves section header and format
+- **Output**: Deduplicated content (in memory, not saved to file)
+- **Fallback**: If deduplication fails, returns enhanced content unchanged
+
+**Why Reverse Order?**
+- Section 4 (Strategic Considerations) is most important for M&A evaluation
+- Strategic insights take precedence over basic company facts
+- Earlier sections become lean foundational context
+- Matches how investors read: thesis first, details second
+
+---
+
+### Step 4b: Polish (Parallel Phase 3)
 ```python
 def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
-    # Input: section dict + step 3 content + word limit (100)
+    # Input: section dict + deduplicated content + word limit (100)
     # Temperature: 0.6 (balanced)
     # Condenses to essential insights only
     # Output: section_N/step4_polished.md
@@ -281,7 +334,7 @@ def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
 **Detailed Input/Output**:
 - **Input**:
   - `section`: Section definition with specs
-  - `content`: Enhanced from Step 3
+  - `content`: Deduplicated content from Step 4a
   - `word_limit`: 100 words (hard target)
   - Prompt with condensing instructions
 - **Processing**:
@@ -301,109 +354,48 @@ def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
   ...
   ```
 - **Saved to**: `section_1/step4_polished.md`
-- **Fallback**: If polish fails, returns Step 3 content unchanged
+- **Fallback**: If polish fails, returns deduplicated content unchanged
 
 ---
 
-**Step 5: Learning Extraction**
-```python
-def _extract_learning(self, section: dict, final_output: str) -> str:
-    # Input: section dict + step 4 polished content
-    # Temperature: 0.2 (analytical)
-    # Extracts UNIVERSAL methodologies for future runs
-    # Output: section_N/step5_learning.json
-```
-
-**Detailed Input/Output**:
-- **Input**:
-  - `section`: Section definition
-  - `final_output`: Polished content from Step 4
-  - Prompt requesting UNIVERSAL analytical techniques
-- **Processing**:
-  - Analyzes completed section for reusable methodologies
-  - Extracts analytical techniques that work ACROSS ALL SECTORS
-  - NO company names, NO sector names, NO specific numbers
-  - Categories: analytical_techniques, red_flag_patterns, data_validation
-  - Maximum 2 items per category - only breakthrough methods
-  - Must work for pharma, industrial, tech, finance, retail - ALL sectors
-  - Phrased as general principles for manual insertion into section specs
-- **Output**:
-  ```json
-  {
-    "analytical_techniques": [
-      "When analyzing [universal context], calculate [general metric] to reveal [insight type]"
-    ],
-    "red_flag_patterns": [
-      "Warning sign: [general pattern] often indicates [business risk]"
-    ],
-    "data_validation": [
-      "Cross-check [data source A] against [data source B] to verify [accuracy]"
-    ]
-  }
-  ```
-- **Saved to**: `section_N/step5_learning.json`
-- **Purpose**: Builds reusable analytical best practices for future profile generation
+After all sections complete the 3-phase pipeline, the final polished content from each section is assembled into the complete profile.
 
 ---
 
-**Post-Run Memory Review**:
-```python
-def _conduct_memory_review(self):
-    # Called after all sections complete
-    # Collects all step5_learning.json files
-    # Synthesizes universal methodologies with LLM
-    # Applies quality filtering (9-10/10 only)
-    # Updates memory/opp_learning_memory.json
-```
+## Parallel Execution Architecture (v1.1)
 
-**Learning System Architecture**:
-- **Per-Section Extraction** (Step 5 during section processing):
-  - Each section saves step5_learning.json with methodology candidates
-  - Focus on universal analytical principles
-  - No company or sector-specific content
-
-- **Memory Review** (after all sections complete):
-  - Collects all step5_learning.json files
-  - LLM synthesizes into transferable methodologies
-  - Quality scoring: 6-10 scale
-  - Harsh filtering: Only 9-10/10 insights persist in memory
-  - Maximum 6 insights per section
-  - Saved to memory/opp_learning_memory.json (separate from PD2's memory)
-
-- **Memory Application** (next run):
-  - Step 1 retrieves top 5 relevant insights for each section
-  - Injected into generation prompt as learned best practices
-  - Enhances analytical quality over time
-
-- **Manual Review**:
-  - Insights phrased as section requirement additions
-  - Suitable for manual insertion into opp_sections.py
-  - Universal principles, not specific findings
-
-**Why Separate from PD2?**
-
-OPP and PD2 use completely different analytical approaches:
-- **OPP Section 1**: "Company Overview" (concise M&A screening)
-- **PD2 Section 1**: "Operating Footprint" (detailed extraction with tables/history)
-
-Sharing learning memory would cause cross-contamination - OPP's learnings for "Company Overview" would incorrectly apply to PD2's "Operating Footprint" analysis, and vice versa. Separate memories ensure each system learns methodologies appropriate to its specific analytical tasks.
-
----
-
-**Parallel Execution**:
+**3-Phase Processing**:
 ```python
 def generate_profile(self, company_name: str, worker_display: WorkerDisplay) -> str:
-    # Submit all 4 sections to ThreadPoolExecutor
-    # Each worker processes one section through all 5 steps
-    # Results collected as they complete
-    # Sorted by section number and assembled
+    # Phase 1: Parallel Steps 1-3 (Draft/Check/Enhance) for all sections
+    # Phase 2: Sequential Dedup in reverse (4→3→2→1)
+    # Phase 3: Parallel Polish to 100 words for all sections
+    # Returns: Assembled markdown with all 4 sections
 ```
 
 **Processing Flow**:
+
+**Phase 1 - Parallel Draft/Check/Enhance**:
 1. Create ThreadPoolExecutor with `self.workers` max workers
-2. Submit 4 section tasks (one per section)
-3. As each completes:
-   - Collect result
+2. Submit all 4 sections to process Steps 1-3 in parallel
+3. Collect enhanced results as they complete
+4. Sort by section number for consistent processing
+
+**Phase 2 - Sequential Deduplication (Reverse Order)**:
+1. Process Section 4 first (keeps all content)
+2. Process Section 3 (removes overlap with 4)
+3. Process Section 2 (removes overlap with 4, 3)
+4. Process Section 1 (removes overlap with 4, 3, 2)
+5. Each deduplication is a single LLM call
+
+**Phase 3 - Parallel Polish**:
+1. Create new ThreadPoolExecutor
+2. Submit all 4 deduplicated sections to polish in parallel
+3. Each polishes to 100 words independently
+4. Collect polished results and save to step4_polished.md files
+
+**Final Assembly**:
+1. Sort polished sections by number (1-4)
    - Update progress counter
    - Worker display shows completion
 4. Sort results by section number

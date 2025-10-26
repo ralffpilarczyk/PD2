@@ -15,6 +15,9 @@ WORKERS = 4
 PDF_DIRECTORY = "SourceFiles/SourceBatch"
 
 def main():
+    # Clear terminal screen
+    print("\033[2J\033[H", end='')
+
     print("\n" + "="*60)
     print("BATCH OPP PROCESSOR")
     print("="*60)

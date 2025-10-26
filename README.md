@@ -1,8 +1,8 @@
-# ProfileDash 2.1 & OnePageProfile 1.0
+# ProfileDash 2.1 & OnePageProfile 1.1
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.1): Comprehensive 33-section company profiles with deep analytical insights
-- **OPP** (OnePageProfile v1.0): Concise one-page profiles for quick M&A evaluation
+- **OPP** (OnePageProfile v1.1): Concise one-page profiles for quick M&A evaluation
 
 ## Quick Start
 
@@ -60,7 +60,7 @@ Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
 - Automatic retry with exponential backoff for API limits
 - Thread-safe operations for concurrent processing
 
-## OnePageProfile v1.0 (OPP)
+## OnePageProfile v1.1 (OPP)
 
 Concise one-page company profiles for rapid M&A screening and evaluation.
 
@@ -71,9 +71,8 @@ python OPP.py
 
 1. Select model: Gemini Flash or Pro
 2. Set parallel workers (1-4, default 4)
-3. Choose learning mode: exclude (default) or include learnings
-4. Select PDFs when prompted
-5. Wait for processing (~5-10 minutes)
+3. Select PDFs when prompted
+4. Wait for processing (~3-5 minutes)
 
 **Batch Processing:**
 
@@ -85,7 +84,6 @@ python batch_opp.py
 Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 - Model: Gemini Pro
 - Workers: 4
-- Learning: disabled
 - Progress tracking and summary report
 
 **Output:**
@@ -95,7 +93,15 @@ Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 **Format:**
 - Title and subtitle
 - 4 sections: Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations
-- Each section limited to ~120 words with bullet points
+- Each section limited to ~100 words with bullet points
+
+**Architecture (v1.1):**
+- **Phase 1**: Parallel Draft/Check/Enhance for all sections
+- **Phase 2**: Sequential deduplication in reverse priority (Section 4→3→2→1)
+  - Section 4 (Strategic Considerations) keeps richest content
+  - Earlier sections remove overlaps with later ones
+- **Phase 3**: Parallel polish to 100 words
+- No learning system (removed in v1.1 for simplicity)
 
 ## Requirements
 
@@ -103,13 +109,14 @@ Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 - Gemini API key (free at https://makersuite.google.com/app/apikey)
 - 8GB RAM minimum
 
-**Learning System:**
-Both systems learn and improve over time, but maintain separate learning memories:
-- PD2: `memory/pd2_learning_memory.json` (33 sections, detailed analysis)
-- OPP: `memory/opp_learning_memory.json` (4 sections, M&A screening)
-- Archives: `memory/memory_library/{prefix}_memory_{timestamp}.json`
+**Learning System (PD2 only):**
+PD2 learns and improves over time:
+- Memory: `memory/pd2_learning_memory.json` (33 sections, detailed analysis)
+- Archives: `memory/memory_library/pd2_memory_{timestamp}.json`
+- Extracts universal analytical methodologies (9-10/10 quality only)
+- Applies learned patterns to future runs
 
-Each system extracts universal analytical methodologies (9-10/10 quality only) and applies them to future runs.
+OPP v1.1 does not use learning for simplicity and speed.
 
 ## License
 

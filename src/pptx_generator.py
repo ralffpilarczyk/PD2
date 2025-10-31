@@ -87,13 +87,14 @@ def parse_markdown_profile(md_path: str) -> Dict:
     return result
 
 
-def create_profile_pptx(md_path: str, company_name: str, timestamp: str) -> str:
+def create_profile_pptx(md_path: str, company_name: str, timestamp: str, version_suffix: str = "") -> str:
     """Create PowerPoint presentation from markdown profile
 
     Args:
         md_path: Path to step4_final.md
         company_name: Company name for filename
         timestamp: Timestamp for filename
+        version_suffix: Optional version suffix (e.g., "_v1", "_v2", "_v3")
 
     Returns:
         Path to generated PPTX file
@@ -129,7 +130,7 @@ def create_profile_pptx(md_path: str, company_name: str, timestamp: str) -> str:
     clean_name = "".join(c for c in company_name if c.isalnum() or c in (' ', '_', '-')).strip()
     clean_name = clean_name.replace(' ', '_')
 
-    output_path = output_dir / f"{clean_name}_{timestamp}.pptx"
+    output_path = output_dir / f"{clean_name}_{timestamp}{version_suffix}.pptx"
     prs.save(str(output_path))
 
     return str(output_path)

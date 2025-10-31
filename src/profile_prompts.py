@@ -11,6 +11,12 @@ Critical rules:
 • A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded
 • Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.
 • If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics
+
+Prose requirements:
+• Every bullet must be a complete grammatical sentence with subject and verb
+• No sentence fragments or comma-separated lists without connecting words
+• Use proper articles (a, the) and conjunctions (and, but, while)
+• Readable as standalone prose, not telegraphic shorthand
 """
 
 def _get_section_boundaries(section_num: int) -> str:
@@ -89,6 +95,11 @@ SECTION REQUIREMENTS:
 {section['specs']}
 
 {OPP_CRITICAL_RULES}
+
+DENSITY PRIORITY:
+• Pack multiple related facts into single sentences where sensible
+• Every word must earn its place - no filler, no obvious observations
+• Prioritize sentences with 2+ quantified facts over single-fact sentences
 
 SECTION BOUNDARIES - STAY FOCUSED:
 This is the "{section['title']}" section. DO NOT include content that belongs in other sections:
@@ -210,6 +221,12 @@ INSTRUCTIONS:
 6. Keep the same format: bullets with bold keywords using **word** syntax
 7. If an ADD item duplicates existing content, enhance rather than duplicate
 
+INTEGRATION STRATEGY FOR DENSITY:
+• When adding new facts, fuse them with existing content where possible
+• Create multi-fact sentences rather than adding new bullets
+• Example: Instead of adding separate bullet "Revenue grew 12%" to existing "Malaysia 35%, Indonesia 28%",
+  combine: "Malaysia generates 35% of revenue and Indonesia 28%, with combined growth of 12% YoY"
+
 FORMATTING RULES:
 - Keep bullet format with **bold** keywords (1-2 most important words per bullet)
 - Each bullet is one sentence maximum
@@ -221,6 +238,61 @@ CRITICAL:
 - Do NOT include page numbers, footnotes, or source citations
 - Only add content that provides real investor value with specific facts/numbers
 - Output ONLY the enhanced section content (## Section Name + bullets). No preamble, no postamble."""
+
+
+def get_section_density_enhancement_prompt(section: dict, section_content: str) -> str:
+    """Generate density-focused enhancement prompt when no gaps are found
+
+    Used in iterations 2+ when completeness check finds no missing content,
+    but we still want to increase information density through compression and fusion.
+
+    Args:
+        section: Section dictionary from opp_sections.py
+        section_content: Current section content to enhance for density
+
+    Returns:
+        Prompt string for density enhancement
+    """
+    return f"""You are a precision editor increasing information density for M&A evaluation.
+
+SECTION: {section['title']}
+
+CURRENT SECTION CONTENT:
+---
+{section_content}
+---
+
+SOURCE DOCUMENTS (for additional quantified details):
+{{source_documents}}
+
+TASK:
+The content is complete but can be denser. Increase information density without adding new topics by:
+
+1. **FUSION**: Combine related facts from multiple bullets into single multi-fact sentences
+   - Example: Two bullets "Malaysia 35% revenue" + "Indonesia 28%" → "Malaysia generates 35% of revenue and Indonesia 28%"
+
+2. **QUANTIFICATION**: Replace qualitative statements with quantified facts from source documents
+   - Example: "Strong growth" → "Revenue grew 12% YoY to USD81m"
+
+3. **COMPRESSION**: Remove verbose phrasing while preserving all facts
+   - Example: "The company has a presence in" → "Operates in"
+
+4. **ENRICHMENT**: Add specific numbers, percentages, or dates where currently missing
+   - Only if data exists in source documents
+   - Example: "Several countries" → "9 countries across Asia"
+
+CONSTRAINTS:
+• Maintain all existing facts - do not drop information
+• Keep section boundaries - stay focused on "{section['title']}"
+• Preserve bullet format with **bold** keywords
+• Each bullet must remain a complete grammatical sentence
+• Skip enrichment if source documents lack supporting data
+
+OUTPUT FORMAT:
+## {section['title']}
+[Enhanced bullets with higher information density]
+
+Generate the density-enhanced version now."""
 
 
 def get_section_deduplication_prompt(section: dict, section_content: str, previous_sections: list) -> str:
@@ -330,6 +402,7 @@ CONDENSING INSTRUCTIONS:
    - Eliminate elaborate explanations - let the data speak
    - Focus on what's surprising, notable, or value-affecting
    - Deliver deep insights
+   - Combine related facts in one multi-fact sentence to the extent possible and sensible. Example: "Malaysia generates 35% of revenue and Indonesia 28%, with combined growth of 12% YoY" (3 facts, 1 sentence)
    - Be brutal yet constructive when condensing
    
 5. **FORMAT PRESERVATION**:

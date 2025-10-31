@@ -3,6 +3,7 @@ import random
 import re
 import threading
 import os
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 # Thread-safe print lock
 print_lock = threading.Lock()
@@ -227,17 +228,38 @@ def _fix_single_table(table_lines: list) -> list:
     return table_lines
 
 
-def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
-    """Retry function with exponential backoff for rate limits"""
+def retry_with_backoff(func, max_retries=3, base_delay=1.0, context="", timeout=120):
+    """Retry function with exponential backoff for rate limits and timeout protection
+
+    Args:
+        func: Function to execute
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay for exponential backoff (seconds)
+        context: Context string for logging
+        timeout: Timeout for each function call (seconds, default 120)
+    """
     context_str = f"Section {context} - " if context else ""
     for attempt in range(max_retries):
         try:
             # Simple global gate to avoid burst concurrency
             _llm_semaphore.acquire()
             try:
-                return func()
+                # Execute function with timeout protection
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(func)
+                    return future.result(timeout=timeout)
             finally:
                 _llm_semaphore.release()
+        except FuturesTimeoutError:
+            # Treat timeout like rate limit - retry with backoff
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                thread_safe_print(f"{context_str}Timeout after {timeout}s, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                time.sleep(delay)
+                continue
+            else:
+                thread_safe_print(f"{context_str}Max retries exceeded after timeout")
+                raise
         except Exception as e:
             error_str = str(e)
             if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
@@ -252,7 +274,7 @@ def retry_with_backoff(func, max_retries=3, base_delay=1.0, context=""):
                         except (ValueError, AttributeError):
                             # Unable to parse retry delay from error message
                             pass
-                    
+
                     thread_safe_print(f"{context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
                     time.sleep(delay)
                     continue

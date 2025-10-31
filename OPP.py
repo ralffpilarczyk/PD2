@@ -255,44 +255,6 @@ class OnePageProfile:
         # Setup directories
         self.file_manager.setup_directories(sections)
 
-    def _call_llm_with_retry(self, model, content, context: str = "", max_retries: int = 3) -> str:
-        """Call LLM with automatic 429 retry using API-specified delay
-
-        Args:
-            model: Gemini model instance
-            content: Content to send (can be list with PDF parts + prompt)
-            context: Context string for logging (e.g., "Section 1 Draft")
-            max_retries: Maximum number of retry attempts
-
-        Returns:
-            Response text from LLM
-
-        Raises:
-            Exception: If all retries exhausted
-        """
-        for attempt in range(max_retries):
-            try:
-                response = model.generate_content(content)
-                return response.text.strip()
-            except Exception as e:
-                error_str = str(e)
-                is_rate_limit = "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower()
-
-                if is_rate_limit and attempt < max_retries - 1:
-                    # Extract retry delay from API response (fallback to exponential backoff)
-                    delay = 2 ** attempt
-                    delay_match = re.search(r'retry.*?(\d+\.?\d*)\s*s|seconds:\s*(\d+)', error_str, re.IGNORECASE)
-                    if delay_match:
-                        delay = float(delay_match.group(1) or delay_match.group(2))
-
-                    context_str = f"{context} - " if context else ""
-                    thread_safe_print(f"{YELLOW}{WARNING}{RESET} {context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(delay)
-                    continue
-                else:
-                    # Not a rate limit error, or max retries exhausted
-                    raise
-
     def encode_pdf_to_base64(self, pdf_path: str) -> str:
         """Encode PDF file to base64 string"""
         with open(pdf_path, 'rb') as pdf_file:
@@ -320,9 +282,8 @@ class OnePageProfile:
         thread_safe_print(f"{CYAN}{ARROW}{RESET} Extracting company name...")
 
         try:
-            company_name = self._call_llm_with_retry(
-                self.model_medium_temp,
-                pdf_parts + [COMPANY_NAME_EXTRACTION_PROMPT],
+            company_name = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(pdf_parts + [COMPANY_NAME_EXTRACTION_PROMPT]).text.strip(),
                 context="Company name extraction"
             )
 
@@ -344,9 +305,8 @@ class OnePageProfile:
         prompt = get_title_subtitle_prompt(company_name)
 
         try:
-            title_subtitle = self._call_llm_with_retry(
-                self.model_medium_temp,
-                self.pdf_parts + [prompt],
+            title_subtitle = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
                 context="Title/subtitle generation"
             )
             thread_safe_print(f"{CYAN}{CHECK}{RESET} Title and subtitle complete")
@@ -358,9 +318,8 @@ class OnePageProfile:
     def _generate_section(self, section: dict) -> str:
         """Step 1: Generate initial section content"""
         prompt = get_section_generation_prompt(section)
-        return self._call_llm_with_retry(
-            self.model_medium_temp,
-            self.pdf_parts + [prompt],
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
             context=f"Section {section['number']} Draft"
         )
 
@@ -368,9 +327,8 @@ class OnePageProfile:
         """Step 2: Check section completeness"""
         prompt = get_section_completeness_check_prompt(section, content)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        return self._call_llm_with_retry(
-            self.model_low_temp,
-            self.pdf_parts + [prompt],
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
             context=f"Section {section['number']} Check"
         )
 
@@ -378,9 +336,8 @@ class OnePageProfile:
         """Step 3: Enhance section with missing items"""
         prompt = get_section_enhancement_prompt(section, content, add_list)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        enhanced = self._call_llm_with_retry(
-            self.model_medium_temp,
-            self.pdf_parts + [prompt],
+        enhanced = retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
             context=f"Section {section['number']} Enhance"
         )
 
@@ -393,9 +350,8 @@ class OnePageProfile:
         """Step 3: Enhance section for density when no gaps are found (iterations 2+)"""
         prompt = get_section_density_enhancement_prompt(section, content)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        enhanced = self._call_llm_with_retry(
-            self.model_medium_temp,
-            self.pdf_parts + [prompt],
+        enhanced = retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
             context=f"Section {section['number']} Density Enhancement"
         )
 
@@ -407,9 +363,8 @@ class OnePageProfile:
     def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
         """Step 4b: Polish section to word limit"""
         prompt = get_section_polish_prompt(section, content, word_limit)
-        polished = self._call_llm_with_retry(
-            self.model_medium_temp,
-            prompt,
+        polished = retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text.strip(),
             context=f"Section {section['number']} Polish"
         )
 
@@ -434,9 +389,8 @@ class OnePageProfile:
             return content
 
         prompt = get_section_deduplication_prompt(section, content, previous_sections)
-        deduplicated = self._call_llm_with_retry(
-            self.model_medium_temp,
-            prompt,
+        deduplicated = retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text.strip(),
             context=f"Section {section['number']} Dedup"
         )
 
@@ -483,9 +437,8 @@ OUTPUT FORMAT:
 Generate the refined version now."""
 
         try:
-            refined = self._call_llm_with_retry(
-                self.model_medium_temp,
-                prompt,
+            refined = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(prompt).text.strip(),
                 context="Subtitle refinement"
             )
 

@@ -785,38 +785,10 @@ Status: {status}
             # Create worker display
             worker_display = WorkerDisplay(self.workers)
 
-            # Generate all sections (returns list of profiles, one per iteration)
-            all_profiles = self.generate_profile(company_name, worker_display)
+            # Generate all sections and PowerPoints (returns list of PPT paths, one per iteration)
+            pptx_paths = self.generate_profile(company_name, title_subtitle, worker_display)
 
-            thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Content generation complete")
-
-            # Save markdown and generate PPT for each iteration
-            thread_safe_print(f"\n{CYAN}{ARROW}{RESET} Saving profiles and generating PowerPoints...")
-
-            pptx_paths = []
-            for iteration_num, section_content in enumerate(all_profiles, start=1):
-                version_suffix = f"_v{iteration_num}" if len(all_profiles) > 1 else ""
-
-                # Assemble final markdown for this iteration
-                final_profile = self._assemble_final_markdown(title_subtitle, section_content)
-
-                # Save markdown
-                final_path = Path(self.file_manager.run_dir) / f"final_profile{version_suffix}.md"
-                final_path.write_text(final_profile, encoding='utf-8')
-
-                # Generate PowerPoint
-                try:
-                    pptx_path = create_profile_pptx(
-                        md_path=str(final_path),
-                        company_name=company_name,
-                        timestamp=self.timestamp,
-                        version_suffix=version_suffix
-                    )
-                    pptx_paths.append(pptx_path)
-                    thread_safe_print(f"{CYAN}{CHECK}{RESET} v{iteration_num} PowerPoint: {pptx_path}")
-                except Exception as e:
-                    thread_safe_print(f"{YELLOW}{WARNING}{RESET} v{iteration_num} PowerPoint generation failed: {e}")
-                    pptx_paths.append(None)
+            thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Profile generation complete")
 
             # Save run log
             self.save_run_log(company_name, "Success", pptx_paths)
@@ -826,9 +798,10 @@ Status: {status}
             thread_safe_print(f"{CYAN}{BOLD}Profile generation complete!{RESET}")
             thread_safe_print(f"{CYAN}{'='*60}{RESET}")
             thread_safe_print(f"\nOutput saved to: {self.file_manager.run_dir}/")
-            for iteration_num in range(1, len(all_profiles) + 1):
-                version_suffix = f"_v{iteration_num}" if len(all_profiles) > 1 else ""
+            for iteration_num in range(1, self.iterations + 1):
+                version_suffix = f"_v{iteration_num}" if self.iterations > 1 else ""
                 thread_safe_print(f"  - final_profile{version_suffix}.md")
+                thread_safe_print(f"  - subtitle{version_suffix}.md")
             thread_safe_print(f"  - section_1/ through section_4/ (intermediate steps)")
 
             if any(pptx_paths):
@@ -838,7 +811,7 @@ Status: {status}
                         thread_safe_print(f"  - {pptx_path}")
 
             # Return the first markdown file path (for compatibility)
-            return Path(self.file_manager.run_dir) / "final_profile.md" if len(all_profiles) == 1 else Path(self.file_manager.run_dir) / "final_profile_v1.md"
+            return Path(self.file_manager.run_dir) / "final_profile.md" if self.iterations == 1 else Path(self.file_manager.run_dir) / "final_profile_v1.md"
 
         except Exception as e:
             thread_safe_print(f"{RED}{CROSS}{RESET} Error during profile generation: {e}")

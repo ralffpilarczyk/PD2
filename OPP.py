@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import re
 import json
+import time
 
 # Load environment variables
 load_dotenv()
@@ -255,6 +256,44 @@ class OnePageProfile:
         # Setup directories
         self.file_manager.setup_directories(sections)
 
+    def _call_llm_with_retry(self, model, content, context: str = "", max_retries: int = 3) -> str:
+        """Call LLM with automatic 429 retry using API-specified delay
+
+        Args:
+            model: Gemini model instance
+            content: Content to send (can be list with PDF parts + prompt)
+            context: Context string for logging (e.g., "Section 1 Draft")
+            max_retries: Maximum number of retry attempts
+
+        Returns:
+            Response text from LLM
+
+        Raises:
+            Exception: If all retries exhausted
+        """
+        for attempt in range(max_retries):
+            try:
+                response = model.generate_content(content)
+                return response.text.strip()
+            except Exception as e:
+                error_str = str(e)
+                is_rate_limit = "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower()
+
+                if is_rate_limit and attempt < max_retries - 1:
+                    # Extract retry delay from API response (fallback to exponential backoff)
+                    delay = 2 ** attempt
+                    delay_match = re.search(r'retry.*?(\d+\.?\d*)\s*s|seconds:\s*(\d+)', error_str, re.IGNORECASE)
+                    if delay_match:
+                        delay = float(delay_match.group(1) or delay_match.group(2))
+
+                    context_str = f"{context} - " if context else ""
+                    thread_safe_print(f"{YELLOW}{WARNING}{RESET} {context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(delay)
+                    continue
+                else:
+                    # Not a rate limit error, or max retries exhausted
+                    raise
+
     def encode_pdf_to_base64(self, pdf_path: str) -> str:
         """Encode PDF file to base64 string"""
         with open(pdf_path, 'rb') as pdf_file:
@@ -282,8 +321,11 @@ class OnePageProfile:
         thread_safe_print(f"{CYAN}{ARROW}{RESET} Extracting company name...")
 
         try:
-            response = self.model_medium_temp.generate_content(pdf_parts + [COMPANY_NAME_EXTRACTION_PROMPT])
-            company_name = response.text.strip()
+            company_name = self._call_llm_with_retry(
+                self.model_medium_temp,
+                pdf_parts + [COMPANY_NAME_EXTRACTION_PROMPT],
+                context="Company name extraction"
+            )
 
             # Validate
             if len(company_name) < 2 or len(company_name) > 100:
@@ -303,8 +345,11 @@ class OnePageProfile:
         prompt = get_title_subtitle_prompt(company_name)
 
         try:
-            response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
-            title_subtitle = response.text.strip()
+            title_subtitle = self._call_llm_with_retry(
+                self.model_medium_temp,
+                self.pdf_parts + [prompt],
+                context="Title/subtitle generation"
+            )
             thread_safe_print(f"{CYAN}{CHECK}{RESET} Title and subtitle complete")
             return title_subtitle
         except Exception as e:
@@ -314,22 +359,31 @@ class OnePageProfile:
     def _generate_section(self, section: dict) -> str:
         """Step 1: Generate initial section content"""
         prompt = get_section_generation_prompt(section)
-        response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
-        return response.text.strip()
+        return self._call_llm_with_retry(
+            self.model_medium_temp,
+            self.pdf_parts + [prompt],
+            context=f"Section {section['number']} Draft"
+        )
 
     def _check_section_completeness(self, section: dict, content: str) -> str:
         """Step 2: Check section completeness"""
         prompt = get_section_completeness_check_prompt(section, content)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        response = self.model_low_temp.generate_content(self.pdf_parts + [prompt])
-        return response.text.strip()
+        return self._call_llm_with_retry(
+            self.model_low_temp,
+            self.pdf_parts + [prompt],
+            context=f"Section {section['number']} Check"
+        )
 
     def _enhance_section(self, section: dict, content: str, add_list: str) -> str:
         """Step 3: Enhance section with missing items"""
         prompt = get_section_enhancement_prompt(section, content, add_list)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
-        enhanced = response.text.strip()
+        enhanced = self._call_llm_with_retry(
+            self.model_medium_temp,
+            self.pdf_parts + [prompt],
+            context=f"Section {section['number']} Enhance"
+        )
 
         # Fallback to original if enhancement fails
         if not enhanced or len(enhanced) < 50:
@@ -340,8 +394,11 @@ class OnePageProfile:
         """Step 3: Enhance section for density when no gaps are found (iterations 2+)"""
         prompt = get_section_density_enhancement_prompt(section, content)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        response = self.model_medium_temp.generate_content(self.pdf_parts + [prompt])
-        enhanced = response.text.strip()
+        enhanced = self._call_llm_with_retry(
+            self.model_medium_temp,
+            self.pdf_parts + [prompt],
+            context=f"Section {section['number']} Density Enhancement"
+        )
 
         # Fallback to original if enhancement fails
         if not enhanced or len(enhanced) < 50:
@@ -351,8 +408,11 @@ class OnePageProfile:
     def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
         """Step 4b: Polish section to word limit"""
         prompt = get_section_polish_prompt(section, content, word_limit)
-        response = self.model_medium_temp.generate_content(prompt)
-        polished = response.text.strip()
+        polished = self._call_llm_with_retry(
+            self.model_medium_temp,
+            prompt,
+            context=f"Section {section['number']} Polish"
+        )
 
         # Fallback to original if polish fails
         if not polished or len(polished) < 50:
@@ -375,8 +435,11 @@ class OnePageProfile:
             return content
 
         prompt = get_section_deduplication_prompt(section, content, previous_sections)
-        response = self.model_medium_temp.generate_content(prompt)
-        deduplicated = response.text.strip()
+        deduplicated = self._call_llm_with_retry(
+            self.model_medium_temp,
+            prompt,
+            context=f"Section {section['number']} Dedup"
+        )
 
         # Fallback to original if deduplication fails
         if not deduplicated or len(deduplicated) < 50:
@@ -447,172 +510,200 @@ class OnePageProfile:
                 'error': str(e)
             }
 
-    def generate_profile(self, company_name: str, worker_display: WorkerDisplay) -> List[str]:
+    def generate_profile(self, company_name: str, title_subtitle: str, worker_display: WorkerDisplay) -> List[str]:
         """Generate profile with lockstep iterations through 3-phase processing
 
+        Args:
+            company_name: Company name for file naming
+            title_subtitle: Pre-generated title and subtitle
+            worker_display: WorkerDisplay instance
+
         Returns:
-            List of profile markdown strings, one per iteration
+            List of PPT paths generated (one per successful iteration)
         """
-        all_profiles = []
+        pptx_paths = []
         previous_polished_results = None
 
-        # Loop through iterations
+        # Loop through iterations with graceful degradation
         for iteration_num in range(1, self.iterations + 1):
-            version_label = f"v{iteration_num}"
-            thread_safe_print(f"\n{CYAN}{'='*60}{RESET}")
-            thread_safe_print(f"{CYAN}{BOLD}{version_label}: Starting iteration {iteration_num}/{self.iterations}{RESET}")
-            thread_safe_print(f"{CYAN}{'='*60}{RESET}")
+            try:
+                version_label = f"v{iteration_num}"
+                version_suffix = f"_v{iteration_num}" if iteration_num > 1 else ""
+                thread_safe_print(f"\n{CYAN}{'='*60}{RESET}")
+                thread_safe_print(f"{CYAN}{BOLD}{version_label}: Starting iteration {iteration_num}/{self.iterations}{RESET}")
+                thread_safe_print(f"{CYAN}{'='*60}{RESET}")
 
-            # Update worker display to show version
-            worker_display.set_version(version_label)
+                # Update worker display to show version
+                worker_display.set_version(version_label)
 
-            # Phase 1: Parallel Steps 1-3 (Draft/Check/Enhance) or 2-3 (Check/Enhance for iter 2+)
-            if iteration_num == 1:
-                thread_safe_print(f"\n{CYAN}Phase 1: Draft/Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
-            else:
-                thread_safe_print(f"\n{CYAN}Phase 1: Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
-
-            enhanced_results = []
-            completed_count = 0
-
-            with ThreadPoolExecutor(max_workers=self.workers) as executor:
+                # Phase 1: Parallel Steps 1-3 (Draft/Check/Enhance) or 2-3 (Check/Enhance for iter 2+)
                 if iteration_num == 1:
-                    # First iteration: full pipeline (steps 1-3)
-                    future_to_section = {
-                        executor.submit(self.process_section_main, section, worker_display, None, iteration_num): section
-                        for section in sections
-                    }
+                    thread_safe_print(f"\n{CYAN}Phase 1: Draft/Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
                 else:
-                    # Subsequent iterations: use previous polished content (steps 2-3 only)
-                    future_to_section = {
-                        executor.submit(
-                            self.process_section_main,
-                            section,
-                            worker_display,
-                            previous_polished_results[section['number']]['content'],
-                            iteration_num
-                        ): section
-                        for section in sections
+                    thread_safe_print(f"\n{CYAN}Phase 1: Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
+
+                enhanced_results = []
+                completed_count = 0
+
+                with ThreadPoolExecutor(max_workers=self.workers) as executor:
+                    if iteration_num == 1:
+                        # First iteration: full pipeline (steps 1-3)
+                        future_to_section = {
+                            executor.submit(self.process_section_main, section, worker_display, None, iteration_num): section
+                            for section in sections
+                        }
+                    else:
+                        # Subsequent iterations: use previous polished content (steps 2-3 only)
+                        future_to_section = {
+                            executor.submit(
+                                self.process_section_main,
+                                section,
+                                worker_display,
+                                previous_polished_results[section['number']]['content'],
+                                iteration_num
+                            ): section
+                            for section in sections
+                        }
+
+                    for future in as_completed(future_to_section):
+                        section = future_to_section[future]
+                        result = future.result()
+                        enhanced_results.append(result)
+                        completed_count += 1
+                        worker_display.complete(result['number'], completed_count, len(sections))
+
+                # Sort by section number for consistent processing
+                enhanced_results.sort(key=lambda x: x['number'])
+
+                # Phase 2: Sequential Deduplication in REVERSE order (4→3→2→1)
+                thread_safe_print(f"\n{CYAN}Phase 2: Deduplicating (reverse order: 4→3→2→1)...{RESET}\n")
+
+                deduplicated_results = {}
+                processed_sections = []  # Accumulates sections in reverse order
+
+                # Process in reverse: Section 4, then 3, then 2, then 1
+                for section_num in [4, 3, 2, 1]:
+                    # Find the enhanced result for this section
+                    enhanced_result = next(r for r in enhanced_results if r['number'] == section_num)
+
+                    if not enhanced_result['success']:
+                        # Skip failed sections
+                        deduplicated_results[section_num] = enhanced_result
+                        continue
+
+                    section = next(s for s in sections if s['number'] == section_num)
+
+                    # Display dedup progress
+                    worker_display.update(section_num, "Dedup")
+
+                    # Deduplicate against already-processed sections
+                    deduplicated_content = self._deduplicate_section(
+                        section,
+                        enhanced_result['content'],
+                        processed_sections
+                    )
+
+                    # Save deduplicated content for this section
+                    deduplicated_results[section_num] = {
+                        'number': section_num,
+                        'title': enhanced_result['title'],
+                        'content': deduplicated_content,
+                        'success': True
                     }
 
-                for future in as_completed(future_to_section):
-                    section = future_to_section[future]
-                    result = future.result()
-                    enhanced_results.append(result)
-                    completed_count += 1
-                    worker_display.complete(result['number'], completed_count, len(sections))
+                    # Add to processed sections (for next iteration)
+                    processed_sections.append({
+                        'title': enhanced_result['title'],
+                        'content': deduplicated_content
+                    })
 
-            # Sort by section number for consistent processing
-            enhanced_results.sort(key=lambda x: x['number'])
+                    # Remove from display after dedup
+                    worker_display._remove_silent(section_num)
 
-            # Phase 2: Sequential Deduplication in REVERSE order (4→3→2→1)
-            thread_safe_print(f"\n{CYAN}Phase 2: Deduplicating (reverse order: 4→3→2→1)...{RESET}\n")
+                # Phase 3: Parallel Polish to 100 words
+                thread_safe_print(f"\n{CYAN}Phase 3: Polishing to 100 words (parallel)...{RESET}\n")
 
-            deduplicated_results = {}
-            processed_sections = []  # Accumulates sections in reverse order
+                def polish_section_task(section_num):
+                    """Polish a single section"""
+                    dedup_result = deduplicated_results[section_num]
 
-            # Process in reverse: Section 4, then 3, then 2, then 1
-            for section_num in [4, 3, 2, 1]:
-                # Find the enhanced result for this section
-                enhanced_result = next(r for r in enhanced_results if r['number'] == section_num)
+                    if not dedup_result['success']:
+                        return dedup_result
 
-                if not enhanced_result['success']:
-                    # Skip failed sections
-                    deduplicated_results[section_num] = enhanced_result
-                    continue
+                    section = next(s for s in sections if s['number'] == section_num)
+                    section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
 
-                section = next(s for s in sections if s['number'] == section_num)
+                    # Display polish progress
+                    worker_display.update(section_num, "Polish")
 
-                # Display dedup progress
-                worker_display.update(section_num, "Dedup")
+                    # Polish the deduplicated content
+                    polished = self._polish_section(section, dedup_result['content'], word_limit=120)
 
-                # Deduplicate against already-processed sections
-                deduplicated_content = self._deduplicate_section(
-                    section,
-                    enhanced_result['content'],
-                    processed_sections
-                )
+                    # Save polished content with version suffix
+                    (section_dir / f"step4_polished{version_suffix}.md").write_text(
+                        f"## {dedup_result['title']}\n{polished}",
+                        encoding='utf-8'
+                    )
 
-                # Save deduplicated content for this section
-                deduplicated_results[section_num] = {
-                    'number': section_num,
-                    'title': enhanced_result['title'],
-                    'content': deduplicated_content,
-                    'success': True
-                }
+                    # Remove from display after polish
+                    worker_display._remove_silent(section_num)
 
-                # Add to processed sections (for next iteration)
-                processed_sections.append({
-                    'title': enhanced_result['title'],
-                    'content': deduplicated_content
-                })
+                    return {
+                        'number': section_num,
+                        'title': dedup_result['title'],
+                        'content': polished,
+                        'success': True
+                    }
 
-                # Remove from display after dedup
-                worker_display._remove_silent(section_num)
+                polished_results = []
+                with ThreadPoolExecutor(max_workers=self.workers) as executor:
+                    futures = {executor.submit(polish_section_task, num): num for num in [1, 2, 3, 4]}
 
-            # Phase 3: Parallel Polish to 100 words
-            thread_safe_print(f"\n{CYAN}Phase 3: Polishing to 100 words (parallel)...{RESET}\n")
+                    for future in as_completed(futures):
+                        result = future.result()
+                        polished_results.append(result)
 
-            version_suffix = f"_v{iteration_num}" if iteration_num > 1 else ""
+                # Sort by section number for final assembly
+                polished_results.sort(key=lambda x: x['number'])
 
-            def polish_section_task(section_num):
-                """Polish a single section"""
-                dedup_result = deduplicated_results[section_num]
+                # Convert to dict for next iteration
+                previous_polished_results = {r['number']: r for r in polished_results}
 
-                if not dedup_result['success']:
-                    return dedup_result
+                # Assemble final markdown for this iteration
+                parts = []
+                for result in polished_results:
+                    if result['success']:
+                        parts.append(f"## {result['title']}\n{result['content']}")
 
-                section = next(s for s in sections if s['number'] == section_num)
-                section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+                profile_content = '\n\n'.join(parts)
 
-                # Display polish progress
-                worker_display.update(section_num, "Polish")
+                # Save markdown immediately
+                final_profile = self._assemble_final_markdown(title_subtitle, profile_content)
+                final_path = Path(self.file_manager.run_dir) / f"final_profile{version_suffix}.md"
+                final_path.write_text(final_profile, encoding='utf-8')
 
-                # Polish the deduplicated content
-                polished = self._polish_section(section, dedup_result['content'], word_limit=120)
+                thread_safe_print(f"\n{CYAN}{CHECK}{RESET} {version_label} content complete, generating PowerPoint...")
 
-                # Save polished content with version suffix
-                (section_dir / f"step4_polished{version_suffix}.md").write_text(
-                    f"## {dedup_result['title']}\n{polished}",
-                    encoding='utf-8'
-                )
+                # Generate PowerPoint immediately
+                try:
+                    pptx_path = create_profile_pptx(
+                        md_path=str(final_path),
+                        company_name=company_name,
+                        timestamp=self.timestamp,
+                        version_suffix=version_suffix
+                    )
+                    pptx_paths.append(pptx_path)
+                    thread_safe_print(f"{CYAN}{CHECK}{RESET} {version_label} PowerPoint: {pptx_path}")
+                except Exception as pptx_error:
+                    thread_safe_print(f"{YELLOW}{WARNING}{RESET} {version_label} PowerPoint generation failed: {pptx_error}")
 
-                # Remove from display after polish
-                worker_display._remove_silent(section_num)
+            except Exception as e:
+                # Graceful degradation: log error and stop iterations, but return what we have
+                thread_safe_print(f"\n{RED}{CROSS}{RESET} {version_label} failed: {e}")
+                thread_safe_print(f"{YELLOW}{WARNING}{RESET} Stopping at {version_label}. Previous iterations are saved.")
+                break  # Exit iteration loop, return partial results
 
-                return {
-                    'number': section_num,
-                    'title': dedup_result['title'],
-                    'content': polished,
-                    'success': True
-                }
-
-            polished_results = []
-            with ThreadPoolExecutor(max_workers=self.workers) as executor:
-                futures = {executor.submit(polish_section_task, num): num for num in [1, 2, 3, 4]}
-
-                for future in as_completed(futures):
-                    result = future.result()
-                    polished_results.append(result)
-
-            # Sort by section number for final assembly
-            polished_results.sort(key=lambda x: x['number'])
-
-            # Convert to dict for next iteration
-            previous_polished_results = {r['number']: r for r in polished_results}
-
-            # Assemble final markdown for this iteration
-            parts = []
-            for result in polished_results:
-                if result['success']:
-                    parts.append(f"## {result['title']}\n{result['content']}")
-
-            profile_content = '\n\n'.join(parts)
-            all_profiles.append(profile_content)
-
-            thread_safe_print(f"\n{CYAN}{CHECK}{RESET} {version_label} complete")
-
-        return all_profiles
+        return pptx_paths
 
     def _assemble_final_markdown(self, title_subtitle: str, section_content: str) -> str:
         """Combine title/subtitle with section content"""

@@ -34,8 +34,7 @@ from src.profile_prompts import (
     get_section_enhancement_prompt,
     get_section_density_enhancement_prompt,
     get_section_deduplication_prompt,
-    get_section_polish_prompt,
-    _get_section_boundaries
+    get_section_polish_prompt
 )
 from src.pptx_generator import create_profile_pptx
 from src.file_manager import FileManager

@@ -446,6 +446,61 @@ class OnePageProfile:
             return content
         return deduplicated
 
+    def _refine_subtitle(self, current_title_subtitle: str, sections_context: str = "") -> str:
+        """Refine subtitle for density and investment focus
+
+        Args:
+            current_title_subtitle: Current "# Title\nSubtitle" text
+            sections_context: Optional context from refined sections
+
+        Returns:
+            Refined "# Title\nRefined subtitle" text (or original on failure)
+        """
+        prompt = f"""You are refining a company profile subtitle for M&A bankers.
+
+CURRENT TITLE AND SUBTITLE:
+{current_title_subtitle}
+
+CONTEXT FROM REFINED PROFILE:
+{sections_context if sections_context else "Not available for first refinement"}
+
+TASK: Refine the subtitle ONLY (keep title unchanged) to be more:
+1. **Concise**: 4-10 words maximum, remove filler
+2. **Investment-focused**: What makes this company attractive to acquirers?
+3. **Specific**: Use metrics/market position if available in context
+4. **Factual**: No marketing hype, no superlatives without proof
+
+CRITICAL RULES:
+• The subtitle must be an INVESTMENT THESIS, not a corporate tagline
+• Maximum 10 words, no period at the end
+• Every word must earn its place
+• Chairman-friendly language - no buzzwords
+• If you cannot make it more specific/dense, return it unchanged
+
+OUTPUT FORMAT:
+# [Title - unchanged]
+[Your refined subtitle - 4-10 words]
+
+Generate the refined version now."""
+
+        try:
+            refined = self._call_llm_with_retry(
+                self.model_medium_temp,
+                prompt,
+                context="Subtitle refinement"
+            )
+
+            # Validate format and word count (4-10 words)
+            lines = refined.strip().split('\n')
+            if len(lines) >= 2 and lines[0].startswith('#') and 4 <= len(lines[1].split()) <= 10:
+                return refined.strip()
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Subtitle validation failed, keeping original")
+            return current_title_subtitle
+
+        except Exception as e:
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Subtitle refinement error: {e}, keeping original")
+            return current_title_subtitle
+
     def process_section_main(self, section: dict, worker_display: WorkerDisplay, previous_content: str = None, version_num: int = 1) -> dict:
         """Process a single section through Steps 1-3 (Draft/Check/Enhance) or Steps 2-3 (Check/Enhance for iterations 2+)
 
@@ -523,6 +578,7 @@ class OnePageProfile:
         """
         pptx_paths = []
         previous_polished_results = None
+        current_title_subtitle = title_subtitle  # Will be refined in each iteration
 
         # Loop through iterations with graceful degradation
         for iteration_num in range(1, self.iterations + 1):
@@ -576,7 +632,21 @@ class OnePageProfile:
                 enhanced_results.sort(key=lambda x: x['number'])
 
                 # Phase 2: Sequential Deduplication in REVERSE order (4→3→2→1)
-                thread_safe_print(f"\n{CYAN}Phase 2: Deduplicating (reverse order: 4→3→2→1)...{RESET}\n")
+                thread_safe_print(f"\n{CYAN}Phase 2: Refining subtitle and deduplicating...{RESET}\n")
+
+                # Refine subtitle using context from previous iteration's polished sections (if available)
+                sections_context = "\n".join([
+                    f"{r['title']}: {r['content'][:150]}..."
+                    for r in previous_polished_results.values()
+                ])[:500] if previous_polished_results else ""
+
+                thread_safe_print(f"{CYAN}Refining subtitle...{RESET}")
+                current_title_subtitle = self._refine_subtitle(current_title_subtitle, sections_context)
+
+                # Save refined subtitle
+                subtitle_path = Path(self.file_manager.run_dir) / f"subtitle{version_suffix}.md"
+                subtitle_path.write_text(current_title_subtitle, encoding='utf-8')
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} Subtitle refined")
 
                 deduplicated_results = {}
                 processed_sections = []  # Accumulates sections in reverse order
@@ -677,8 +747,8 @@ class OnePageProfile:
 
                 profile_content = '\n\n'.join(parts)
 
-                # Save markdown immediately
-                final_profile = self._assemble_final_markdown(title_subtitle, profile_content)
+                # Save markdown immediately (with refined subtitle)
+                final_profile = self._assemble_final_markdown(current_title_subtitle, profile_content)
                 final_path = Path(self.file_manager.run_dir) / f"final_profile{version_suffix}.md"
                 final_path.write_text(final_profile, encoding='utf-8')
 

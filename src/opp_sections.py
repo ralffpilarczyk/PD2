@@ -64,3 +64,33 @@ sections = [
                 "• If you don't have the data then stick with the company's narrative\\n"
     }
 ]
+
+
+def get_section_boundaries(section_num: int) -> str:
+    """Generate section boundary warnings based on actual section specs
+
+    Args:
+        section_num: Section number (1-4)
+
+    Returns:
+        Formatted string listing what content belongs in OTHER sections (max 20 words per section)
+    """
+    boundaries = {
+        1: """- Section 2: value chain position, strategic objectives, market rankings/share, competitive positioning, accolades/awards
+- Section 3: revenue/cost drivers and trends, revenue/EBITDA numbers/growth, margins, segment financials, capex, balance sheet, MD&A highlights
+- Section 4: strategic initiatives/transactions, partnerships, management/shareholder agendas, strategic observations, investment thesis""",
+
+        2: """- Section 1: company location, operating/asset footprint, key products and services, product/service value propositions, customer/supplier relationships
+- Section 3: revenue/cost drivers and trends, revenue/EBITDA numbers/growth, margins, segment financials, capex, balance sheet, MD&A highlights
+- Section 4: strategic initiatives/transactions, partnerships, management/shareholder agendas, strategic observations, investment thesis""",
+
+        3: """- Section 1: company location, operating/asset footprint, key products and services, product/service value propositions, customer/supplier relationships
+- Section 2: value chain position, strategic objectives, market rankings/share, competitive positioning, accolades/awards
+- Section 4: strategic initiatives/transactions, partnerships, management/shareholder agendas, strategic observations, investment thesis""",
+
+        4: """- Section 1: company location, operating/asset footprint, key products and services, product/service value propositions, customer/supplier relationships
+- Section 2: value chain position, strategic objectives, market rankings/share, competitive positioning, accolades/ awards
+- Section 3: revenue/cost drivers and trends, revenue/EBITDA numbers/growth, margins, segment financials, capex, balance sheet, MD&A highlights"""
+    }
+
+    return boundaries.get(section_num, "")

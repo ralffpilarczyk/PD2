@@ -2,7 +2,11 @@
 Prompt templates for OnePageProfile (OPP.py)
 """
 
-from src.opp_sections import get_section_boundaries
+# Dynamic import: try custom sections first, fall back to default
+try:
+    from src.opp_sections_custom import get_section_boundaries
+except ImportError:
+    from src.opp_sections import get_section_boundaries
 
 # Common critical rules for all OPP sections
 OPP_CRITICAL_RULES = """

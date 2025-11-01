@@ -7,11 +7,16 @@ from .utils import thread_safe_print, clean_markdown_tables
 
 class FileManager:
     """Handles all file I/O operations and directory management"""
-    
-    def __init__(self, run_timestamp: str):
-        """Initialize file manager with run timestamp"""
+
+    def __init__(self, run_timestamp: str, run_dir_prefix: str = "run"):
+        """Initialize file manager with run timestamp and optional directory prefix
+
+        Args:
+            run_timestamp: Timestamp string for the run
+            run_dir_prefix: Prefix for run directory (default: "run", for OPP: "opp" or "opp_custom")
+        """
         self.run_timestamp = run_timestamp
-        self.run_dir = f"runs/run_{run_timestamp}"
+        self.run_dir = f"runs/{run_dir_prefix}_{run_timestamp}"
     
     def setup_directories(self, sections: List[Dict]):
         """Create folder structure for tracking"""

@@ -25,7 +25,7 @@ __opp_version__ = "1.1"
 
 # Import utilities from PD2
 from src.utils import thread_safe_print, retry_with_backoff
-from src.opp_sections import sections
+# Note: sections imported dynamically based on user profile type selection
 from src.profile_prompts import (
     COMPANY_NAME_EXTRACTION_PROMPT,
     get_title_subtitle_prompt,
@@ -228,11 +228,12 @@ class WorkerDisplay:
 class OnePageProfile:
     """Generates one-page company profiles from PDF documents with parallel section processing"""
 
-    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2, iterations: int = 1):
+    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2, iterations: int = 1, profile_type: str = "default"):
         self.pdf_files = pdf_files
         self.model_name = model_name
         self.workers = workers
         self.iterations = iterations
+        self.profile_type = profile_type
 
         # Create models with different temperatures
         self.model_low_temp = genai.GenerativeModel(
@@ -246,14 +247,42 @@ class OnePageProfile:
 
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+        # Dynamic import of sections based on profile type
+        if profile_type == "custom":
+            from src.opp_sections_custom import sections, get_section_boundaries
+            self.run_dir_prefix = "opp_custom"
+        else:
+            from src.opp_sections import sections, get_section_boundaries
+            self.run_dir_prefix = "opp"
+
+        self.sections = sections
+        self.get_section_boundaries = get_section_boundaries
+
+        # Validate sections structure (especially important for custom sections)
+        self._validate_sections()
+
         # PDF parts will be prepared once and reused
         self.pdf_parts = None
 
         # Initialize file manager
-        self.file_manager = FileManager(self.timestamp)
+        self.file_manager = FileManager(self.timestamp, self.run_dir_prefix)
 
         # Setup directories
-        self.file_manager.setup_directories(sections)
+        self.file_manager.setup_directories(self.sections)
+
+    def _validate_sections(self):
+        """Validate section structure (especially important for custom sections)"""
+        if len(self.sections) != 4:
+            raise ValueError(f"Must have exactly 4 sections, found {len(self.sections)}")
+
+        required_keys = {"number", "title", "specs"}
+        for i, section in enumerate(self.sections):
+            missing = required_keys - set(section.keys())
+            if missing:
+                raise ValueError(f"Section {i} missing keys: {missing}")
+
+            if section["number"] != i + 1:
+                raise ValueError(f"Section numbers must be 1-4 in order, found {section['number']} at position {i}")
 
     def encode_pdf_to_base64(self, pdf_path: str) -> str:
         """Encode PDF file to base64 string"""
@@ -558,7 +587,7 @@ Generate the refined version now."""
                         # First iteration: full pipeline (steps 1-3)
                         future_to_section = {
                             executor.submit(self.process_section_main, section, worker_display, None, iteration_num): section
-                            for section in sections
+                            for section in self.sections
                         }
                     else:
                         # Subsequent iterations: use previous polished content (steps 2-3 only)
@@ -570,7 +599,7 @@ Generate the refined version now."""
                                 previous_polished_results[section['number']]['content'],
                                 iteration_num
                             ): section
-                            for section in sections
+                            for section in self.sections
                         }
 
                     for future in as_completed(future_to_section):
@@ -578,7 +607,7 @@ Generate the refined version now."""
                         result = future.result()
                         enhanced_results.append(result)
                         completed_count += 1
-                        worker_display.complete(result['number'], completed_count, len(sections))
+                        worker_display.complete(result['number'], completed_count, len(self.sections))
 
                 # Sort by section number for consistent processing
                 enhanced_results.sort(key=lambda x: x['number'])
@@ -613,7 +642,7 @@ Generate the refined version now."""
                         deduplicated_results[section_num] = enhanced_result
                         continue
 
-                    section = next(s for s in sections if s['number'] == section_num)
+                    section = next(s for s in self.sections if s['number'] == section_num)
 
                     # Display dedup progress
                     worker_display.update(section_num, "Dedup")
@@ -652,7 +681,7 @@ Generate the refined version now."""
                     if not dedup_result['success']:
                         return dedup_result
 
-                    section = next(s for s in sections if s['number'] == section_num)
+                    section = next(s for s in self.sections if s['number'] == section_num)
                     section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
 
                     # Display polish progress
@@ -712,7 +741,8 @@ Generate the refined version now."""
                         md_path=str(final_path),
                         company_name=company_name,
                         timestamp=self.timestamp,
-                        version_suffix=version_suffix
+                        version_suffix=version_suffix,
+                        profile_type=self.profile_type
                     )
                     pptx_paths.append(pptx_path)
                     thread_safe_print(f"{CYAN}{CHECK}{RESET} {version_label} PowerPoint: {pptx_path}")
@@ -843,6 +873,27 @@ if __name__ == "__main__":
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Output directory ready")
     thread_safe_print("="*60 + "\n")
 
+    # Profile type selection
+    thread_safe_print(f"{BOLD}Select profile type:{RESET}")
+    thread_safe_print(f"  {CYAN}1{RESET} - OnePageProfile (default)")
+    thread_safe_print(f"  {CYAN}2{RESET} - Custom Profile")
+    profile_choice = prompt_single_digit("Choose profile type [1/2] (default 1): ", valid_digits="12", default_digit="1")
+
+    if profile_choice == "2":
+        profile_type = "custom"
+        # Validate custom file exists
+        custom_file = Path("src/opp_sections_custom.py")
+        if not custom_file.exists():
+            thread_safe_print(f"\n{RED}{CROSS}{RESET} Custom sections file not found!")
+            thread_safe_print(f"Please copy the template:")
+            thread_safe_print(f"  cp src/opp_sections_template.py src/opp_sections_custom.py")
+            thread_safe_print(f"Then edit it to define your custom sections.\n")
+            sys.exit(1)
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Using custom section definitions\n")
+    else:
+        profile_type = "default"
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Using default OnePageProfile sections\n")
+
     # Model selection
     thread_safe_print("Select LLM model:")
     thread_safe_print("  1) gemini-2.5-flash")
@@ -875,7 +926,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60 + "\n")
 
     # Generate profile
-    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers, iterations=num_iterations)
+    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers, iterations=num_iterations, profile_type=profile_type)
     profile_path = maker.run()
 
     if not profile_path:

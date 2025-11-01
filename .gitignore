@@ -78,5 +78,8 @@ VS Code workspace
 m_mid.py
 test_6agents.py
 
+# Custom OPP sections (user-specific configurations)
+src/opp_sections_custom.py
+
 # Claude Code
 .claude/

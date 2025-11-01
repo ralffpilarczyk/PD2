@@ -1,8 +1,8 @@
-# ProfileDash 2.1 & OnePageProfile 1.1
+# ProfileDash 2.1 & OnePageProfile 1.2
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.1): Comprehensive 33-section company profiles with deep analytical insights
-- **OPP** (OnePageProfile v1.1): Concise one-page profiles for quick M&A evaluation
+- **OPP** (OnePageProfile v1.2): Concise one-page profiles for quick M&A evaluation
 
 ## Quick Start
 
@@ -60,7 +60,7 @@ Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
 - Automatic retry with exponential backoff for API limits
 - Thread-safe operations for concurrent processing
 
-## OnePageProfile v1.1 (OPP)
+## OnePageProfile v1.2 (OPP)
 
 Concise one-page company profiles for rapid M&A screening and evaluation.
 
@@ -69,10 +69,12 @@ Concise one-page company profiles for rapid M&A screening and evaluation.
 python OPP.py
 ```
 
-1. Select model: Gemini Flash or Pro
-2. Set parallel workers (1-4, default 4)
-3. Select PDFs when prompted
-4. Wait for processing (~3-5 minutes)
+1. Select profile type: OnePageProfile (default) or Custom Profile
+2. Select model: Gemini Flash or Pro
+3. Set parallel workers (1-4, default 4)
+4. Set density iterations (1-3, default 1)
+5. Select PDFs when prompted
+6. Wait for processing (~3-5 minutes)
 
 **Batch Processing:**
 
@@ -87,21 +89,40 @@ Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 - Progress tracking and summary report
 
 **Output:**
-- Markdown: `runs/run_TIMESTAMP/final_profile.md`
-- PowerPoint: `ReportFiles/[Company]_TIMESTAMP.pptx`
+- Markdown: `runs/opp_TIMESTAMP/final_profile.md` (or `runs/opp_custom_TIMESTAMP/` for custom profiles)
+- PowerPoint: `ProfileFiles/[Company]_TIMESTAMP.pptx` (or `Custom_[Company]_TIMESTAMP.pptx` for custom profiles)
+- Multiple iterations create versioned outputs: `_v1.pptx`, `_v2.pptx`, `_v3.pptx`
 
 **Format:**
-- Title and subtitle
+- Title and subtitle (up to 8 words, prose statement)
 - 4 sections: Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations
 - Each section limited to ~100 words with bullet points
+- Temporal bias: prioritizes most recent fiscal data over historical data
 
-**Architecture (v1.1):**
+**Custom Sections (New in v1.2):**
+
+Create custom section definitions for specialized use cases:
+
+```bash
+# 1. Copy template to create custom sections file
+cp src/opp_sections_template.py src/opp_sections_custom.py
+
+# 2. Edit opp_sections_custom.py to define your 4 custom sections
+
+# 3. Run OPP and select "2 - Custom Profile"
+python OPP.py
+```
+
+Custom profiles use distinct output naming for easy identification.
+
+**Architecture (v1.2):**
 - **Phase 1**: Parallel Draft/Check/Enhance for all sections
 - **Phase 2**: Sequential deduplication in reverse priority (Section 4→3→2→1)
   - Section 4 (Strategic Considerations) keeps richest content
   - Earlier sections remove overlaps with later ones
 - **Phase 3**: Parallel polish to 100 words
-- No learning system (removed in v1.1 for simplicity)
+- **Iterations**: Optional 2-3 iterations for increased density (subtitle refinement + section enhancement)
+- Dynamic section loading: supports default or custom section definitions
 
 ## Requirements
 
@@ -116,7 +137,7 @@ PD2 learns and improves over time:
 - Extracts universal analytical methodologies (9-10/10 quality only)
 - Applies learned patterns to future runs
 
-OPP v1.1 does not use learning for simplicity and speed.
+OPP v1.2 does not use learning for simplicity and speed.
 
 ## License
 

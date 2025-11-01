@@ -1,17 +1,66 @@
-# OPP Code Overview - Complete Technical Documentation (v1.1)
+# OPP Code Overview - Complete Technical Documentation (v1.2)
 
 ## Executive Summary
 
-OnePageProfile (OPP) v1.1 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 3-phase architecture with parallel processing and sequential deduplication optimized for speed, clarity, and eliminating redundancy across sections.
+OnePageProfile (OPP) v1.2 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 3-phase architecture with parallel processing, sequential deduplication, and optional density iterations. New in v1.2: custom section definitions and improved data recency handling.
 
 **Key Metrics**:
-- 4 analytical sections (Company Overview, Competitive Positioning, Financial KPIs, Strategic Considerations)
+- 4 analytical sections (default or custom-defined)
 - 3-phase architecture: Parallel Draft/Check/Enhance → Sequential Dedup (reverse) → Parallel Polish
 - 100-word limit per section
 - Parallel processing with 1-4 configurable workers
+- Optional 1-3 density iterations for enhanced output quality
 - Dual output: Markdown + PowerPoint
-- Processing time: ~3-5 minutes per profile (with 4 workers)
+- Processing time: ~3-5 minutes per profile (with 4 workers, 1 iteration)
 - No learning system (removed in v1.1 for simplicity)
+- Custom sections support (new in v1.2)
+
+## What's New in v1.2
+
+### 1. Custom Section Definitions
+
+Users can now define custom section specifications for specialized use cases:
+
+- **Template file**: `src/opp_sections_template.py` provides a working example
+- **Custom file**: Copy template to `src/opp_sections_custom.py` and modify
+- **Structure**: Must maintain exactly 4 sections for 2×2 PowerPoint layout
+- **Validation**: Automatic validation on load prevents malformed sections
+- **Output naming**: Custom profiles use distinct naming (`Custom_*.pptx`, `runs/opp_custom_*/`)
+- **Dynamic loading**: Profile type selection in UI determines which sections to load
+
+### 2. Density Iterations
+
+Optional multi-iteration processing for enhanced content quality:
+
+- **Iteration count**: 1-3 iterations (default: 1)
+- **Per iteration**:
+  - Subtitle refinement based on evolved content
+  - Completeness check flags missing/outdated content
+  - Density enhancement when no gaps found
+  - Full 3-phase processing with deduplication and polish
+- **Versioned outputs**: `_v1.pptx`, `_v2.pptx`, `_v3.pptx` for comparison
+- **Processing time**: ~3-5 minutes per iteration
+
+### 3. Temporal Bias for Data Recency
+
+Enhanced prompts prioritize recent data over historical data:
+
+- **Principle**: "ALWAYS use the most recent data available in source documents"
+- **Completeness check**: Part C identifies outdated metrics for replacement
+- **Enhancement step**: Can replace old data with newer data (not just additive)
+- **Polish step**: Prefers most recent fiscal period when multiple metrics exist
+- **Problem solved**: Prevents LLM from selecting 2019 prospectus data when 2025 financials exist
+
+### 4. M&A Clarity Principles
+
+Universal quality improvements for banker-friendly outputs:
+
+- **Metrics with context**: Every metric must include units AND time/period
+- **Redundancy elimination**: Never repeat facts across bullets
+- **Subsector precision**: Exact subsector specification (e.g., "pharmaceutical distribution" not "healthcare")
+- **Financial clarity**: Explicit units for all metrics (%, currency, etc.)
+- **Deal implications**: Strategic observations must explain WHY they matter for valuation/synergies/risk
+- **Subtitle format**: Up to 8 words as prose statement (not cryptic keywords)
 
 ## Architecture Overview
 
@@ -72,7 +121,7 @@ OnePageProfile (OPP) v1.1 is a focused document analysis tool that transforms PD
 - Consistent color scheme (dark blue #2d5a87, dark grey #4a5568)
 - Auto-generated footnotes with version and date
 
-### 5. Three-Phase Processing with Deduplication (v1.1)
+### 5. Three-Phase Processing with Deduplication (introduced v1.1, enhanced v1.2)
 - **Phase 1**: Parallel Draft/Check/Enhance for all 4 sections
 - **Phase 2**: Sequential deduplication in reverse priority (Section 4→3→2→1)
   - Section 4 (Strategic Considerations) processes first, keeps richest content
@@ -85,25 +134,33 @@ OnePageProfile (OPP) v1.1 is a focused document analysis tool that transforms PD
 
 ```
 PD2/
-├── OPP.py                       # Main entry point (~530 lines)
+├── OPP.py                           # Main entry point (~930 lines)
 ├── src/
-│   ├── opp_sections.py         # Section definitions (~95 lines)
-│   ├── profile_prompts.py      # Prompt templates (~245 lines)
-│   ├── pptx_generator.py       # PowerPoint generation (~300 lines)
-│   └── utils.py                # Thread-safe utilities (shared with PD2)
+│   ├── opp_sections.py             # Default section definitions (~97 lines)
+│   ├── opp_sections_template.py    # Template for custom sections (~170 lines) - NEW v1.2
+│   ├── opp_sections_custom.py      # User-created custom sections (gitignored) - NEW v1.2
+│   ├── profile_prompts.py          # Prompt templates (~420 lines, enhanced v1.2)
+│   ├── pptx_generator.py           # PowerPoint generation (~140 lines)
+│   ├── file_manager.py             # File I/O and directory management
+│   └── utils.py                    # Thread-safe utilities (shared with PD2)
 ├── Manuals/
-│   ├── Profile_Page.md         # User-facing specification
-│   └── Refinement.md           # Pipeline documentation
-├── requirements.txt            # Dependencies (includes python-pptx)
-├── ProfileFiles/               # PowerPoint output directory
-└── runs/                       # Processing work products
-    └── opp_YYMMDD_HHMMSS/
-        ├── section_1/          # Company Overview steps
-        ├── section_2/          # Competitive Positioning steps
-        ├── section_3/          # Financial KPIs steps
-        ├── section_4/          # Strategic Considerations steps
-        ├── final_profile.md    # Assembled final output
-        └── run_log.txt         # Processing log
+│   ├── OPP_OVERVIEW.md             # This technical documentation
+│   ├── Profile_Page.md             # User-facing specification
+│   └── Refinement.md               # Pipeline documentation
+├── requirements.txt                # Dependencies (includes python-pptx)
+├── ProfileFiles/                   # PowerPoint output directory
+│   ├── [Company]_TIMESTAMP.pptx    # Default profiles
+│   └── Custom_[Company]_TIMESTAMP.pptx  # Custom profiles
+└── runs/                           # Processing work products
+    ├── opp_YYMMDD_HHMMSS/          # Default profile runs
+    │   ├── section_1/              # Company Overview steps
+    │   ├── section_2/              # Competitive Positioning steps
+    │   ├── section_3/              # Financial KPIs steps
+    │   ├── section_4/              # Strategic Considerations steps
+    │   ├── step4_final_v1.md       # Iteration 1 output
+    │   ├── step4_final_v2.md       # Iteration 2 output (if enabled)
+    │   └── step4_final_v3.md       # Iteration 3 output (if enabled)
+    └── opp_custom_YYMMDD_HHMMSS/   # Custom profile runs - NEW v1.2
 ```
 
 ## Detailed Module Documentation
@@ -116,12 +173,26 @@ PD2/
 
 ```python
 class OnePageProfile:
-    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2):
+    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2,
+                 iterations: int = 1, profile_type: str = "default"):
         self.pdf_files = pdf_files
         self.model_name = model_name
-        self.workers = workers  # Parallel worker count (1-4)
+        self.workers = workers              # Parallel worker count (1-4)
+        self.iterations = iterations        # Density iterations (1-3) - NEW v1.2
+        self.profile_type = profile_type    # "default" or "custom" - NEW v1.2
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.run_dir = Path(f"runs/opp_{self.timestamp}")
+
+        # Dynamic section loading based on profile type - NEW v1.2
+        if profile_type == "custom":
+            from src.opp_sections_custom import sections, get_section_boundaries
+            self.run_dir_prefix = "opp_custom"
+        else:
+            from src.opp_sections import sections, get_section_boundaries
+            self.run_dir_prefix = "opp"
+
+        self.sections = sections
+        self.get_section_boundaries = get_section_boundaries
+        self._validate_sections()  # Validate structure - NEW v1.2
 
         # Two models with different temperatures
         self.model_low_temp = genai.GenerativeModel(model_name, temperature=0.2)
@@ -132,11 +203,13 @@ class OnePageProfile:
 ```
 
 **Key Design Decisions**:
-- Configurable parallel workers (1-4, default 2)
+- Configurable parallel workers (1-4, default 4) - changed default in v1.2
+- Configurable density iterations (1-3, default 1) - NEW v1.2
+- Dynamic section loading (default or custom) - NEW v1.2
 - Separate models for different tasks (temperature optimization)
 - PDF parts prepared once, shared across all workers (memory efficient)
-- Run directory: `runs/opp_TIMESTAMP/` with section_N subdirectories
-- Version tracking: `__opp_version__` (distinct from PD2's `__version__`)
+- Run directory: `runs/opp_TIMESTAMP/` or `runs/opp_custom_TIMESTAMP/` with section_N subdirectories
+- Version tracking: `__opp_version__ = "1.2"` (distinct from PD2's `__version__`)
 
 #### WorkerDisplay Class
 
@@ -159,7 +232,7 @@ class WorkerDisplay:
 - Real-time display of active workers
 - Completion tracking with progress counter
 
-#### The 3-Phase Architecture (v1.1)
+#### The 3-Phase Architecture (v1.2)
 
 **Phase 1 - Parallel Steps 1-3**: All 4 sections process Draft/Check/Enhance simultaneously.
 
@@ -282,7 +355,7 @@ def _enhance_section(self, section: dict, content: str, add_list: str) -> str:
 
 ---
 
-### Step 4a: Deduplication (Sequential Phase 2 - v1.1 NEW)
+### Step 4a: Deduplication (Sequential Phase 2 - introduced v1.1)
 
 **Architecture**: After Phase 1 completes, sections are deduplicated **sequentially in reverse order (4→3→2→1)** to eliminate overlaps while preserving the richest content.
 
@@ -362,7 +435,7 @@ After all sections complete the 3-phase pipeline, the final polished content fro
 
 ---
 
-## Parallel Execution Architecture (v1.1)
+## Parallel Execution Architecture (v1.2)
 
 **3-Phase Processing**:
 ```python

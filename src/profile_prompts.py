@@ -40,7 +40,7 @@ def get_title_subtitle_prompt(company_name: str) -> str:
 
 CRITICAL RULES:
 - Title should be the company name: {company_name}
-- Subtitle should be a key message about the company for potential investors or buyers, in 4-8 words, no period at the end
+- Subtitle should be a key message about the company for potential investors or buyers, in up to 8 words as a prose statement (not a cryptic assembly of keywords), no period at the end
 - The subtitle must be an INVESTMENT THESIS, not a corporate tagline, no buzz words, no superlatives without proof
 - Professional M&A banker tone - no marketing hype, no superlatives without proof
 
@@ -48,7 +48,7 @@ TEST: Would this subtitle help a banker decide if deal merits further review?
 
 OUTPUT FORMAT:
 # {company_name}
-Your investment-focused 4-8 word subtitle here
+Your investment-focused subtitle (up to 8 words) here
 
 Now generate the title and subtitle based on the documents provided."""
 

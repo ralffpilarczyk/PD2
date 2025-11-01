@@ -418,21 +418,21 @@ CONTEXT FROM REFINED PROFILE:
 {sections_context if sections_context else "Not available for first refinement"}
 
 TASK: Refine the subtitle ONLY (keep title unchanged) to be more:
-1. **Concise**: 4-10 words maximum, remove filler
+1. **Concise**: Up to 8 words maximum, remove filler
 2. **Investment-focused**: What makes this company attractive to acquirers?
 3. **Specific**: Use metrics/market position if available in context
 4. **Factual**: No marketing hype, no superlatives without proof
 
 CRITICAL RULES:
 • The subtitle must be an INVESTMENT THESIS, not a corporate tagline
-• Maximum 10 words, no period at the end
+• Maximum 8 words, no period at the end
 • Every word must earn its place
 • Chairman-friendly language - no buzzwords
 • If you cannot make it more specific/dense, return it unchanged
 
 OUTPUT FORMAT:
 # [Title - unchanged]
-[Your refined subtitle - 4-10 words]
+[Your refined subtitle - up to 8 words]
 
 Generate the refined version now."""
 
@@ -442,9 +442,9 @@ Generate the refined version now."""
                 context="Subtitle refinement"
             )
 
-            # Validate format and word count (4-10 words)
+            # Validate format and word count (up to 8 words)
             lines = refined.strip().split('\n')
-            if len(lines) >= 2 and lines[0].startswith('#') and 4 <= len(lines[1].split()) <= 10:
+            if len(lines) >= 2 and lines[0].startswith('#') and len(lines[1].split()) <= 8:
                 return refined.strip()
             thread_safe_print(f"{YELLOW}{WARNING}{RESET} Subtitle validation failed, keeping original")
             return current_title_subtitle

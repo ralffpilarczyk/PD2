@@ -13,6 +13,7 @@ Critical rules:
 • A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded
 • Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.
 • If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics
+• ALWAYS use the most recent data available in the source documents - prioritize latest fiscal periods over historical data
 
 Prose requirements:
 • Every bullet must be a complete grammatical sentence with subject and verb
@@ -124,6 +125,9 @@ Consider adding statements (but only if they are not already present) underpinne
 - They are fundamental to a reader's understanding of the company as an investment or acquisition target
 - They are fundamental to the company's prospects
 
+PART C: TEMPORAL COMPLETENESS
+Identify any metrics or data points in the current content using data older than the most recent fiscal period available in source documents. Flag for replacement with latest data.
+
 CRITICAL CONSTRAINT:
 ONLY suggest additions where the source documents contain relevant data to support the addition. Do NOT suggest perspective gaps if the source documents lack the necessary data.
 
@@ -141,6 +145,7 @@ ADD LIST FORMAT:
 - [CRITICAL] Missing item that would materially affect investment decision
 - [IMPORTANT] Relevant item that would improve completeness
 - [USEFUL] Supporting item that adds investor value
+- [OUTDATED] Replace [old metric/year] with [newer metric/year] from source
 
 STRICT RULES:
 1. Be EXTREMELY specific - include exact data points (numbers, percentages, names)
@@ -189,7 +194,7 @@ INSTRUCTIONS:
 2. If an ADD item cannot be supported by source document data, skip it silently - do NOT add placeholder text like "metrics not disclosed" or "data unavailable"
 3. Use exact data from source documents with numbers and specifics
 4. Maintain narrative flow - integrate additions smoothly
-5. Preserve all existing content - do not remove anything
+5. Preserve all existing content - do not remove anything UNLESS the ADD list provides more recent or more relevant data that should replace outdated information
 6. Keep the same format: bullets with bold keywords using **word** syntax
 7. If an ADD item duplicates existing content, enhance rather than duplicate
 
@@ -367,6 +372,7 @@ CONDENSING INSTRUCTIONS:
    - Preserve specific numbers, percentages, and trends
    - Keep year-over-year comparisons and growth rates and margins and percent contributions
    - Maintain factual density while cutting descriptive text
+   - When multiple metrics exist for same item, ALWAYS prefer the most recent fiscal period
 
 4. **SMART CONDENSING**:
    - Remove generic statements and obvious observations

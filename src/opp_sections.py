@@ -10,7 +10,7 @@ sections = [
         "specs": "Provide a comprehensive overview of the company's business.\\n"
                 "\\n"
                 "Include the following elements:\\n"
-                "• One sentence where the company is based (city and country) and what its primary business is (key subsector, not high level like 'technology company')\\n"
+                "• One sentence where the company is based (city and country) and what its primary business is - specify the EXACT subsector with precision (e.g., 'pharmaceutical distribution', not 'healthcare'; 'SaaS CRM software', not 'technology')\\n"
                 "• One sentence on the company's primary operating footprint, i.e. where its people are based, with numbers\\n"
                 "• One sentence on the company's asset base, i.e. where its key assets are based, and if they are owned or leased\\n"
                 "• One sentence on the key products and services and their value proposition\\n"
@@ -43,7 +43,7 @@ sections = [
                 "• One sentence on the company's most important revenue drivers, e.g. prices or volumes or ARPU, depending on sector, and any important trends\\n"
                 "• One sentence on most recent revenue and recent growth\\n"
                 "• One sentence on the company's most important cost drivers, e.g. cost of goods sold or operating expenses or other costs, and any important trends\\n"
-                "• One sentence on EBITDA or, absent that, operating profit or, absent that, profit in absolute terms, as well as recent growth or margins, whatever is more important for the reader\\n"
+                "• One sentence on EBITDA or, absent that, operating profit or, absent that, profit - include absolute values (with currency units), margins (as %), and growth rates (as %) with proper labels\\n"
                 "• For each segment, one sentence on the segment financials, with numbers, and the percentage contribution to revenues and profits, if possible\\n"
                 "• One sentence on the company's capital expenditure and any important trends\\n"
                 "• One sentence on balance sheet highlights, i.e. what's the single most important thing about the company's balance sheet, sometimes that's about net debt, sometimes about impairments, you need to judge\\n"
@@ -59,8 +59,8 @@ sections = [
                 "• One sentence on the company's history of partnerships, including dates and numbers\\n"
                 "• One sentence on the key decision makers at the management level and their strategic agenda\\n"
                 "• One sentence on the key shareholders and their ownership in the company (in %), and their key decision makers at the shareholder level and their strategic agenda towards the company, any indications of their willingness to sell, or any relevant track record\\n"
-                "• One sentence on 2 strategic observations that would be highly interesting to a potential buyer, including strategic disconnects that warrant further analysis before proceeding with an acquisition\\n"
-                "• One sentence on what is the key attraction of the company to a potential buyer, but this needs to be deeply insightful and be backed up by numbers\\n"
+                "• One sentence on 2 strategic observations connecting to deal implications - explain WHY each matters for valuation, synergies, or integration risk, not just WHAT you observe\\n"
+                "• One sentence on the key acquisition rationale quantifying the value creation opportunity - specify who would buy this (strategic vs financial) and why with numbers\\n"
                 "• If you don't have the data then stick with the company's narrative\\n"
     }
 ]

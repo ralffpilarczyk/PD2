@@ -14,6 +14,10 @@ Critical rules:
 • Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.
 • If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics
 • ALWAYS use the most recent data available in the source documents - prioritize latest fiscal periods over historical data
+• Every metric must include proper units (%, USD, units, etc.) AND the time/time period it refers to (e.g., in parentheses)
+• Never repeat the same fact twice across bullets - eliminate all redundancy
+• Avoid vague qualifiers like "integrated", "leading", "comprehensive" unless quantified with proof
+• Every sentence must be clear enough that a reader unfamiliar with the sector can understand it
 
 Prose requirements:
 • Every bullet must be a complete grammatical sentence with subject and verb
@@ -398,6 +402,7 @@ WHAT TO PRESERVE:
 WHAT TO REMOVE:
 - Generic framework language unless specifically relevant
 - Repetitive points
+- Repetition of facts already stated in other bullets (even if worded differently)
 - Obvious statements without data
 - Elaborate explanations of simple facts
 - Content that doesn't address the original section requirements

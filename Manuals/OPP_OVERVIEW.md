@@ -21,8 +21,9 @@ OnePageProfile (OPP) v1.2 is a focused document analysis tool that transforms PD
 
 Users can now define custom section specifications for specialized use cases:
 
-- **Template file**: `src/opp_sections_template.py` provides a working example
-- **Custom file**: Copy template to `src/opp_sections_custom.py` and modify
+- **Custom file**: `src/opp_sections_custom.py` (ships with default sections as working example)
+- **Usage**: Simply edit the file to define your custom sections
+- **Reset**: `git checkout src/opp_sections_custom.py` to restore defaults
 - **Structure**: Must maintain exactly 4 sections for 2×2 PowerPoint layout
 - **Validation**: Automatic validation on load prevents malformed sections
 - **Output naming**: Custom profiles use distinct naming (`Custom_*.pptx`, `runs/opp_custom_*/`)
@@ -137,8 +138,7 @@ PD2/
 ├── OPP.py                           # Main entry point (~930 lines)
 ├── src/
 │   ├── opp_sections.py             # Default section definitions (~97 lines)
-│   ├── opp_sections_template.py    # Template for custom sections (~170 lines) - NEW v1.2
-│   ├── opp_sections_custom.py      # User-created custom sections (gitignored) - NEW v1.2
+│   ├── opp_sections_custom.py      # Custom sections (edit directly, ships with defaults) - NEW v1.2
 │   ├── profile_prompts.py          # Prompt templates (~420 lines, enhanced v1.2)
 │   ├── pptx_generator.py           # PowerPoint generation (~140 lines)
 │   ├── file_manager.py             # File I/O and directory management

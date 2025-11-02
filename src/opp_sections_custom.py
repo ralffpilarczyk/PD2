@@ -1,21 +1,20 @@
 """
-TEMPLATE for Custom OPP Section Definitions
+Custom OPP Section Definitions
 
 ==================================================================================
 INSTRUCTIONS FOR CREATING YOUR CUSTOM PROFILE
 ==================================================================================
 
-This template is a working example showing the default OnePageProfile sections.
+This file contains the default OnePageProfile sections as a working example.
 To create your custom profile:
 
-1. COPY this file to: src/opp_sections_custom.py
-   Command: cp src/opp_sections_template.py src/opp_sections_custom.py
-
-2. EDIT the two marked sections below:
+1. EDIT the two marked sections below:
    - EDITABLE SECTION 1: Modify the 4 section definitions
    - EDITABLE SECTION 2: Update the section boundaries to match
 
-3. SAVE and run OPP, selecting "2 - Custom Profile"
+2. SAVE and run OPP, selecting "2 - Custom Profile"
+
+3. To RESET to defaults: git checkout src/opp_sections_custom.py
 
 ==================================================================================
 CRITICAL RULES

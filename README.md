@@ -104,12 +104,13 @@ Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 Create custom section definitions for specialized use cases:
 
 ```bash
-# 1. Edit src/opp_sections_custom.py to define your 4 custom sections
+# 1. Copy template to create custom sections file
+cp src/opp_sections_template.py src/opp_sections_custom.py
 
-# 2. Run OPP and select "2 - Custom Profile"
+# 2. Edit opp_sections_custom.py to define your 4 custom sections
+
+# 3. Run OPP and select "2 - Custom Profile"
 python OPP.py
-
-# 3. To reset to defaults: git checkout src/opp_sections_custom.py
 ```
 
 Custom profiles use distinct output naming for easy identification.

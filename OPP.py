@@ -885,8 +885,9 @@ if __name__ == "__main__":
         custom_file = Path("src/opp_sections_custom.py")
         if not custom_file.exists():
             thread_safe_print(f"\n{RED}{CROSS}{RESET} Custom sections file not found!")
-            thread_safe_print(f"Please restore the file:")
-            thread_safe_print(f"  git checkout src/opp_sections_custom.py\n")
+            thread_safe_print(f"Please copy the template:")
+            thread_safe_print(f"  cp src/opp_sections_template.py src/opp_sections_custom.py")
+            thread_safe_print(f"Then edit it to define your custom sections.\n")
             sys.exit(1)
         thread_safe_print(f"{CYAN}{CHECK}{RESET} Using custom section definitions\n")
     else:

@@ -22,6 +22,7 @@ Critical rules:
 • Never repeat the same fact twice across bullets - eliminate all redundancy
 • Avoid vague qualifiers like "integrated", "leading", "comprehensive" unless quantified with proof
 • Every sentence must be clear enough that a reader unfamiliar with the sector can understand it
+• Plain US SEC compliant style English: Define all technical terms, industry jargon, and sector-specific language for a general business audience. Assume the reader is a smart generalist, not an industry insider.
 
 Prose requirements:
 • Every bullet must be a complete grammatical sentence with subject and verb
@@ -51,6 +52,7 @@ CRITICAL RULES:
 - Subtitle should be a key message about the company for potential investors or buyers, in up to 8 words as a prose statement (not a cryptic assembly of keywords), no period at the end
 - The subtitle must be an INVESTMENT THESIS, not a corporate tagline, no buzz words, no superlatives without proof
 - Professional M&A banker tone - no marketing hype, no superlatives without proof
+- Plain US SEC compliant style English
 
 TEST: Would this subtitle help a banker decide if deal merits further review?
 
@@ -194,6 +196,8 @@ ADD THESE ITEMS:
 SOURCE DOCUMENTS (for looking up ADD items):
 {{source_documents}}
 
+{OPP_CRITICAL_RULES}
+
 INSTRUCTIONS:
 0. RESPECT SECTION BOUNDARIES: Only add content relevant to "{section['title']}".
    Do NOT add content belonging in other sections:
@@ -249,6 +253,8 @@ CURRENT SECTION CONTENT:
 
 SOURCE DOCUMENTS (for additional quantified details):
 {{source_documents}}
+
+{OPP_CRITICAL_RULES}
 
 TASK:
 The content is complete but can be denser. Increase information density without adding new topics by:
@@ -307,6 +313,8 @@ CURRENT SECTION TO DEDUPLICATE:
 
 ALREADY-FINALIZED SECTIONS (these take precedence):
 {previous_content}
+
+{OPP_CRITICAL_RULES}
 
 TASK:
 Remove any bullet points from the current section that cover topics already addressed in the finalized sections above.

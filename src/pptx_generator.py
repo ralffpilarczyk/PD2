@@ -121,7 +121,7 @@ def create_profile_pptx(md_path: str, company_name: str, timestamp: str, version
     _add_2x2_boxes(slide, data['sections'])
 
     # Add footnote at bottom
-    _add_footnote(slide)
+    # _add_footnote(slide)  # Removed per user request
 
     # Save to ProfileFiles
     output_dir = Path("ProfileFiles")

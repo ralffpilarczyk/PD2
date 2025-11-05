@@ -233,6 +233,9 @@ def _format_bullet_text(paragraph, text: str):
     - Regular text: Arial 10pt, dark grey
     - Bold text: Arial Bold 10pt, dark blue
     """
+    # Fix malformed bold: "Label**: " → "**Label**: "
+    text = re.sub(r'(\w+)\*\*:', r'**\1**:', text)
+
     # Split text by **bold** markers
     parts = re.split(r'(\*\*.*?\*\*)', text)
 

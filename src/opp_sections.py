@@ -12,13 +12,13 @@ sections = [
                 "Include the following elements:\\n"
                 "• One sentence describing where the company is based (city and country) and what its primary business is - specify the EXACT subsector with precision (e.g., 'pharmaceutical distribution', not 'healthcare'; 'SaaS CRM software', not 'technology')\\n"
                 "• One sentence describing the company's primary operating footprint, i.e. where its people are based, with numbers\\n"
-                "• One sentence describing the company's asset base, i.e. where its key assets are based, and if they are owned or leased\\n"
-                "• One sentence describing the key products and services and their value proposition\\n"
-                "• One sentence describing the key geographies where the company is active\\n"
-                "• One sentence describing the key customers, including spread or concentration risk\\n"
+                "• One sentence describing the company's asset base, i.e. where its key assets are based, with numbers, and if they are owned or leased\\n"
+                "• One sentence describing the key products and services and their value proposition, with numbers\\n"
+                "• One sentence describing the key geographies where the company is active, with numbers\\n"
+                "• One sentence describing the key customers, including spread or concentration risk, with numbers\\n"
                 "• One sentence describing how the company sells (e.g. direct or indirect) and how it contracts with customers (e.g. long term contracts, purchase orders, etc.) and how it maintains relationships with customers (e.g. loyalty programs, etc.)\\n"
-                "• One sentence describing the company's key suppliers, but only if there is significant concentration risk\\n"
-                "• In case the company is listed on a stock exchange, then one sentence on the market capitalization in local currency. in case the company is not listed on a stock exchange, then skip this sentence.\\n"
+                "• One sentence describing the company's key suppliers, but only if there is significant concentration risk, with numbers\\n"
+                "• In case the company is listed on a stock exchange, then one sentence on the current market capitalization in local currency. in case the company is not listed on a stock exchange, then skip this sentence.\\n"
     },
     {
         "number": 2,
@@ -26,14 +26,14 @@ sections = [
         "specs": "Analyze the company's competitive position and strategic focus.\\n"
                 "\\n"
                 "Include the following elements:\\n"
-                "• One sentence describing the company's position in the value chain, i.e. what is the company's core capability and how does it compare to competitors\\n"
-                "• One sentence describing the company's 2 most important strategic objectives\\n"
-                "• One sentence describing market structure and the company's competitive positioning\\n"
-                "• One sentence describing market position (e.g. #1 in market) and market share by products and services\\n"
-                "• One sentence describing market position (e.g. #3 in geography) and market share by geography\\n"
-                "• One sentence describing market position (e.g. #2 in customer segment) and market share by customer segment\\n"
-                "• One sentence describing the 2 most important accolades and awards the company has received\\n"
-                "• In case the data is missing, then use the company's narrative\\n"
+                "• One sentence describing the company's position in the value chain, i.e. what is the company's core capability, and how does it compare to competitors\\n"
+                "• One sentence describing the company's 2 most important strategic objectives, with numbers\\n"
+                "• One sentence describing market structure and the company's competitive positioning, with numbers\\n"
+                "• One sentence describing market position (e.g. #1 in market) and market share by products and services, with numbers\\n"
+                "• One sentence describing market position (e.g. #3 in geography) and market share by geography, with numbers\\n"
+                "• One sentence describing market position (e.g. #2 in customer segment) and market share by customer segment, with numbers\\n"
+                "• One sentence describing the 2 most important accolades and awards the company has received, with numbers\\n"
+                "• In case the data is missing, then use the company's narrative, but try to use the numbers if possible\\n"
     },
     {
         "number": 3,
@@ -42,13 +42,13 @@ sections = [
                 "\\n"
                 "Include the following elements:\\n"
                 "• One sentence describing the company's most important revenue drivers, e.g. prices or volumes or ARPU, depending on sector, and any important trends\\n"
-                "• One sentence describing most recent revenue in local currency terms and recent growth\\n"
+                "• One sentence describing most recent revenue in absolute terms in local currency terms and recent growth in percentage terms\\n"
                 "• One sentence describing the company's most important cost drivers, e.g. cost of goods sold or operating expenses or other costs, and any important trends\\n"
-                "• One sentence describing most recent EBITDA in local currency terms or, absent that, operating profit in local currency terms or, absent that, profit in local currency terms - include absolute values (with currency units), margins (as %), and growth rates (as %) with proper labels\\n"
+                "• One sentence describing most recent EBITDA in absolute terms in local currency terms or, absent that, operating profit in absolute terms in local currency terms or, absent that, profit in absolute terms in local currency terms - include absolute values (with currency units), margins (as %), and growth rates (as %) with proper labels\\n"
                 "• For each segment, one sentence describing the segment financials, with numbers, and the percentage contribution to revenues and profits, if possible\\n"
-                "• One sentence describing the company's capital expenditure and any important trends\\n"
-                "• One sentence describing balance sheet highlights, i.e. what's the single most important thing about the company's balance sheet, sometimes that's about net debt, sometimes about impairments, you need to judge\\n"
-                "• One sentence describing unit economics and the 2 most important financial performance drivers, including numbers\\n"
+                "• One sentence describing the company's capital expenditure in absolute terms in local currency terms and any important trends in percentage terms\\n"
+                "• One sentence describing balance sheet highlights, i.e. what's the single most important thing about the company's balance sheet, sometimes that's about net debt, sometimes about impairments, you need to judge, with numbers\\n"
+                "• One sentence describing unit economics and the 2 most important financial performance drivers, including numbers, with proper labels\\n"
     },
     {
         "number": 4,
@@ -56,13 +56,14 @@ sections = [
         "specs": "Summarise key strategic considerations for the company as an investment or acquisition target.\\n"
                 "\\n"
                 "Include the following elements:\\n"
-                "• One sentence describing the company's 2 most important strategic initiatives or transactions, including dates and numbers\\n"
-                "• One sentence describing the company's history of partnerships, including dates and numbers\\n"
-                "• One sentence describing the key decision makers at the management level and their strategic agenda\\n"
-                "• One sentence describing all shareholders who own more than 20% of the company and their ownership in the company (in %), and their key decision makers at the shareholder level and their strategic agenda towards the company, any indications of their willingness to sell, or any relevant track record\\n"
-                "• One sentence describing 2 strategic observations connecting to deal implications - explain WHY each matters for valuation, synergies, or integration risk, not just WHAT you observe\\n"
-                "• One sentence describing the key acquisition rationale quantifying the value creation opportunity - specify who would buy this (strategic vs financial) and why with numbers\\n"
-                "• If you don't have the data then stick with the company's narrative\\n"
+                "• One sentence describing all shareholders who own more than 20% of the company and their ownership in the company (in %), and their key decision makers at the shareholder level and their strategic agenda towards the company, any indications of their willingness to sell, or any relevant track record, with numbers\\n"
+                "• One sentence describing the company's history of material acquisitions or divestitures, including dates, including the size of the transaction in absolute terms, and valuation in absolute terms and in multiples terms\\n"
+                "• One sentence describing the company's history of material capital raises, including dates, including the size of the transaction in absolute terms, and valuation in absolute terms and in multiples terms, and the type of capital raise (equity, debt, or hybrid)\\n"
+                "• One sentence describing the company's history of material commercial or strategic partnerships, including dates, and the size of the transaction in absolute terms, and valuation in absolute terms and in multiples terms\\n"
+                "• One sentence describing the key decision makers at the management level and their strategic agenda for the company, with numbers\\n"
+                "• One sentence describing the 2 most important strategic observations relevant to a buyer or investor - explain WHY each matters for valuation, synergies, or integration risk, not just WHAT you observe, with numbers\\n"
+                "• One sentence describing the primary value creation opportunity for a buyer or investor, with numbers\\n"
+                "• If you don't have the data then stick with the company's narrative, but try to use the numbers if possible\\n"
     }
 ]
 

@@ -76,8 +76,8 @@ def parse_markdown_profile(md_path: str) -> Dict:
         for line in section_content.split('\n'):
             line = line.strip()
             if line.startswith('*'):
-                # Remove leading * and whitespace
-                bullet = line.lstrip('*').strip()
+                # Remove leading * (bullet marker) and whitespace, but preserve ** bold markers
+                bullet = line[1:].strip()  # Remove only the first *, not all *
                 if bullet:  # Only add non-empty bullets
                     bullets.append(bullet)
 

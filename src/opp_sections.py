@@ -56,13 +56,12 @@ sections = [
         "specs": "Summarise key strategic considerations for the company as an investment or acquisition target.\\n"
                 "\\n"
                 "Include the following elements:\\n"
-                "• One sentence describing all shareholders who own more than 20% of the company and their ownership in the company (in %), and their key decision makers at the shareholder level and their strategic agenda towards the company, any indications of their willingness to sell, or any relevant track record, with numbers\\n"
+                "• One sentence describing the 1-3 most important shareholders of the company and their ownership in the company (in %), and their key decision makers at the shareholder level and their strategic agenda towards the company, any indications of their willingness to sell, or any relevant track record, with numbers\\n"
                 "• One sentence describing the company's history of material acquisitions or divestitures, including dates, including the size of the transaction in absolute terms, and valuation in absolute terms and in multiples terms\\n"
                 "• One sentence describing the company's history of material capital raises, including dates, including the size of the transaction in absolute terms, and valuation in absolute terms and in multiples terms, and the type of capital raise (equity, debt, or hybrid)\\n"
                 "• One sentence describing the company's history of material commercial or strategic partnerships, including dates, and the size of the transaction in absolute terms, and valuation in absolute terms and in multiples terms\\n"
-                "• One sentence describing the key decision makers at the management level and their strategic agenda for the company, with numbers\\n"
+                "• One sentence describing the 1-2 most important decision makers at the management level and their strategic agenda for the company, with numbers\\n"
                 "• One sentence describing the 2 most important strategic observations relevant to a buyer or investor - explain WHY each matters for valuation, synergies, or integration risk, not just WHAT you observe, with numbers\\n"
-                "• One sentence describing the primary value creation opportunity for a buyer or investor, with numbers\\n"
                 "• If you don't have the data then stick with the company's narrative, but try to use the numbers if possible\\n"
     }
 ]

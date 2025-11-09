@@ -457,6 +457,7 @@ CRITICAL RULES:
 • Maximum 8 words, no period at the end
 • Every word must earn its place
 • Chairman-friendly language - no buzzwords
+• Plain US SEC compliant style English, a full sentence in prose, not cryptic half-sentences, no period at the end
 • If you cannot make it more specific/dense, return it unchanged
 
 OUTPUT FORMAT:

@@ -17,7 +17,9 @@ Critical rules:
 • A precise sentence which may not perfectly suit the purpose is much more valuable than a beautifully tailored sentence which is not grounded
 • Format each bullet as: **Title** (1-2 words): Rest of sentence. Example: **Revenues**: In 2024 revenues were USD81m, up 8.5% YoY.
 • If there is no meaningful data to write a sentence as instructed, skip it silently - never write a bullet without specifics
-• ALWAYS use the most recent data available in the source documents - prioritize latest fiscal periods over historical data
+• MATERIALITY RULE: When multiple numbers could describe the same concept, always use the MOST MATERIAL figure.
+• RECENCY VALIDATION: If data for the same metric for more than one period, ALWAYS use the most recent one and state the fiscal period explicitly: "3,291 employees (FY2025)" not just "3,291 employees".
+• ZERO INFERENCE RULE: Do not infer unstated metrics. If a metric is not in the source, skip it.
 • Every metric must include proper units (%, USD, units, etc.) AND the time/time period it refers to (e.g., in parentheses)
 • Never repeat the same fact twice across bullets - eliminate all redundancy
 • Avoid vague qualifiers like "integrated", "leading", "comprehensive" unless quantified with proof
@@ -49,10 +51,10 @@ def get_title_subtitle_prompt(company_name: str) -> str:
 
 CRITICAL RULES:
 - Title should be the company name: {company_name}
-- Subtitle should be a key message about the company for potential investors or buyers, in up to 8 words as a prose statement (not a cryptic assembly of keywords), no period at the end
+- Subtitle should be a key message about the company for potential investors or buyers, in up to 8 words
 - The subtitle must be an INVESTMENT THESIS, not a corporate tagline, no buzz words, no superlatives without proof
 - Professional M&A banker tone - no marketing hype, no superlatives without proof
-- Plain US SEC compliant style English
+- Plain US SEC compliant style English, a full sentence in prose, not cryptic half-sentences, no period at the end
 
 TEST: Would this subtitle help a banker decide if deal merits further review?
 
@@ -93,6 +95,13 @@ OUTPUT FORMAT:
 [Your bullet points here, following the requirements above]
 
 CRITICAL: Do NOT include page numbers, footnotes, or source citations in your output.
+
+FACT-CHECKING BEFORE YOU WRITE:
+• Verify every number appears in source documents (within reasonable rounding)
+• Use the MOST RECENT fiscal period if multiple periods exist
+• Use the CORRECT category if similar metrics exist 
+• Use local currency as stated in source
+• Skip any bullet if you cannot find specific data - NEVER estimate
 
 Now generate this section based on the documents provided."""
 
@@ -140,6 +149,13 @@ Identify any metrics or data points in the current content using data older than
 
 CRITICAL CONSTRAINT:
 ONLY suggest additions where the source documents contain relevant data to support the addition. Do NOT suggest perspective gaps if the source documents lack the necessary data.
+
+VALIDATION CHECKLIST - Flag these errors if found in current content:
+• [WRONG NUMBER]: Draft number doesn't match source (within 5%)
+• [OUTDATED]: Draft uses old data when more recent data exists
+• [CATEGORY ERROR]: Draft confuses similar metrics 
+• [WRONG MATERIALITY]: Draft emphasizes immaterial figure over material one
+• [FABRICATED]: Draft includes specific metrics not in source
 
 SECTION BOUNDARIES - STAY IN SCOPE:
 This completeness check is for the "{section['title']}" section ONLY.
@@ -203,7 +219,10 @@ INSTRUCTIONS:
    Do NOT add content belonging in other sections:
    {get_section_boundaries(section['number'])}
 1. Add ALL items from the ADD list ONLY if the source documents contain supporting data
-2. If an ADD item cannot be supported by source document data, skip it silently - do NOT add placeholder text like "metrics not disclosed" or "data unavailable"
+2. PRIORITY: Lead with most material numbers (RM 15B receivables > RM 94M equipment)
+3. RECENCY: Replace outdated data with most recent period from source
+4. CORRECTIONS: Fix category errors flagged in ADD list with correct specific figures
+5. If an ADD item cannot be supported by source document data, skip it silently - do NOT add placeholder text like "metrics not disclosed" or "data unavailable"
 3. Use exact data from source documents with numbers and specifics
 4. Maintain narrative flow - integrate additions smoothly
 5. Preserve all existing content - do not remove anything UNLESS the ADD list provides more recent or more relevant data that should replace outdated information
@@ -428,6 +447,8 @@ CONSTRAINTS:
 
 CRITICAL OUTPUT RULES:
 - Do NOT include any preamble, introduction, or explanatory text like "Here is the condensed..." or "This section..."
+- RETAIN MATERIALITY: Don't delete the most important facts (largest numbers, recent data, differentiators) to hit word count
+- PRESERVE REQUIRED ELEMENTS: Check original requirements above - ensure all required elements remain covered after condensing
 - Do NOT repeat the section name as a header, bold text, or label (the section name is already in the document header)
 - Output ONLY the bullet points for this section
 - Start directly with the first bullet point (starting with *)

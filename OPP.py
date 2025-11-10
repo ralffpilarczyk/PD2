@@ -29,6 +29,7 @@ from src.utils import thread_safe_print, retry_with_backoff
 from src.profile_prompts import (
     COMPANY_NAME_EXTRACTION_PROMPT,
     get_title_subtitle_prompt,
+    get_subtitle_refinement_prompt,
     get_section_generation_prompt,
     get_section_completeness_check_prompt,
     get_section_enhancement_prompt,
@@ -438,33 +439,7 @@ class OnePageProfile:
         Returns:
             Refined "# Title\nRefined subtitle" text (or original on failure)
         """
-        prompt = f"""You are refining a company profile subtitle for M&A bankers.
-
-CURRENT TITLE AND SUBTITLE:
-{current_title_subtitle}
-
-CONTEXT FROM REFINED PROFILE:
-{sections_context if sections_context else "Not available for first refinement"}
-
-TASK: Refine the subtitle ONLY (keep title unchanged) to be more:
-1. **Concise**: Up to 8 words maximum, remove filler
-2. **Investment-focused**: What makes this company attractive to acquirers?
-3. **Specific**: Use metrics/market position if available in context
-4. **Factual**: No marketing hype, no superlatives without proof
-
-CRITICAL RULES:
-• The subtitle must be an INVESTMENT THESIS, not a corporate tagline
-• Maximum 8 words, no period at the end
-• Every word must earn its place
-• Chairman-friendly language - no buzzwords
-• Plain US SEC compliant style English, a full sentence in prose, not cryptic half-sentences, no period at the end
-• If you cannot make it more specific/dense, return it unchanged
-
-OUTPUT FORMAT:
-# [Title - unchanged]
-[Your refined subtitle - up to 8 words]
-
-Generate the refined version now."""
+        prompt = get_subtitle_refinement_prompt(current_title_subtitle, sections_context)
 
         try:
             refined = retry_with_backoff(

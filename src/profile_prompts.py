@@ -33,6 +33,54 @@ Prose requirements:
 • Readable as standalone prose, not telegraphic shorthand
 """
 
+# Shared formatting rules for section outputs
+SECTION_FORMATTING_RULES = """
+FORMATTING RULES:
+• Keep bullet format with **bold** keywords (1-2 most important words per bullet)
+• Each bullet is one sentence maximum
+• ALWAYS put a blank line before starting any list
+• Use consistent markdown formatting
+• Do NOT include page numbers, footnotes, or source citations
+• Output ONLY the section content - start directly with bullets
+• No preamble, introduction, or explanatory text
+"""
+
+# Subtitle-specific requirements
+SUBTITLE_GENERATION_RULES = """
+SUBTITLE REQUIREMENTS:
+• Maximum 8 words
+• Must be an INVESTMENT THESIS, not a corporate tagline
+• No marketing hype, no buzzwords, no superlatives without proof
+• Plain US SEC compliant style English
+• Full sentence in prose, not cryptic half-sentences
+• No period at the end
+• Professional M&A banker tone - help banker decide if deal merits review
+"""
+
+# Section boundary enforcement (template - use with format())
+BOUNDARY_ENFORCEMENT_INTRO = """
+SECTION BOUNDARIES - STAY FOCUSED:
+This is the "{section_title}" section. DO NOT include content that belongs in other sections:
+{boundaries}
+"""
+
+# Condensing and prioritization guidance
+CONDENSING_PRIORITY_RULES = """
+WHAT TO PRESERVE:
+• Specific metrics and quantified trends
+• Year-over-year comparisons, growth rates, margins, percent contributions
+• Key benchmarks and unusual patterns
+• Most recent fiscal period data (when multiple periods exist)
+• Strategic disconnects or red flags
+
+WHAT TO REMOVE:
+• Generic statements and obvious observations
+• Repetitive points - state each insight once
+• Elaborate explanations - let data speak
+• Content without specific numbers or hard facts
+• Page numbers, footnotes, source citations
+"""
+
 COMPANY_NAME_EXTRACTION_PROMPT = """Extract the primary company name from these documents.
 
 Look for the company name in:
@@ -51,10 +99,9 @@ def get_title_subtitle_prompt(company_name: str) -> str:
 
 CRITICAL RULES:
 - Title should be the company name: {company_name}
-- Subtitle should be a key message about the company for potential investors or buyers, in up to 8 words
-- The subtitle must be an INVESTMENT THESIS, not a corporate tagline, no buzz words, no superlatives without proof
-- Professional M&A banker tone - no marketing hype, no superlatives without proof
-- Plain US SEC compliant style English, a full sentence in prose, not cryptic half-sentences, no period at the end
+- Subtitle should be a key message about the company for potential investors or buyers
+
+{SUBTITLE_GENERATION_RULES}
 
 TEST: Would this subtitle help a banker decide if deal merits further review?
 
@@ -63,6 +110,43 @@ OUTPUT FORMAT:
 Your investment-focused subtitle (up to 8 words) here
 
 Now generate the title and subtitle based on the documents provided."""
+
+
+def get_subtitle_refinement_prompt(current_title_subtitle: str, sections_context: str) -> str:
+    """Generate prompt for refining subtitle after iterations
+
+    Args:
+        current_title_subtitle: Current title and subtitle text
+        sections_context: Context from refined profile sections
+
+    Returns:
+        Prompt string for subtitle refinement
+    """
+    return f"""You are refining a company profile subtitle for M&A bankers.
+
+CURRENT TITLE AND SUBTITLE:
+{current_title_subtitle}
+
+CONTEXT FROM REFINED PROFILE:
+{sections_context if sections_context else "Not available for first refinement"}
+
+TASK: Refine the subtitle ONLY (keep title unchanged) to be more:
+1. **Concise**: Up to 8 words maximum, remove filler
+2. **Investment-focused**: What makes this company attractive to acquirers?
+3. **Specific**: Use metrics/market position if available in context
+4. **Factual**: No marketing hype, no superlatives without proof
+
+{SUBTITLE_GENERATION_RULES}
+
+ADDITIONAL RULES:
+• Every word must earn its place
+• If you cannot make it more specific/dense, return it unchanged
+
+OUTPUT FORMAT:
+# [Title - unchanged]
+[Your refined subtitle - up to 8 words]
+
+Generate the refined version now."""
 
 
 def get_section_generation_prompt(section: dict) -> str:
@@ -86,9 +170,7 @@ DENSITY PRIORITY:
 • Every word must earn its place - no filler, no obvious observations
 • Prioritize sentences with 2+ quantified facts over single-fact sentences
 
-SECTION BOUNDARIES - STAY FOCUSED:
-This is the "{section['title']}" section. DO NOT include content that belongs in other sections:
-{get_section_boundaries(section['number'])}
+{BOUNDARY_ENFORCEMENT_INTRO.format(section_title=section['title'], boundaries=get_section_boundaries(section['number']))}
 
 OUTPUT FORMAT:
 ## {section['title']}
@@ -157,10 +239,7 @@ VALIDATION CHECKLIST - Flag these errors if found in current content:
 • [WRONG MATERIALITY]: Draft emphasizes immaterial figure over material one
 • [FABRICATED]: Draft includes specific metrics not in source
 
-SECTION BOUNDARIES - STAY IN SCOPE:
-This completeness check is for the "{section['title']}" section ONLY.
-Do NOT suggest additions that belong in other sections:
-{get_section_boundaries(section['number'])}
+{BOUNDARY_ENFORCEMENT_INTRO.format(section_title=section['title'], boundaries=get_section_boundaries(section['number']))}
 
 MATERIALITY FILTER:
 Each addition must pass TWO tests:
@@ -215,9 +294,7 @@ SOURCE DOCUMENTS (for looking up ADD items):
 {OPP_CRITICAL_RULES}
 
 INSTRUCTIONS:
-0. RESPECT SECTION BOUNDARIES: Only add content relevant to "{section['title']}".
-   Do NOT add content belonging in other sections:
-   {get_section_boundaries(section['number'])}
+0. {BOUNDARY_ENFORCEMENT_INTRO.format(section_title=section['title'], boundaries=get_section_boundaries(section['number']))}
 1. Add ALL items from the ADD list ONLY if the source documents contain supporting data
 2. PRIORITY: Lead with most material numbers (RM 15B receivables > RM 94M equipment)
 3. RECENCY: Replace outdated data with most recent period from source
@@ -235,11 +312,7 @@ INTEGRATION STRATEGY FOR DENSITY:
 • Example: Instead of adding separate bullet "Revenue grew 12%" to existing "Malaysia 35%, Indonesia 28%",
   combine: "Malaysia generates 35% of revenue and Indonesia 28%, with combined growth of 12% YoY"
 
-FORMATTING RULES:
-- Keep bullet format with **bold** keywords (1-2 most important words per bullet)
-- Each bullet is one sentence maximum
-- ALWAYS put a blank line before starting any list
-- Use consistent markdown formatting
+{SECTION_FORMATTING_RULES}
 
 CRITICAL:
 - Do NOT add unhelpful statements about missing data
@@ -294,9 +367,9 @@ The content is complete but can be denser. Increase information density without 
 CONSTRAINTS:
 • Maintain all existing facts - do not drop information
 • Keep section boundaries - stay focused on "{section['title']}"
-• Preserve bullet format with **bold** keywords
-• Each bullet must remain a complete grammatical sentence
 • Skip enrichment if source documents lack supporting data
+
+{SECTION_FORMATTING_RULES}
 
 OUTPUT FORMAT:
 ## {section['title']}
@@ -348,12 +421,12 @@ REMOVE bullet points that:
 - Overlap significantly with finalized section content
 - Repeat information without adding material new value
 
+{SECTION_FORMATTING_RULES}
+
 CRITICAL RULES:
 - Maintain the section header: ## {section['title']}
-- Keep the bullet format with **bold** keywords
 - If a bullet is only partially redundant, keep the unique parts and remove the redundant parts
 - If ALL bullets are redundant, return just the section header with a note: "Content integrated into other sections"
-- Output ONLY the deduplicated section content (## Section Name + remaining bullets)
 - No preamble, no explanation, no commentary
 
 Generate the deduplicated version now."""
@@ -417,31 +490,13 @@ CONDENSING INSTRUCTIONS:
    - Deliver deep insights
    - Combine related facts in one multi-fact sentence to the extent possible and sensible. Example: "Malaysia generates 35% of revenue and Indonesia 28%, with combined growth of 12% YoY" (3 facts, 1 sentence)
    - Be brutal yet constructive when condensing
-   
-5. **FORMAT PRESERVATION**:
-   - Keep bullet format with **bold** keywords (1-2 words per bullet)
-   - Each bullet is one sentence
-   - Prioritize bullets with numbers and specific facts
 
-WHAT TO PRESERVE:
-- Content that addresses the original requirements
-- Specific metrics and quantified trends
-- Key comparisons and benchmarks
-- Unusual patterns or red flags
-- Strategic disconnects or opportunities
+{CONDENSING_PRIORITY_RULES}
 
-WHAT TO REMOVE:
-- Generic framework language unless specifically relevant
-- Repetitive points
-- Repetition of facts already stated in other bullets (even if worded differently)
-- Obvious statements without data
-- Elaborate explanations of simple facts
-- Content that doesn't address the original section requirements
-- Page numbers, footnotes, or source citations
+{SECTION_FORMATTING_RULES}
 
 CONSTRAINTS:
 - Maximum {word_limit} words total (count everything)
-- Maintain bullet format with **bold** syntax
 - Preserve coverage of original requirements
 - Every sentence must add investment decision value
 

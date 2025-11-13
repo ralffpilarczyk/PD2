@@ -67,15 +67,20 @@ This is the "{section_title}" section. DO NOT include content that belongs in ot
 # Condensing and prioritization guidance
 CONDENSING_PRIORITY_RULES = """
 WHAT TO PRESERVE:
+• Content that addresses the original requirements
+• Bullets with numbers and specific facts - prioritize these over generic statements
 • Specific metrics and quantified trends
 • Year-over-year comparisons, growth rates, margins, percent contributions
-• Key benchmarks and unusual patterns
-• Most recent fiscal period data (when multiple periods exist)
-• Strategic disconnects or red flags
+• Key comparisons and benchmarks
+• Unusual patterns or red flags
+• Strategic disconnects or opportunities
 
 WHAT TO REMOVE:
+• Generic framework language unless specifically relevant
 • Generic statements and obvious observations
 • Repetitive points - state each insight once
+• Repetition of facts already stated in other bullets (even if worded differently)
+• Obvious statements without data
 • Elaborate explanations - let data speak
 • Content without specific numbers or hard facts
 • Page numbers, footnotes, source citations
@@ -497,6 +502,7 @@ CONDENSING INSTRUCTIONS:
 
 CONSTRAINTS:
 - Maximum {word_limit} words total (count everything)
+- Maintain bullet format with **bold** syntax
 - Preserve coverage of original requirements
 - Every sentence must add investment decision value
 

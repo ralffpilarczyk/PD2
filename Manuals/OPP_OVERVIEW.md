@@ -1,8 +1,8 @@
-# OPP Code Overview - Complete Technical Documentation (v1.2)
+# OPP Code Overview - Complete Technical Documentation (v1.3)
 
 ## Executive Summary
 
-OnePageProfile (OPP) v1.2 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 3-phase architecture with parallel processing, sequential deduplication, and optional density iterations. New in v1.2: custom section definitions and improved data recency handling.
+OnePageProfile (OPP) v1.3 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 3-phase architecture with parallel processing, sequential deduplication, and optional density iterations. New in v1.3: Files API and context caching for 85-90% cost reduction. Introduced in v1.2: custom section definitions and improved data recency handling.
 
 **Key Metrics**:
 - 4 analytical sections (default or custom-defined)
@@ -13,7 +13,38 @@ OnePageProfile (OPP) v1.2 is a focused document analysis tool that transforms PD
 - Dual output: Markdown + PowerPoint
 - Processing time: ~3-5 minutes per profile (with 4 workers, 1 iteration)
 - No learning system (removed in v1.1 for simplicity)
-- Custom sections support (new in v1.2)
+- Custom sections support (introduced in v1.2)
+- Files API and context caching (new in v1.3)
+
+## What's New in v1.3
+
+### 1. Files API Integration
+
+PDFs are now uploaded to Google's Files API instead of inline base64 encoding:
+
+- **Upload once**: PDFs uploaded at start of run, reused across all API calls
+- **Automatic cleanup**: Files deleted from Google's servers at run completion
+- **Better performance**: Reduces bandwidth usage for multi-iteration runs
+- **Foundation for caching**: Enables context caching (see below)
+
+### 2. Context Caching for Cost Reduction
+
+Gemini API context caching dramatically reduces input token costs:
+
+- **Cache creation**: PDFs cached after upload with configurable TTL (2 hours + 1 hour per additional iteration)
+- **Cached models**: Two temperature variants (0.2 for completeness checks, 0.6 for all other Phase 1 functions)
+- **API optimization**: All Phase 1 functions use cached content - prompts sent without PDFs
+- **Cost savings**: 85-90% reduction in input token costs (cached tokens cost 10% of regular tokens)
+- **Graceful degradation**: If cache creation fails, automatically falls back to Files API without caching
+- **Automatic cleanup**: Cache deleted at run completion
+
+### 3. Enhanced Batch Processing
+
+batch_opp.py automatically benefits from Files API and caching:
+
+- **Per-document isolation**: Each PDF gets its own cache, created and deleted independently
+- **Resource cleanup**: Files and cache cleaned up between documents
+- **Cost efficiency**: Maximum savings for batch workflows
 
 ## What's New in v1.2
 

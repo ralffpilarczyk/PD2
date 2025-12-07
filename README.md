@@ -1,8 +1,8 @@
-# ProfileDash 2.1 & OnePageProfile 1.2
+# ProfileDash 2.1 & OnePageProfile 1.3
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.1): Comprehensive 33-section company profiles with deep analytical insights
-- **OPP** (OnePageProfile v1.2): Concise one-page profiles for quick M&A evaluation
+- **OPP** (OnePageProfile v1.3): Concise one-page profiles for quick M&A evaluation
 
 ## Quick Start
 
@@ -60,7 +60,7 @@ Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
 - Automatic retry with exponential backoff for API limits
 - Thread-safe operations for concurrent processing
 
-## OnePageProfile v1.2 (OPP)
+## OnePageProfile v1.3 (OPP)
 
 Concise one-page company profiles for rapid M&A screening and evaluation.
 
@@ -99,7 +99,7 @@ Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 - Each section limited to ~100 words with bullet points
 - Temporal bias: prioritizes most recent fiscal data over historical data
 
-**Custom Sections (New in v1.2):**
+**Custom Sections (Introduced in v1.2):**
 
 Create custom section definitions for specialized use cases:
 
@@ -115,7 +115,7 @@ python OPP.py
 
 Custom profiles use distinct output naming for easy identification.
 
-**Architecture (v1.2):**
+**Architecture (v1.3):**
 - **Phase 1**: Parallel Draft/Check/Enhance for all sections
 - **Phase 2**: Sequential deduplication in reverse priority (Section 4→3→2→1)
   - Section 4 (Strategic Considerations) keeps richest content
@@ -137,7 +137,7 @@ PD2 learns and improves over time:
 - Extracts universal analytical methodologies (9-10/10 quality only)
 - Applies learned patterns to future runs
 
-OPP v1.2 does not use learning for simplicity and speed.
+OPP v1.3 does not use learning for simplicity and speed.
 
 ## License
 

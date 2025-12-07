@@ -1,5 +1,4 @@
 import os
-import base64
 import google.generativeai as genai
 from typing import List, Optional, Dict
 import sys
@@ -264,6 +263,7 @@ class OnePageProfile:
 
         # PDF parts will be prepared once and reused
         self.pdf_parts = None
+        self.uploaded_files = []  # Track uploaded files for cleanup
 
         # Initialize file manager
         self.file_manager = FileManager(self.timestamp, self.run_dir_prefix)
@@ -285,27 +285,56 @@ class OnePageProfile:
             if section["number"] != i + 1:
                 raise ValueError(f"Section numbers must be 1-4 in order, found {section['number']} at position {i}")
 
-    def encode_pdf_to_base64(self, pdf_path: str) -> str:
-        """Encode PDF file to base64 string"""
-        with open(pdf_path, 'rb') as pdf_file:
-            return base64.standard_b64encode(pdf_file.read()).decode('utf-8')
-
     def prepare_pdf_parts(self) -> List:
-        """Prepare PDF files as inline base64 parts for Gemini"""
+        """Upload PDF files to Gemini Files API and return file references"""
         parts = []
 
         for pdf_path in self.pdf_files:
-            thread_safe_print(f"{CYAN}{ARROW}{RESET} Encoding {Path(pdf_path).name}...")
-            pdf_data = self.encode_pdf_to_base64(pdf_path)
+            pdf_filename = Path(pdf_path).name
+            thread_safe_print(f"{CYAN}{ARROW}{RESET} Uploading {pdf_filename}...")
 
-            parts.append({
-                "inline_data": {
-                    "mime_type": "application/pdf",
-                    "data": pdf_data
-                }
-            })
+            try:
+                # Upload file using old SDK pattern
+                uploaded_file = genai.upload_file(pdf_path)
+                self.uploaded_files.append(uploaded_file)
+
+                # Wait for file processing to complete
+                thread_safe_print(f"{CYAN}{ARROW}{RESET} Processing {pdf_filename}...")
+                max_wait = 60  # 60 second timeout
+                start_time = time.time()
+
+                while uploaded_file.state.name == 'PROCESSING':
+                    if time.time() - start_time > max_wait:
+                        raise TimeoutError(f"File processing timeout for {pdf_filename}")
+                    time.sleep(2)
+                    uploaded_file = genai.get_file(uploaded_file.name)
+
+                if uploaded_file.state.name == 'FAILED':
+                    raise RuntimeError(f"File processing failed for {pdf_filename}")
+
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} {pdf_filename} ready (URI: {uploaded_file.uri})")
+
+                # Add to parts list
+                parts.append(uploaded_file)
+
+            except Exception as e:
+                thread_safe_print(f"{RED}{CROSS}{RESET} Failed to upload {pdf_filename}: {e}")
+                raise
 
         return parts
+
+    def cleanup_uploaded_files(self):
+        """Delete uploaded files from Gemini Files API"""
+        for uploaded_file in self.uploaded_files:
+            try:
+                thread_safe_print(f"{CYAN}{ARROW}{RESET} Deleting {uploaded_file.name}...")
+                genai.delete_file(uploaded_file.name)
+            except Exception as e:
+                # Don't fail cleanup on errors
+                thread_safe_print(f"{YELLOW}{WARNING}{RESET} Failed to delete {uploaded_file.name}: {e}")
+
+        self.uploaded_files = []
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Cleanup complete")
 
     def extract_company_name(self, pdf_parts: List) -> str:
         """Extract company name from PDF documents"""
@@ -823,6 +852,12 @@ Status: {status}
             thread_safe_print(f"{RED}{CROSS}{RESET} Error during profile generation: {e}")
             self.save_run_log(company_name if 'company_name' in locals() else "Unknown", f"Failed: {e}")
             return None
+
+        finally:
+            # Always cleanup uploaded files
+            if self.uploaded_files:
+                thread_safe_print(f"\n{CYAN}Cleaning up uploaded files...{RESET}")
+                self.cleanup_uploaded_files()
 
 
 if __name__ == "__main__":

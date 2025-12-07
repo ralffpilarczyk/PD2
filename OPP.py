@@ -851,7 +851,7 @@ class OnePageProfile:
                     worker_display.update(section_num, "Polish")
 
                     # Polish the cleaned content
-                    polished = self._polish_section(section, cleaned_result['content'], word_limit=120)
+                    polished = self._polish_section(section, cleaned_result['content'], word_limit=110)
 
                     # Save polished content with version suffix
                     (section_dir / f"step4_polished{version_suffix}.md").write_text(

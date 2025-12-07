@@ -3,7 +3,7 @@ import google.generativeai as genai
 from typing import List, Optional, Dict
 import sys
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import filedialog
 import tkinter as tk
@@ -265,6 +265,11 @@ class OnePageProfile:
         self.pdf_parts = None
         self.uploaded_files = []  # Track uploaded files for cleanup
 
+        # Caching support
+        self.cache = None  # Cached content object
+        self.cached_model_low_temp = None   # Cached model with temp 0.2
+        self.cached_model_medium_temp = None  # Cached model with temp 0.6
+
         # Initialize file manager
         self.file_manager = FileManager(self.timestamp, self.run_dir_prefix)
 
@@ -336,15 +341,81 @@ class OnePageProfile:
         self.uploaded_files = []
         thread_safe_print(f"{CYAN}{CHECK}{RESET} Cleanup complete")
 
+    def create_cache(self) -> bool:
+        """Create cache with uploaded PDFs, return True if successful
+
+        Returns:
+            bool: True if cache created successfully, False otherwise
+        """
+        try:
+            # Calculate TTL based on iterations
+            # Base: 2 hours, add 1 hour per iteration beyond first
+            ttl_hours = 2 + (self.iterations - 1)
+            ttl = timedelta(hours=ttl_hours)
+
+            thread_safe_print(f"{CYAN}{ARROW}{RESET} Creating cache (TTL: {ttl_hours * 60} minutes)...")
+
+            # Create cache with uploaded files
+            self.cache = genai.caching.CachedContent.create(
+                model=self.model_name,
+                contents=self.pdf_parts,
+                ttl=ttl
+            )
+
+            # Create cached models with different temperatures
+            self.cached_model_low_temp = genai.GenerativeModel.from_cached_content(
+                cached_content=self.cache,
+                generation_config=genai.types.GenerationConfig(temperature=0.2)
+            )
+
+            self.cached_model_medium_temp = genai.GenerativeModel.from_cached_content(
+                cached_content=self.cache,
+                generation_config=genai.types.GenerationConfig(temperature=0.6)
+            )
+
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Cache created (name: {self.cache.name})")
+            return True
+
+        except Exception as e:
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Cache creation failed: {e}")
+            thread_safe_print(f"{YELLOW}{ARROW}{RESET} Continuing without cache (will use Files API)")
+            self.cache = None
+            self.cached_model_low_temp = None
+            self.cached_model_medium_temp = None
+            return False
+
+    def cleanup_cache(self):
+        """Delete cache from Gemini API"""
+        if self.cache:
+            try:
+                thread_safe_print(f"{CYAN}{ARROW}{RESET} Deleting cache {self.cache.name}...")
+                self.cache.delete()
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} Cache deleted")
+            except Exception as e:
+                # Don't fail cleanup on errors
+                thread_safe_print(f"{YELLOW}{WARNING}{RESET} Failed to delete cache: {e}")
+
+            self.cache = None
+            self.cached_model_low_temp = None
+            self.cached_model_medium_temp = None
+
     def extract_company_name(self, pdf_parts: List) -> str:
         """Extract company name from PDF documents"""
         thread_safe_print(f"{CYAN}{ARROW}{RESET} Extracting company name...")
 
         try:
-            company_name = retry_with_backoff(
-                lambda: self.model_medium_temp.generate_content(pdf_parts + [COMPANY_NAME_EXTRACTION_PROMPT]).text.strip(),
-                context="Company name extraction"
-            )
+            if self.cached_model_medium_temp:
+                # Use cached model - PDFs already in cache
+                company_name = retry_with_backoff(
+                    lambda: self.cached_model_medium_temp.generate_content([COMPANY_NAME_EXTRACTION_PROMPT]).text.strip(),
+                    context="Company name extraction"
+                )
+            else:
+                # Fallback to non-cached model with Files API
+                company_name = retry_with_backoff(
+                    lambda: self.model_medium_temp.generate_content(pdf_parts + [COMPANY_NAME_EXTRACTION_PROMPT]).text.strip(),
+                    context="Company name extraction"
+                )
 
             # Validate
             if len(company_name) < 2 or len(company_name) > 100:
@@ -364,10 +435,18 @@ class OnePageProfile:
         prompt = get_title_subtitle_prompt(company_name)
 
         try:
-            title_subtitle = retry_with_backoff(
-                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
-                context="Title/subtitle generation"
-            )
+            if self.cached_model_medium_temp:
+                # Use cached model
+                title_subtitle = retry_with_backoff(
+                    lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
+                    context="Title/subtitle generation"
+                )
+            else:
+                # Fallback to Files API
+                title_subtitle = retry_with_backoff(
+                    lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                    context="Title/subtitle generation"
+                )
             thread_safe_print(f"{CYAN}{CHECK}{RESET} Title and subtitle complete")
             return title_subtitle
         except Exception as e:
@@ -377,28 +456,55 @@ class OnePageProfile:
     def _generate_section(self, section: dict) -> str:
         """Step 1: Generate initial section content"""
         prompt = get_section_generation_prompt(section)
-        return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
-            context=f"Section {section['number']} Draft"
-        )
+
+        if self.cached_model_medium_temp:
+            # Use cached model
+            return retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Draft"
+            )
+        else:
+            # Fallback to Files API
+            return retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Draft"
+            )
 
     def _check_section_completeness(self, section: dict, content: str) -> str:
         """Step 2: Check section completeness"""
         prompt = get_section_completeness_check_prompt(section, content)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
-            context=f"Section {section['number']} Check"
-        )
+
+        if self.cached_model_low_temp:
+            # Use cached model with low temperature
+            return retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Check"
+            )
+        else:
+            # Fallback to Files API
+            return retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Check"
+            )
 
     def _enhance_section(self, section: dict, content: str, add_list: str) -> str:
         """Step 3: Enhance section with missing items"""
         prompt = get_section_enhancement_prompt(section, content, add_list)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        enhanced = retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
-            context=f"Section {section['number']} Enhance"
-        )
+
+        if self.cached_model_medium_temp:
+            # Use cached model
+            enhanced = retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Enhance"
+            )
+        else:
+            # Fallback to Files API
+            enhanced = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Enhance"
+            )
 
         # Fallback to original if enhancement fails
         if not enhanced or len(enhanced) < 50:
@@ -409,10 +515,19 @@ class OnePageProfile:
         """Step 3: Enhance section for density when no gaps are found (iterations 2+)"""
         prompt = get_section_density_enhancement_prompt(section, content)
         prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-        enhanced = retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
-            context=f"Section {section['number']} Density Enhancement"
-        )
+
+        if self.cached_model_medium_temp:
+            # Use cached model
+            enhanced = retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Density Enhancement"
+            )
+        else:
+            # Fallback to Files API
+            enhanced = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Density Enhancement"
+            )
 
         # Fallback to original if enhancement fails
         if not enhanced or len(enhanced) < 50:
@@ -811,6 +926,9 @@ Status: {status}
             # Prepare PDFs once (will be reused by all workers)
             self.pdf_parts = self.prepare_pdf_parts()
 
+            # Create cache with uploaded PDFs
+            self.create_cache()
+
             # Extract company name
             company_name = self.extract_company_name(self.pdf_parts)
 
@@ -854,9 +972,14 @@ Status: {status}
             return None
 
         finally:
-            # Always cleanup uploaded files
+            # Always cleanup cache and uploaded files
+            if self.cache or self.uploaded_files:
+                thread_safe_print(f"\n{CYAN}Cleaning up...{RESET}")
+
+            if self.cache:
+                self.cleanup_cache()
+
             if self.uploaded_files:
-                thread_safe_print(f"\n{CYAN}Cleaning up uploaded files...{RESET}")
                 self.cleanup_uploaded_files()
 
 

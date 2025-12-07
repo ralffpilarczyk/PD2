@@ -437,6 +437,69 @@ CRITICAL RULES:
 Generate the deduplicated version now."""
 
 
+def get_section_cleanup_prompt(target_section: dict, all_sections: list) -> str:
+    """Generate cleanup prompt to sort content based on relevance to section specs
+
+    Args:
+        target_section: Dict with 'number', 'title', 'specs', 'content' for the target section
+        all_sections: List of dicts with 'number', 'title', 'specs', 'content' for ALL 4 sections
+
+    Returns:
+        Prompt string for cleanup
+    """
+    # Build the current content from all sections
+    all_content = "\n\n".join([
+        f"## Section {s['number']}: {s['title']}\n{s['content']}"
+        for s in all_sections
+    ])
+
+    # Build the section specs reference
+    all_specs = "\n\n".join([
+        f"SECTION {s['number']} ({s['title']}) SPECS:\n{s['specs']}"
+        for s in all_sections
+    ])
+
+    return f"""Sort content based on which section it belongs to MOST.
+
+TARGET SECTION: Section {target_section['number']} - {target_section['title']}
+
+CURRENT CONTENT ACROSS ALL SECTIONS:
+{all_content}
+
+SECTION SPECIFICATIONS:
+{all_specs}
+
+{OPP_CRITICAL_RULES}
+
+TASK:
+Review ALL bullets across ALL sections and identify which ones belong MOST to Section {target_section['number']} ({target_section['title']}).
+
+For each bullet across all sections, ask:
+- Is this MOST relevant to Section {target_section['number']} specs?
+- Or is it MORE relevant to another section's specs?
+
+INCLUDE bullets that:
+- Are MOST relevant to Section {target_section['number']} specs, regardless of where they currently are
+- Best fit the requirements and focus of this section
+- Align with this section's purpose and scope
+
+EXCLUDE bullets that:
+- Are MORE relevant to another section's specs
+- Better fit another section's requirements
+- Are not relevant to any section (rare but possible)
+
+{SECTION_FORMATTING_RULES}
+
+CRITICAL RULES:
+- Include the section header: ## {target_section['title']}
+- Return ONLY bullets that belong MOST to this section
+- Duplicates are OK - the polish step will handle them
+- If no bullets belong to this section, return just the header
+- No preamble, no explanation, no commentary
+
+Generate the cleaned section now."""
+
+
 def get_section_polish_prompt(section: dict, section_content: str, word_limit: int) -> str:
     """Generate the polish prompt for a specific section
 

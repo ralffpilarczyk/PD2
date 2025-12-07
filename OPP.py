@@ -34,6 +34,7 @@ from src.profile_prompts import (
     get_section_enhancement_prompt,
     get_section_density_enhancement_prompt,
     get_section_deduplication_prompt,
+    get_section_cleanup_prompt,
     get_section_polish_prompt
 )
 from src.pptx_generator import create_profile_pptx
@@ -162,7 +163,7 @@ class WorkerDisplay:
 
         Args:
             section_num: Section number being processed
-            action: One of "Draft", "Check", "Enhance", "Dedup", "Polish"
+            action: One of "Draft", "Check", "Enhance", "Clean-up", "Polish"
         """
         with self.lock:
             # Assign worker ID if this is a new section
@@ -573,6 +574,84 @@ class OnePageProfile:
             return content
         return deduplicated
 
+    def _cleanup_sections(self, sections_content: dict, worker_display) -> dict:
+        """Step 4a: Redistribute content based on relevance to section specs
+
+        Args:
+            sections_content: Dict mapping section_num -> dict with 'number', 'title', 'content', 'success'
+            worker_display: WorkerDisplay instance for progress tracking
+
+        Returns:
+            Dict mapping section_num -> dict with cleaned content
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        def cleanup_section(section_num: int):
+            """Clean up a single section"""
+            result = sections_content[section_num]
+
+            if not result['success']:
+                # Skip failed sections
+                return result
+
+            # Display cleanup progress
+            worker_display.update(section_num, "Clean-up")
+
+            # Get the section definition
+            section = next(s for s in self.sections if s['number'] == section_num)
+
+            # Build section data for prompt (all 4 sections)
+            all_sections = [
+                {
+                    'number': s['number'],
+                    'title': s['title'],
+                    'specs': s['specs'],
+                    'content': sections_content[s['number']]['content']
+                }
+                for s in self.sections
+            ]
+
+            # Target section for cleanup
+            target_section = {
+                'number': section['number'],
+                'title': section['title'],
+                'specs': section['specs'],
+                'content': result['content']
+            }
+
+            # Generate cleanup prompt
+            prompt = get_section_cleanup_prompt(target_section, all_sections)
+
+            # Execute cleanup
+            cleaned = retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(prompt).text.strip(),
+                context=f"Section {section_num} Clean-up"
+            )
+
+            # Fallback to original if cleanup fails
+            if not cleaned or len(cleaned) < 20:
+                cleaned = result['content']
+
+            # Remove from display
+            worker_display._remove_silent(section_num)
+
+            return {
+                'number': section_num,
+                'title': result['title'],
+                'content': cleaned,
+                'success': True
+            }
+
+        # Run cleanup for all 4 sections in parallel
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {executor.submit(cleanup_section, i): i for i in range(1, 5)}
+            results = {}
+            for future in futures:
+                section_result = future.result()
+                results[section_result['number']] = section_result
+
+        return results
+
     def _refine_subtitle(self, current_title_subtitle: str, sections_context: str = "") -> str:
         """Refine subtitle for density and investment focus
 
@@ -732,8 +811,8 @@ class OnePageProfile:
                 # Sort by section number for consistent processing
                 enhanced_results.sort(key=lambda x: x['number'])
 
-                # Phase 2: Sequential Deduplication in REVERSE order (4→3→2→1)
-                thread_safe_print(f"\n{CYAN}Phase 2: Refining subtitle and deduplicating...{RESET}\n")
+                # Phase 2: Parallel clean-up to redistribute content based on relevance
+                thread_safe_print(f"\n{CYAN}Phase 2: Refining subtitle and cleaning up sections...{RESET}\n")
 
                 # Refine subtitle using context from previous iteration's polished sections (if available)
                 sections_context = "\n".join([
@@ -749,57 +828,21 @@ class OnePageProfile:
                 subtitle_path.write_text(current_title_subtitle, encoding='utf-8')
                 thread_safe_print(f"{CYAN}{CHECK}{RESET} Subtitle refined")
 
-                deduplicated_results = {}
-                processed_sections = []  # Accumulates sections in reverse order
+                # Convert enhanced_results list to dict for cleanup
+                enhanced_dict = {r['number']: r for r in enhanced_results}
 
-                # Process in reverse: Section 4, then 3, then 2, then 1
-                for section_num in [4, 3, 2, 1]:
-                    # Find the enhanced result for this section
-                    enhanced_result = next(r for r in enhanced_results if r['number'] == section_num)
-
-                    if not enhanced_result['success']:
-                        # Skip failed sections
-                        deduplicated_results[section_num] = enhanced_result
-                        continue
-
-                    section = next(s for s in self.sections if s['number'] == section_num)
-
-                    # Display dedup progress
-                    worker_display.update(section_num, "Dedup")
-
-                    # Deduplicate against already-processed sections
-                    deduplicated_content = self._deduplicate_section(
-                        section,
-                        enhanced_result['content'],
-                        processed_sections
-                    )
-
-                    # Save deduplicated content for this section
-                    deduplicated_results[section_num] = {
-                        'number': section_num,
-                        'title': enhanced_result['title'],
-                        'content': deduplicated_content,
-                        'success': True
-                    }
-
-                    # Add to processed sections (for next iteration)
-                    processed_sections.append({
-                        'title': enhanced_result['title'],
-                        'content': deduplicated_content
-                    })
-
-                    # Remove from display after dedup
-                    worker_display._remove_silent(section_num)
+                # Clean up sections in parallel - redistributes content based on relevance
+                cleaned_results = self._cleanup_sections(enhanced_dict, worker_display)
 
                 # Phase 3: Parallel Polish to 100 words
                 thread_safe_print(f"\n{CYAN}Phase 3: Polishing to 100 words (parallel)...{RESET}\n")
 
                 def polish_section_task(section_num):
                     """Polish a single section"""
-                    dedup_result = deduplicated_results[section_num]
+                    cleaned_result = cleaned_results[section_num]
 
-                    if not dedup_result['success']:
-                        return dedup_result
+                    if not cleaned_result['success']:
+                        return cleaned_result
 
                     section = next(s for s in self.sections if s['number'] == section_num)
                     section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
@@ -807,12 +850,12 @@ class OnePageProfile:
                     # Display polish progress
                     worker_display.update(section_num, "Polish")
 
-                    # Polish the deduplicated content
-                    polished = self._polish_section(section, dedup_result['content'], word_limit=120)
+                    # Polish the cleaned content
+                    polished = self._polish_section(section, cleaned_result['content'], word_limit=120)
 
                     # Save polished content with version suffix
                     (section_dir / f"step4_polished{version_suffix}.md").write_text(
-                        f"## {dedup_result['title']}\n{polished}",
+                        f"## {cleaned_result['title']}\n{polished}",
                         encoding='utf-8'
                     )
 
@@ -821,7 +864,7 @@ class OnePageProfile:
 
                     return {
                         'number': section_num,
-                        'title': dedup_result['title'],
+                        'title': cleaned_result['title'],
                         'content': polished,
                         'success': True
                     }
@@ -909,7 +952,7 @@ Processing:
   - Title/Subtitle generation
   - {self.iterations} iteration(s) of 3-phase processing:
     - Phase 1: Steps 1-3 (Draft/Check/Enhance) or 2-3 (Check/Enhance) in parallel
-    - Phase 2: Step 4a (Deduplication) sequentially in reverse (4→3→2→1)
+    - Phase 2: Step 4a (Clean-up) in parallel - redistributes content based on relevance
     - Phase 3: Step 4b (Polish to 100 words) in parallel
   - PowerPoint generation for each iteration
   - See section_N/ subdirectories for intermediate outputs{pptx_info}

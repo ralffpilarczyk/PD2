@@ -25,11 +25,10 @@ class ProfileGenerator:
             generation_config=genai.types.GenerationConfig(temperature=0.6)
         )
     
-    def generate_html_profile(self, results: Dict, section_numbers: List[int], full_context: str, sections_param: List[Dict]):
+    def generate_html_profile(self, results: Dict, section_numbers: List[int], company_name: str, sections_param: List[Dict]):
         """Generate complete markdown and HTML profile documents from existing section files"""
-        
-        # Extract company name
-        company_name = self._extract_company_name(full_context)
+
+        # Company name is now passed directly (extracted using cached model in PD2.py)
 
         # Collect markdown from existing section files
         combined_markdown, processed_sections = self._collect_section_markdown()

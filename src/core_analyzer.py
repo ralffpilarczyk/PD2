@@ -20,30 +20,41 @@ class CoreAnalyzer:
     LOW_TEMP = 0.2           # Systematic, methodical analysis (completeness)
     MEDIUM_TEMP = 0.6        # Balanced refinement (polish, initial draft)
     HIGH_TEMP = 0.9          # Creative breakthrough thinking (insights) - reduced to avoid safety blocks
-    
-    def __init__(self, full_context: str, run_timestamp: str = None, model_name: str = 'gemini-2.5-flash'):
-        """Initialize core analyzer with document context
-        
+
+    def __init__(self, run_timestamp: str = None, model_name: str = 'gemini-2.5-flash',
+                 cached_model_low=None, cached_model_medium=None, cached_model_high=None,
+                 pdf_parts=None):
+        """Initialize core analyzer with cached models for document context
+
         Args:
-            full_context: The full document context to analyze
             run_timestamp: Optional run timestamp for organizing outputs
-            model_name: The Gemini model to use (e.g., 'gemini-2.5-flash' or 'gemini-2.5-flash-lite')
+            model_name: The Gemini model to use (e.g., 'gemini-2.5-flash')
+            cached_model_low: Cached model with temp 0.2 (optional)
+            cached_model_medium: Cached model with temp 0.6 (optional)
+            cached_model_high: Cached model with temp 0.9 (optional)
+            pdf_parts: List of uploaded file references for fallback (optional)
         """
-        self.full_context = full_context
-        
         # Run timestamp for organizing outputs
         self.run_timestamp = run_timestamp or datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-        
+
         # Selected model name
         self.model_name = model_name
-        
-        # Create models with different temperatures for different cognitive phases
+
+        # Store pdf_parts for fallback when cache is not available
+        self.pdf_parts = pdf_parts or []
+
+        # Store cached models (documents already in cache)
+        self.cached_model_low_temp = cached_model_low
+        self.cached_model_medium_temp = cached_model_medium
+        self.cached_model_high_temp = cached_model_high
+
+        # Create regular models for fallback OR for operations that don't need docs
         self.model_low_temp = genai.GenerativeModel(
             self.model_name,
             generation_config=genai.types.GenerationConfig(temperature=self.LOW_TEMP)
         )
         self.model_medium_temp = genai.GenerativeModel(
-            self.model_name, 
+            self.model_name,
             generation_config=genai.types.GenerationConfig(temperature=self.MEDIUM_TEMP)
         )
         self.model_high_temp = genai.GenerativeModel(
@@ -53,7 +64,7 @@ class CoreAnalyzer:
     
     def create_initial_draft(self, section: Dict, relevant_memory: str) -> str:
         """Step 1: Create a disciplined initial draft."""
-        
+
         if section['number'] == self.SECTION_32_EXEMPT:
             # This prompt is highly specific and should remain as is.
             prompt = f"""You are a data organizer. Your only job is to create a comprehensive data appendix.
@@ -62,9 +73,6 @@ SECTION {section['number']}: {section['title']}
 
 REQUIREMENTS:
 {section['specs']}
-
-DOCUMENTS:
-{self.full_context}
 
 APPENDIX OUTPUT REQUIREMENTS:
 1. Extract the MOST IMPORTANT tables and structured data from the documents.
@@ -90,16 +98,13 @@ This is a data-only section. Any narrative text will be removed.
 """
         else:
             memory_instructions = f"\n\nANALYTICAL METHODOLOGY (apply these proven techniques):\n{relevant_memory}" if relevant_memory.strip() else ""
-            
+
             prompt = f"""You are an expert business analyst creating a DISCIPLINED initial draft.
 
 SECTION {section['number']}: {section['title']}
 
 REQUIREMENTS:
 {section['specs']}{memory_instructions}
-
-DOCUMENTS:
-{self.full_context}
 
 DRAFTING INSTRUCTIONS:
 1.  **Word Count:** Target a DRAFT of approximately **{self.INITIAL_WORDS} words**. This is a draft, but it must be focused.
@@ -133,13 +138,15 @@ CRITICAL LIST FORMATTING RULES:
 Your goal is to create a strong, fact-based draft that applies proven analytical techniques and is well-structured within the target word count.
 """
 
-        # Section 34 (Data Book) needs longer timeout due to large table processing
-        timeout_value = 300 if section['number'] == self.SECTION_32_EXEMPT else 120
-        result = retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section['number'],
-            timeout=timeout_value
-        )
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_medium_temp:
+            result = retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text,
+                context=section['number']            )
+        else:
+            result = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context=section['number']            )
         
         # Validate and fix tables BEFORE size check
         result = validate_and_fix_tables(result)
@@ -241,8 +248,7 @@ Generate the condensed version that respects the section's specific focus."""
 
         result = retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section['number']
-        )
+            context=section['number']        )
         
         # Validate and fix tables
         result = validate_and_fix_tables(result)
@@ -325,27 +331,23 @@ Extract principles that guide deeper analytical thinking."""
         # Low temperature for structured, precise data extraction.
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,
-            context=section['number']
-        )
+            context=section['number']        )
     
     def completeness_check(self, section: Dict, draft: str) -> str:
         """Step 2: Check what's missing from the draft by comparing against source documents."""
-        
+
         word_count = len(draft.split())
-        
+
         # Skip for Section 32
         if section['number'] == self.SECTION_32_EXEMPT:
             return "No additions needed - data appendix section."
-        
+
         prompt = f"""You are a meticulous completeness auditor focused on SECTION RELEVANCE. Your job is to identify missing data that belongs specifically in this section.
 
 SECTION {section['number']}: {section['title']}
 
 REQUIREMENTS:
 {section['specs']}
-
-SOURCE DOCUMENTS (WARNING: May contain corrupted tables - ignore malformed formatting):
-{self.full_context}
 
 CURRENT DRAFT:
 ---
@@ -366,22 +368,27 @@ ADD LIST FORMAT:
 
 STRICT RULES:
 1. Only suggest data that explicitly belongs in THIS section per the requirements
-2. Be EXTREMELY specific - include exact data point and source location  
+2. Be EXTREMELY specific - include exact data point and source location
 3. Each item must directly address the section scope
 4. Focus on quantified, factual data only
 5. Maximum 5 suggestions - focus on the most important gaps only
 
 Output ONLY the ADD list. No preamble or explanation."""
-        
-        return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text,
-            context=section['number']
-        )
-    
-    
+
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_low_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text,
+                context=section['number']            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context=section['number']            )
+
+
     def apply_completeness_only(self, section: Dict, current_draft: str, add_list: str) -> str:
         """Apply only the ADD list to create an improved draft."""
-        
+
         prompt = f"""You are a precise editor. Add missing content to create a more complete draft.
 
 CURRENT DRAFT:
@@ -393,9 +400,6 @@ ADD THESE ITEMS:
 ---
 {add_list}
 ---
-
-SOURCE DOCUMENTS (for looking up ADD items):
-{self.full_context}
 
 INSTRUCTIONS:
 1. Add ALL items from the ADD list using the exact data from source documents
@@ -424,12 +428,17 @@ CRITICAL LIST RULES:
 - Use consistent list markers throughout
 
 CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any explanations, commentary, or descriptions of what you are doing. No preamble, no postamble - just the final enhanced draft."""
-        
-        result = retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section['number']
-        )
-        
+
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_medium_temp:
+            result = retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text,
+                context=section['number']            )
+        else:
+            result = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context=section['number']            )
+
         # Validate and fix tables
         result = validate_and_fix_tables(result)
         
@@ -480,14 +489,16 @@ PERSISTENCE: Number of periods this has occurred
 WHY NOTABLE: Why this warrants investigation
 
 Present as a numbered list (1, 2, 3).
-
-DOCUMENTS:
-{self.full_context}
 """
-        return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text,
-            context="Section 33 Layer 1"
-        )
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_medium_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text,
+                context="Section 33 Layer 1"            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context="Section 33 Layer 1"            )
 
     def _section33_layer2_generate_hypotheses(self, company_name: str, pattern_text: str) -> str:
         """
@@ -515,8 +526,7 @@ Present as EXPLANATION 1, EXPLANATION 2, EXPLANATION 3.
 """
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context="Section 33 Layer 2"
-        )
+            context="Section 33 Layer 2"        )
 
     def _section33_layer3_test_hypothesis(self, company_name: str, pattern_text: str, explanation_text: str) -> str:
         """
@@ -542,14 +552,16 @@ For each prediction, report:
 Do not infer or fabricate evidence. Only cite what is explicitly stated in the document.
 
 OVERALL VERDICT: Rate as strongly supported / supported / indeterminate / weakly refuted / strongly refuted. Explain in two sentences.
-
-DOCUMENTS:
-{self.full_context}
 """
-        return retry_with_backoff(
-            lambda: self.model_low_temp.generate_content(prompt).text,
-            context="Section 33 Layer 3"
-        )
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_low_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text,
+                context="Section 33 Layer 3"            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context="Section 33 Layer 3"            )
 
     def _section33_layer4_synthesize(self, company_name: str, pattern_text: str,
                                       explanations_and_verdicts: str) -> str:
@@ -579,14 +591,16 @@ VALUATION IMPLICATION: What adjustment to normalised earnings or cash flow? Quan
 DILIGENCE PRIORITIES: Two questions to ask management.
 
 Direct prose. No bullet points. No reference to hypotheses or methodology. 200-300 words.
-
-DOCUMENTS:
-{self.full_context}
 """
-        return retry_with_backoff(
-            lambda: self.model_medium_temp.generate_content(prompt).text,
-            context="Section 33 Layer 4"
-        )
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_medium_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text,
+                context="Section 33 Layer 4"            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context="Section 33 Layer 4"            )
 
     def _section33_parse_patterns(self, layer1_output: str) -> list:
         """Parse Layer 1 output into list of pattern dicts."""

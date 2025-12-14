@@ -18,9 +18,9 @@ except ImportError:
     # Windows msvcrt not available (likely Unix/Mac)
     msvcrt = None
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import threading
 
@@ -33,8 +33,8 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 # Import modular components
 from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections, __version__
 
-# Import thread_safe_print, retry_with_backoff, and clean_markdown_tables from utils
-from src.utils import thread_safe_print, retry_with_backoff, clean_markdown_tables
+# Import thread_safe_print and retry_with_backoff from utils
+from src.utils import thread_safe_print, retry_with_backoff
 
 # ANSI Color Codes and Styling
 RESET = '\033[0m'
@@ -51,52 +51,6 @@ CHECK = '✓'
 ARROW = '→'
 WARNING = '⚠'
 CROSS = '✗'
-
-# Module-level worker function for PDF conversion (needed for multiprocessing)
-def _pdf_conversion_worker(pdf_path: str, use_llm: bool = False) -> Optional[str]:
-    """Worker function for parallel PDF conversion with optional LLM enhancement
-
-    Args:
-        pdf_path: Path to PDF file
-        use_llm: Whether to use LLM-enhanced conversion
-    """
-    # Limit BLAS threads in child processes
-    os.environ.setdefault("OMP_NUM_THREADS", "1")
-    os.environ.setdefault("MKL_NUM_THREADS", "1")
-
-    # Pass Gemini key to Marker if using LLM
-    if use_llm:
-        gemini_key = os.environ.get("GEMINI_API_KEY", "")
-        if gemini_key:
-            os.environ["GOOGLE_API_KEY"] = gemini_key
-
-    try:
-        from marker.converters.pdf import PdfConverter
-        from marker.models import create_model_dict
-        from marker.output import text_from_rendered
-
-        if use_llm and os.environ.get("GOOGLE_API_KEY"):
-            # LLM-enhanced converter with curated processors for business documents
-            converter = PdfConverter(
-                artifact_dict=create_model_dict(),
-                llm_service="google",
-                config={
-                    "llm_model": "gemini-2.5-flash",
-                    "llm_batch_size": 10,  # Batch multiple items per API call
-                    "table_confidence_threshold": 0.7,
-                    "enable_table_llm": True,
-                    "enable_complex_regions": True,
-                }
-            )
-        else:
-            # Basic converter (current behavior)
-            converter = PdfConverter(artifact_dict=create_model_dict())
-
-        rendered = converter(pdf_path)
-        full_text, _, _ = text_from_rendered(rendered)
-        return full_text if isinstance(full_text, str) else (full_text or "")
-    except Exception:
-        return None
 
 
 class WorkerDisplay:
@@ -158,286 +112,207 @@ class WorkerDisplay:
 
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
-    
-    def __init__(self, source_files: dict, model_name: str = 'gemini-2.5-flash', use_llm_pdf_conversion: bool = True):
+
+    def __init__(self, source_files: dict, model_name: str = 'gemini-2.5-flash'):
         """Initialize ProfileDash with modular components
 
         Args:
-            source_files: Dict with 'pdf_files' and 'md_files' lists
+            source_files: Dict with 'pdf_files' list
             model_name: Name of the Gemini model to use
-            use_llm_pdf_conversion: Whether to use LLM-enhanced PDF conversion
         """
-        # Store LLM conversion preference
-        self.use_llm_pdf_conversion = use_llm_pdf_conversion
+        # Store model name
+        self.model_name = model_name
+
         # Generate run timestamp
         self.run_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-        
+
         # Initialize file manager first
         self.file_manager = FileManager(self.run_timestamp)
-        
+
         # Setup directories and ensure memory file exists (before file processing)
         self.file_manager.setup_directories(sections)
-        
-        # Process both PDF and markdown files
-        thread_safe_print("Processing source files...")
-        
+
+        # Initialize caching variables
+        self.uploaded_files = []              # Track uploaded files for cleanup
+        self.pdf_parts = []                   # File references for cache
+        self.cache = None                     # CachedContent object
+        self.cached_model_low_temp = None     # Cached model (temp 0.2)
+        self.cached_model_medium_temp = None  # Cached model (temp 0.6)
+        self.cached_model_high_temp = None    # Cached model (temp 0.9)
+
+        # Upload PDFs to Files API
         pdf_files = source_files.get('pdf_files', [])
-        md_files = source_files.get('md_files', [])
-        
-        all_markdown_files = []
-        
-        # Convert PDFs to markdown if any exist
-        if pdf_files:
-            thread_safe_print(f"Converting {len(pdf_files)} PDF file(s) to markdown...")
-            converted_files = self._convert_pdfs_to_markdown(pdf_files)
-            all_markdown_files.extend(converted_files)
-        
-        # Add markdown files directly (no conversion needed)
-        if md_files:
-            thread_safe_print(f"Using {len(md_files)} markdown file(s) directly...")
-            all_markdown_files.extend(md_files)
-        
-        if not all_markdown_files:
-            raise Exception("No files were successfully processed")
-        
-        thread_safe_print(f"Total files for analysis: {len(all_markdown_files)}")
-        
-        # Load all markdown files using existing method
-        self.full_context = self.file_manager.load_markdown_files(all_markdown_files)
-        
+        if not pdf_files:
+            raise Exception("No PDF files provided")
+
+        thread_safe_print(f"Uploading {len(pdf_files)} PDF file(s) to Gemini Files API...")
+        self.pdf_parts = self.upload_pdfs_to_files_api(pdf_files)
+
+        if not self.pdf_parts:
+            raise Exception("No files were successfully uploaded")
+
+        thread_safe_print(f"Total files uploaded: {len(self.pdf_parts)}")
+
+        # Create cache with uploaded PDFs
+        self.create_cache()
+
+        # Initialize CoreAnalyzer with cached models and pdf_parts for fallback
+        self.core_analyzer = CoreAnalyzer(
+            run_timestamp=self.run_timestamp,
+            model_name=model_name,
+            cached_model_low=self.cached_model_low_temp,
+            cached_model_medium=self.cached_model_medium_temp,
+            cached_model_high=self.cached_model_high_temp,
+            pdf_parts=self.pdf_parts
+        )
+
         # Initialize other components
-        self.core_analyzer = CoreAnalyzer(self.full_context, run_timestamp=self.run_timestamp, model_name=model_name)
         self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name, memory_prefix="pd2")
         self.quality_tracker = QualityTracker()
 
         # Save pre-run memory state
         self.file_manager.save_memory_state(
-            self.insight_memory.get_memory_data(), 
+            self.insight_memory.get_memory_data(),
             "pre_run_memory.json"
         )
-    
-    def _convert_single_pdf(self, pdf_path: str, progress_tracker: dict) -> str:
-        """Convert a single PDF file to markdown and save to SourceFiles"""
-        source_dir = Path("SourceFiles")
-        source_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            mode_str = "(enhanced)" if self.use_llm_pdf_conversion else ""
-            thread_safe_print(f"Converting {mode_str}: {Path(pdf_path).name}")
+    def upload_pdfs_to_files_api(self, pdf_files: List[str]) -> List:
+        """Upload multiple PDFs to Gemini Files API
 
-            # Pass API key to environment for LLM mode
-            if self.use_llm_pdf_conversion:
-                gemini_key = os.environ.get("GEMINI_API_KEY", "")
-                if gemini_key:
-                    os.environ["GOOGLE_API_KEY"] = gemini_key
+        Args:
+            pdf_files: List of paths to PDF files
 
-            # Import Marker components
-            from marker.converters.pdf import PdfConverter
-            from marker.models import create_model_dict
-            from marker.output import text_from_rendered
-
-            # Create/reuse converter artifacts lazily via attribute cache
-            if not hasattr(self, '_marker_converter'):
-                if self.use_llm_pdf_conversion and os.environ.get("GOOGLE_API_KEY"):
-                    # LLM-enhanced converter with curated processors
-                    self._marker_converter = PdfConverter(
-                        artifact_dict=create_model_dict(),
-                        llm_service="google",
-                        config={
-                            "llm_model": "gemini-2.5-flash",
-                            "llm_batch_size": 10,
-                            "table_confidence_threshold": 0.7,
-                            "enable_table_llm": True,
-                            "enable_complex_regions": True,
-                        }
-                    )
-                else:
-                    # Basic converter
-                    self._marker_converter = PdfConverter(
-                        artifact_dict=create_model_dict(),
-                    )
-
-            # Convert PDF
-            rendered = self._marker_converter(pdf_path)
-            full_text, _, images = text_from_rendered(rendered)
-            
-            # Create output filename matching PDF name
-            pdf_name = Path(pdf_path).stem
-            output_path = source_dir / f"{pdf_name}.md"
-            
-            # Clean markdown before saving
-            thread_safe_print(f"Cleaning markdown tables...")
-            cleaned_text = clean_markdown_tables(full_text)
-            
-            # Save cleaned markdown to SourceFiles
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(cleaned_text)
-            
-            # Update progress
-            with progress_tracker['lock']:
-                progress_tracker['completed'] += 1
-                thread_safe_print(f"Successfully converted and saved: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
-            
-            return str(output_path)
-            
-        except Exception as e:
-            thread_safe_print(f"Failed to convert {Path(pdf_path).name} with Marker: {e}")
-            # Retry once with Marker, then fallback to pdfminer
-            try:
-                from marker.converters.pdf import PdfConverter
-                from marker.models import create_model_dict
-                from marker.output import text_from_rendered
-                if not hasattr(self, '_marker_converter_retry'):
-                    # For retry, use basic converter as fallback (simpler, more reliable)
-                    self._marker_converter_retry = PdfConverter(
-                        artifact_dict=create_model_dict(),
-                    )
-                rendered = self._marker_converter_retry(pdf_path)
-                full_text, _, images = text_from_rendered(rendered)
-
-                pdf_name = Path(pdf_path).stem
-                output_path = source_dir / f"{pdf_name}.md"
-                thread_safe_print(f"Cleaning markdown tables...")
-                cleaned_text = clean_markdown_tables(full_text)
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(cleaned_text)
-                with progress_tracker['lock']:
-                    progress_tracker['completed'] += 1
-                    thread_safe_print(f"Successfully converted on retry: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
-                return str(output_path)
-            except Exception as e2:
-                thread_safe_print(f"Marker retry failed for {Path(pdf_path).name}: {e2}. Falling back to pdfminer...")
-                try:
-                    # Minimal pdfminer text extraction fallback
-                    from pdfminer.high_level import extract_text
-                    text_content = extract_text(pdf_path)
-                    pdf_name = Path(pdf_path).stem
-                    output_path = source_dir / f"{pdf_name}.md"
-                    thread_safe_print(f"Cleaning markdown tables...")
-                    cleaned_text = clean_markdown_tables(text_content or '')
-                    with open(output_path, 'w', encoding='utf-8') as f:
-                        f.write(cleaned_text)
-                    with progress_tracker['lock']:
-                        progress_tracker['completed'] += 1
-                        thread_safe_print(f"Pdfminer fallback succeeded: {output_path.name} ({progress_tracker['completed']}/{progress_tracker['total']} PDFs completed)")
-                    return str(output_path)
-                except Exception as e3:
-                    thread_safe_print(f"Fallback failed for {Path(pdf_path).name}: {e3}")
-                    with progress_tracker['lock']:
-                        progress_tracker['failed'] += 1
-                    return None
-
-    def _convert_pdfs_to_markdown(self, pdf_files: List[str]) -> List[str]:
-        """Convert PDF files to markdown, using SourceFiles directory as cache"""
-        converted_files: List[str] = []
-        source_dir = Path("SourceFiles")
-        source_dir.mkdir(parents=True, exist_ok=True)
-
-        if not pdf_files:
-            return converted_files
-
-        # Progress tracking
-        progress_tracker = {
-            'total': len(pdf_files),
-            'completed': 0,
-            'failed': 0,
-            'lock': threading.Lock()
-        }
-
-        thread_safe_print(f"\nChecking SourceFiles cache for existing conversions...")
-
-        # Check SourceFiles for existing conversions
-        to_convert: List[str] = []
+        Returns:
+            List of uploaded file references
+        """
+        parts = []
         for pdf_path in pdf_files:
-            pdf_name = Path(pdf_path).stem
-            # Check both naming conventions for backward compatibility
-            # New convention: exact PDF filename with .md extension
-            cached_md = source_dir / f"{pdf_name}.md"
-            # Old convention: PDF filename with _m.md suffix
-            cached_md_legacy = source_dir / f"{pdf_name}_m.md"
+            pdf_filename = Path(pdf_path).name
+            thread_safe_print(f"{CYAN}{ARROW}{RESET} Uploading {pdf_filename}...")
 
-            # Prefer new naming, fall back to legacy
-            if cached_md.exists():
-                with progress_tracker['lock']:
-                    progress_tracker['completed'] += 1
-                    thread_safe_print(f"{DIM}[{progress_tracker['completed']}/{progress_tracker['total']}]{RESET} {Path(pdf_path).name} {ARROW} {CYAN}Cached{RESET}")
-                converted_files.append(str(cached_md))
-            elif cached_md_legacy.exists():
-                with progress_tracker['lock']:
-                    progress_tracker['completed'] += 1
-                    thread_safe_print(f"{DIM}[{progress_tracker['completed']}/{progress_tracker['total']}]{RESET} {Path(pdf_path).name} {ARROW} {CYAN}Cached{RESET}")
-                converted_files.append(str(cached_md_legacy))
-            else:
-                to_convert.append(pdf_path)
+            try:
+                uploaded_file = genai.upload_file(pdf_path)
+                self.uploaded_files.append(uploaded_file)
 
-        # Process conversion for remaining PDFs
-        cached_count = len(pdf_files) - len(to_convert)
-        if not to_convert:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} All {BOLD}{len(pdf_files)}{RESET} PDF(s) served from SourceFiles cache - no conversion needed!")
-            return converted_files
+                # Wait for processing
+                while uploaded_file.state.name == 'PROCESSING':
+                    time.sleep(2)
+                    uploaded_file = genai.get_file(uploaded_file.name)
 
-        if cached_count > 0:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Reusing {BOLD}{cached_count}{RESET} cached file(s) from SourceFiles")
-        thread_safe_print(f"{ARROW} Converting {BOLD}{len(to_convert)}{RESET} new PDF(s) to markdown...")
+                if uploaded_file.state.name == 'FAILED':
+                    thread_safe_print(f"{RED}{CROSS}{RESET} File processing failed: {pdf_filename}")
+                    continue
 
-        # Use process pool to avoid PyTorch tensor conflicts
-        # Adjust workers based on LLM mode (API-bound vs CPU-bound)
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} {pdf_filename} ready")
+                parts.append(uploaded_file)
+
+            except Exception as e:
+                thread_safe_print(f"{RED}{CROSS}{RESET} Upload failed for {pdf_filename}: {e}")
+
+        return parts
+
+    def create_cache(self) -> bool:
+        """Create cache with all uploaded PDFs
+
+        Returns:
+            bool: True if cache created successfully, False otherwise
+        """
         try:
-            if self.use_llm_pdf_conversion:
-                # LLM mode: use fewer workers to avoid API rate limits
-                workers_env = int(os.environ.get("MARKER_PROCESS_WORKERS", "2"))
-                if workers_env > 2:
-                    workers_env = 2  # Cap at 2 for LLM mode
-            else:
-                # Basic mode: can use more workers
-                workers_env = int(os.environ.get("MARKER_PROCESS_WORKERS", "3"))
-                if workers_env > 5:
-                    workers_env = 5
-            if workers_env < 1:
-                workers_env = 1
-        except (ValueError, TypeError):
-            thread_safe_print("Warning: Invalid MARKER_PROCESS_WORKERS value, using default")
-            workers_env = 2 if self.use_llm_pdf_conversion else 3
+            ttl = timedelta(hours=3)  # 3 hours default
+            thread_safe_print(f"{CYAN}{ARROW}{RESET} Creating cache (TTL: 180 minutes)...")
 
-        mode_str = "enhanced" if self.use_llm_pdf_conversion else "basic"
-        thread_safe_print(f"Using {BOLD}{workers_env}{RESET} worker(s) for {mode_str} PDF conversion")
+            self.cache = genai.caching.CachedContent.create(
+                model=self.model_name,
+                contents=self.pdf_parts,
+                ttl=ttl
+            )
 
-        with ProcessPoolExecutor(max_workers=workers_env) as pool:
-            # Pass use_llm flag to each worker
-            future_map = {pool.submit(_pdf_conversion_worker, p, self.use_llm_pdf_conversion): p for p in to_convert}
-            for fut in as_completed(future_map):
-                src = future_map[fut]
+            # Create cached models for all three temperatures
+            self.cached_model_low_temp = genai.GenerativeModel.from_cached_content(
+                cached_content=self.cache,
+                generation_config=genai.types.GenerationConfig(temperature=0.2)
+            )
+            self.cached_model_medium_temp = genai.GenerativeModel.from_cached_content(
+                cached_content=self.cache,
+                generation_config=genai.types.GenerationConfig(temperature=0.6)
+            )
+            self.cached_model_high_temp = genai.GenerativeModel.from_cached_content(
+                cached_content=self.cache,
+                generation_config=genai.types.GenerationConfig(temperature=0.9)
+            )
+
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Cache created (name: {self.cache.name})")
+            return True
+
+        except Exception as e:
+            thread_safe_print(f"{WARNING} Cache creation failed: {e}")
+            thread_safe_print(f"{CYAN}{ARROW}{RESET} Continuing without cache (will use Files API directly)")
+            self.cache = None
+            self.cached_model_low_temp = None
+            self.cached_model_medium_temp = None
+            self.cached_model_high_temp = None
+            return False
+
+    def cleanup_cache(self):
+        """Delete cache from Gemini API"""
+        if self.cache:
+            try:
+                thread_safe_print(f"{CYAN}{ARROW}{RESET} Deleting cache {self.cache.name}...")
+                self.cache.delete()
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} Cache deleted")
+            except Exception as e:
+                thread_safe_print(f"{WARNING} Failed to delete cache: {e}")
+
+            self.cache = None
+            self.cached_model_low_temp = None
+            self.cached_model_medium_temp = None
+            self.cached_model_high_temp = None
+
+    def cleanup_uploaded_files(self):
+        """Delete uploaded files from Gemini Files API"""
+        if self.uploaded_files:
+            thread_safe_print(f"{CYAN}{ARROW}{RESET} Cleaning up {len(self.uploaded_files)} uploaded file(s)...")
+            for uploaded_file in self.uploaded_files:
                 try:
-                    text = fut.result()
-                    pdf_name = Path(src).stem
-                    # Save directly to SourceFiles with matching PDF name
-                    out_path = source_dir / f"{pdf_name}.md"
-                    if text is not None:
-                        # Clean tables and write to SourceFiles
-                        cleaned = clean_markdown_tables(text)
-                        out_path.write_text(cleaned, encoding='utf-8')
-                        with progress_tracker['lock']:
-                            progress_tracker['completed'] += 1
-                            thread_safe_print(f"{DIM}[{progress_tracker['completed']}/{progress_tracker['total']}]{RESET} {Path(src).name} {ARROW} {CYAN}Complete{RESET}")
-                        converted_files.append(str(out_path))
-                    else:
-                        # Fallback to original single-threaded path for this file
-                        fallback_result = self._convert_single_pdf(src, progress_tracker)
-                        if fallback_result:
-                            converted_files.append(fallback_result)
-                        else:
-                            with progress_tracker['lock']:
-                                progress_tracker['failed'] += 1
-                                thread_safe_print(f"{RED}{CROSS}{RESET} Failed: {Path(src).name}")
+                    genai.delete_file(uploaded_file.name)
                 except Exception as e:
-                    thread_safe_print(f"{RED}Conversion task error for {Path(src).name}: {e}{RESET}")
+                    # Don't fail cleanup on individual file errors
+                    pass
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Uploaded files cleaned up")
+            self.uploaded_files = []
 
-        thread_safe_print(f"\nSummary: {cached_count} cached, {progress_tracker['completed']} converted, {BOLD}{len(converted_files)}{RESET} total")
-        if progress_tracker['failed'] > 0:
-            thread_safe_print(f"{WARNING} {progress_tracker['failed']} file(s) failed")
+    def _extract_company_name(self) -> str:
+        """Extract company name from cached documents"""
+        prompt = """Extract the primary company name from these documents.
 
-        return converted_files
-    
+Look for the main company being analyzed. This could be in:
+- Document titles
+- Headers and letterheads
+- First mentions in the text
+
+Output ONLY the company name, nothing else. No explanation, no punctuation."""
+
+        try:
+            if self.cached_model_low_temp:
+                result = retry_with_backoff(
+                    lambda: self.cached_model_low_temp.generate_content([prompt]).text.strip(),
+                    context="Company name extraction"
+                )
+            else:
+                # Fallback to Files API
+                model = genai.GenerativeModel(
+                    self.model_name,
+                    generation_config=genai.types.GenerationConfig(temperature=0.2)
+                )
+                result = retry_with_backoff(
+                    lambda: model.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                    context="Company name extraction"
+                )
+            return result if result else "Unknown Company"
+        except Exception as e:
+            thread_safe_print(f"{WARNING} Company name extraction failed: {e}")
+            return "Unknown Company"
+
     def analyze_section(self, section_num: int) -> str:
         """Enhanced 5-step analysis pipeline with completeness and deep analysis."""
         section = next(s for s in sections if s['number'] == section_num)
@@ -449,10 +324,8 @@ class IntelligentAnalyst:
             # Special handling for Section 33: Financial Pattern Analysis
             # Uses a custom 4-layer hypothesis-driven pipeline (16 API calls)
             if section_num == 33:
-                # Extract company name for the prompts
-                from src.profile_generator import ProfileGenerator
-                temp_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-                company_name = temp_generator._extract_company_name(self.full_context)
+                # Extract company name using cached model
+                company_name = self._extract_company_name()
 
                 # Run the 4-layer pipeline
                 worker_display = getattr(self, 'worker_display', None)
@@ -563,6 +436,9 @@ class IntelligentAnalyst:
 
         results: Dict[int, str] = {}
 
+        # Extract company name once at start (using cached model)
+        company_name = self._extract_company_name()
+
         # Determine worker caps from env (tunable)
         try:
             env_cap = int(os.environ.get("MAX_SECTION_WORKERS", "3"))
@@ -617,84 +493,82 @@ class IntelligentAnalyst:
                         local[s_num] = f"Processing failed: {e}"
             return local
 
-        # Special sections that run in their own phases
-        SECTION_33_PATTERN_ANALYSIS = 33
-        SECTION_34_DATA_BOOK = 34
-        special_sections = {SECTION_33_PATTERN_ANALYSIS, SECTION_34_DATA_BOOK}
-
-        # Phase 1: run all sections except 33 and 34
-        regular_sections = [n for n in section_numbers if n not in special_sections]
-        has33 = SECTION_33_PATTERN_ANALYSIS in section_numbers
-        has34 = SECTION_34_DATA_BOOK in section_numbers
-        phase1 = _run_parallel(regular_sections)
-        results.update(phase1)
-
-        # Save quality metrics and run summary for Phase 1
-        quality_scores = self.quality_tracker.get_quality_scores()
-        run_number = self.insight_memory.learning_memory["meta"]["total_runs"] + 1
-        self.file_manager.save_quality_metrics(quality_scores, run_number)
-        self._generate_run_summary(results)
-
-        # Generate profile with Phase 1 results
-        thread_safe_print(f"\n{'='*60}")
-        thread_safe_print(f"{BOLD}Generating Profile{RESET}")
-        thread_safe_print(f"{'='*60}")
         try:
-            profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-            profile_generator.generate_html_profile(results, regular_sections, self.full_context, sections)
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
-        except Exception as e:
-            thread_safe_print(f"{WARNING} Profile generation failed: {e}")
+            # Special sections that run in their own phases
+            SECTION_33_PATTERN_ANALYSIS = 33
+            SECTION_34_DATA_BOOK = 34
+            special_sections = {SECTION_33_PATTERN_ANALYSIS, SECTION_34_DATA_BOOK}
 
-        # Phase 2: run Section 33 (Financial Pattern Analysis) if selected
-        if has33:
+            # Phase 1: run all sections except 33 and 34
+            regular_sections = [n for n in section_numbers if n not in special_sections]
+            has33 = SECTION_33_PATTERN_ANALYSIS in section_numbers
+            has34 = SECTION_34_DATA_BOOK in section_numbers
+            phase1 = _run_parallel(regular_sections)
+            results.update(phase1)
+
+            # Save quality metrics and run summary for Phase 1
+            quality_scores = self.quality_tracker.get_quality_scores()
+            run_number = self.insight_memory.learning_memory["meta"]["total_runs"] + 1
+            self.file_manager.save_quality_metrics(quality_scores, run_number)
+            self._generate_run_summary(results)
+
+            # Generate profile with Phase 1 results
             thread_safe_print(f"\n{'='*60}")
-            thread_safe_print(f"{BOLD}Generating Financial Pattern Analysis (Section 33){RESET}")
+            thread_safe_print(f"{BOLD}Generating Profile{RESET}")
             thread_safe_print(f"{'='*60}")
             try:
-                res33 = self.analyze_section(SECTION_33_PATTERN_ANALYSIS)
-                results[SECTION_33_PATTERN_ANALYSIS] = res33
-            except Exception as e:
-                thread_safe_print(f"{WARNING} Pattern analysis generation failed: {e}")
-            # Regenerate profile with Section 33 included
-            try:
                 profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-                sections_so_far = regular_sections + [SECTION_33_PATTERN_ANALYSIS]
-                profile_generator.generate_html_profile(results, sections_so_far, self.full_context, sections)
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Pattern analysis complete - Profile updated")
+                profile_generator.generate_html_profile(results, regular_sections, company_name, sections)
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
             except Exception as e:
-                thread_safe_print(f"{WARNING} Profile update failed: {e}")
+                thread_safe_print(f"{WARNING} Profile generation failed: {e}")
 
-        # Phase 3: run Section 34 (Data Book) if selected
-        if has34:
+            # Phase 2: run Section 33 (Financial Pattern Analysis) if selected
+            if has33:
+                thread_safe_print(f"\n{'='*60}")
+                thread_safe_print(f"{BOLD}Generating Financial Pattern Analysis (Section 33){RESET}")
+                thread_safe_print(f"{'='*60}")
+                try:
+                    res33 = self.analyze_section(SECTION_33_PATTERN_ANALYSIS)
+                    results[SECTION_33_PATTERN_ANALYSIS] = res33
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Pattern analysis generation failed: {e}")
+                # Regenerate profile with Section 33 included
+                try:
+                    profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
+                    sections_so_far = regular_sections + [SECTION_33_PATTERN_ANALYSIS]
+                    profile_generator.generate_html_profile(results, sections_so_far, company_name, sections)
+                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Pattern analysis complete - Profile updated")
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Profile update failed: {e}")
+
+            # Phase 3: run Section 34 (Data Book) if selected
+            if has34:
+                thread_safe_print(f"\n{'='*60}")
+                thread_safe_print(f"{BOLD}Generating Data Appendix (Section 34){RESET}")
+                thread_safe_print(f"{'='*60}")
+                try:
+                    res34 = self.analyze_section(SECTION_34_DATA_BOOK)
+                    results[SECTION_34_DATA_BOOK] = res34
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Appendix generation failed: {e}")
+                # Regenerate profile with full set
+                try:
+                    profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
+                    profile_generator.generate_html_profile(results, section_numbers, company_name, sections)
+                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profile updated")
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Profile update failed: {e}")
+
+            return results
+
+        finally:
+            # Cleanup cache and uploaded files
             thread_safe_print(f"\n{'='*60}")
-            thread_safe_print(f"{BOLD}Generating Data Appendix (Section 34){RESET}")
+            thread_safe_print(f"{BOLD}Cleanup{RESET}")
             thread_safe_print(f"{'='*60}")
-            try:
-                res34 = self.analyze_section(SECTION_34_DATA_BOOK)
-                results[SECTION_34_DATA_BOOK] = res34
-            except Exception as e:
-                thread_safe_print(f"{WARNING} Appendix generation failed: {e}")
-            # Regenerate profile with full set
-            try:
-                profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-                profile_generator.generate_html_profile(results, section_numbers, self.full_context, sections)
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profile updated")
-            except Exception as e:
-                thread_safe_print(f"{WARNING} Profile update failed: {e}")
-
-        # Post-run memory review - DISABLED
-        # Learning review has been disabled. Code retained for potential future use.
-        # if len(section_numbers) > 1:
-        #     thread_safe_print(f"\n{'='*60}")
-        #     thread_safe_print(f"{BOLD}Learning Review{RESET}")
-        #     thread_safe_print(f"{'='*60}")
-        #     try:
-        #         self._conduct_memory_review()
-        #     except Exception as e:
-        #         thread_safe_print(f"{WARNING} Memory review failed: {e}")
-
-        return results
+            self.cleanup_cache()
+            self.cleanup_uploaded_files()
     
     def _conduct_memory_review(self):
         """Review and update learning memory"""
@@ -928,70 +802,49 @@ def prompt_single_digit(prompt_text: str, valid_digits: str, default_digit: str)
         if ch in valid_digits:
             return ch
         # Re-prompt on any other key
-def select_source_files():
-    """Interactively select source files"""
-    from tkinter import filedialog, messagebox
+def select_pdf_files():
+    """Interactively select PDF files for analysis"""
+    from tkinter import filedialog
     import tkinter as tk
-    
+
     while True:
         root = tk.Tk()
         root.withdraw()
-        
-        thread_safe_print("\nSelect PDF files (for conversion) and/or Markdown files (direct use)...")
+
+        thread_safe_print("\nSelect PDF files for analysis...")
         source_files = filedialog.askopenfilenames(
-            title="Select PDF and/or Markdown Files for Analysis",
+            title="Select PDF Files for Analysis",
             filetypes=[
-                ("PDF files", "*.pdf"), 
-                ("Markdown files", "*.md"),
+                ("PDF files", "*.pdf"),
                 ("All files", "*.*")
             ]
         )
-        
+
         root.destroy()
-        
+
         if not source_files:
             thread_safe_print("No files selected.")
             retry_yes = prompt_yes_no("Would you like to try selecting files again? (y/n): ")
             if not retry_yes:
                 return None
             continue
-        
-        # Categorize files
-        pdf_files = [f for f in source_files if f.lower().endswith('.pdf')]
-        md_files = [f for f in source_files if f.lower().endswith('.md')]
-        other_files = [f for f in source_files if not (f.lower().endswith('.pdf') or f.lower().endswith('.md'))]
-        
-        thread_safe_print(f"Selected {len(source_files)} file(s):")
-        if pdf_files:
-            thread_safe_print(f"  PDF files (will be converted): {len(pdf_files)}")
-            for pdf in pdf_files:
-                thread_safe_print(f"    - {Path(pdf).name}")
-        if md_files:
-            thread_safe_print(f"  Markdown files (direct use): {len(md_files)}")
-            for md in md_files:
-                thread_safe_print(f"    - {Path(md).name}")
-        if other_files:
-            thread_safe_print(f"  Warning: Unsupported files (will be skipped): {len(other_files)}")
-            for other in other_files:
-                thread_safe_print(f"    - {Path(other).name}")
-        
-        if not pdf_files and not md_files:
-            thread_safe_print("No PDF or Markdown files found. Please select supported file types.")
-            continue
-        
-        return {
-            'pdf_files': pdf_files,
-            'md_files': md_files,
-            'other_files': other_files
-        }
 
-def select_pdf_files():
-    """Legacy function for backwards compatibility - now redirects to select_source_files"""
-    file_selection = select_source_files()
-    if file_selection:
-        # Return all files for backwards compatibility, let the class handle the logic
-        return file_selection['pdf_files'] + file_selection['md_files']
-    return None
+        # Filter for PDF files only
+        pdf_files = [f for f in source_files if f.lower().endswith('.pdf')]
+        other_files = [f for f in source_files if not f.lower().endswith('.pdf')]
+
+        thread_safe_print(f"Selected {len(pdf_files)} PDF file(s):")
+        for pdf in pdf_files:
+            thread_safe_print(f"  - {Path(pdf).name}")
+
+        if other_files:
+            thread_safe_print(f"  Warning: {len(other_files)} non-PDF file(s) will be skipped")
+
+        if not pdf_files:
+            thread_safe_print("No PDF files found. Please select PDF files.")
+            continue
+
+        return {'pdf_files': pdf_files}
 
 # Usage interface
 if __name__ == "__main__":
@@ -1013,30 +866,16 @@ if __name__ == "__main__":
         sys.exit(1)
     thread_safe_print(f"{CYAN}{CHECK}{RESET} API key configured")
 
-    # Check 2: Verify required dependencies
-    try:
-        # Check for Marker (PDF conversion)
-        from marker.converters.pdf import PdfConverter
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} PDF conversion ready (Marker)")
-        pdf_support = True
-    except ImportError as e:
-        thread_safe_print(f"{WARNING} Marker not installed - PDF files cannot be processed")
-        thread_safe_print(f"  {DIM}Install with: pip install marker-pdf{RESET}")
-        pdf_support = False
-        # Don't exit - user might only want to use MD files
-
-    # Check 3: Verify WeasyPrint (PDF report generation)
+    # Check 2: Verify WeasyPrint (PDF report generation)
     try:
         from weasyprint import HTML
         thread_safe_print(f"{CYAN}{CHECK}{RESET} PDF reports ready (WeasyPrint)")
-        pdf_generation_support = True
     except ImportError:
         thread_safe_print(f"{WARNING} WeasyPrint not installed - HTML only")
         thread_safe_print(f"  {DIM}Install with: pip install weasyprint{RESET}")
-        pdf_generation_support = False
         # Don't exit - HTML reports will still be generated
 
-    # Check 4: Create base directories
+    # Check 3: Create base directories
     base_dirs = ["runs", "memory", "quality_metrics"]
     for dir_path in base_dirs:
         os.makedirs(dir_path, exist_ok=True)
@@ -1062,30 +901,24 @@ if __name__ == "__main__":
     except Exception as e:
         thread_safe_print(f"{WARNING} LLM warm-up skipped/failed: {e}")
     
-    # Step 1: Select source files (PDF and/or MD) with retry capability
-    source_file_selection = select_source_files()
+    # Step 1: Select PDF files with retry capability
+    source_file_selection = select_pdf_files()
     if not source_file_selection:
         thread_safe_print("No files selected. Exiting.")
         sys.exit(0)
-    
-    # Check if PDFs were selected without support
-    if source_file_selection['pdf_files'] and not pdf_support:
-        thread_safe_print("\nERROR: PDF files selected but Marker library not available.")
-        thread_safe_print("Please install with: pip install marker-pdf")
-        sys.exit(1)
-    
+
     # Available sections for validation
     available_sections = [s['number'] for s in sections]
-    
-    # Step 2: Select analysis components (before PDF conversion)
+
+    # Step 2: Select analysis components
     thread_safe_print("\nSelect analysis components:")
-    
+
     selected_sections = []
     selected_groups = []
-    
+
     # Normal selection mode - go through all groups
     for group_name, group_info in SECTION_GROUPS.items():
-        yn = prompt_yes_no(group_info["prompt"])  
+        yn = prompt_yes_no(group_info["prompt"])
         if yn:
             # Validate that all sections in this group actually exist
             valid_group_sections = [s for s in group_info["sections"] if s in available_sections]
@@ -1094,33 +927,18 @@ if __name__ == "__main__":
                 selected_groups.append(group_name)
             else:
                 thread_safe_print(f"Warning: No valid sections found for {group_name}")
-    
+
     if not selected_sections:
         thread_safe_print("\nNo sections selected. Exiting.")
         sys.exit(0)
-    
+
     # Remove duplicates and sort
     selected_sections = sorted(list(set(selected_sections)))
-    
+
     thread_safe_print(f"\nSelected groups: {', '.join(selected_groups)}")
     thread_safe_print(f"Processing sections: {selected_sections}")
-    
-    # PDF conversion uses single worker to avoid PyTorch tensor memory issues
-    
-    # Step 3: Ask about LLM-enhanced PDF conversion
-    thread_safe_print("\nPDF Conversion Settings:")
-    use_llm_pdf = True  # Default
-    if source_file_selection['pdf_files']:
-        thread_safe_print("Enhanced PDF conversion uses AI to better extract tables and complex layouts.")
-        thread_safe_print("Recommended for investor presentations and financial documents.")
-        yn = prompt_yes_no("Use enhanced PDF conversion? (y/n, default y): ")
-        use_llm_pdf = yn
-        if use_llm_pdf:
-            thread_safe_print("  ✓ Enhanced conversion enabled (better quality)")
-        else:
-            thread_safe_print("  ✓ Basic conversion enabled (faster processing)")
 
-    # Step 4: Ask about number of workers for section processing
+    # Step 3: Ask about number of workers for section processing
     thread_safe_print("\nAnalysis Settings")
     while True:
         env_cap = int(os.environ.get("MAX_SECTION_WORKERS", "3"))
@@ -1136,7 +954,7 @@ if __name__ == "__main__":
         if 1 <= max_workers <= env_cap:
             break
     
-    # Step 5: Now initialize ProfileDash with source files (includes PDF conversion)
+    # Step 4: Now initialize ProfileDash with source files (uploads to Files API)
     # Clear terminal before starting processing
     print("\033[2J\033[H", end='')
 
@@ -1145,7 +963,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60)
 
     try:
-        analyst = IntelligentAnalyst(source_file_selection, model_name=selected_model, use_llm_pdf_conversion=use_llm_pdf)
+        analyst = IntelligentAnalyst(source_file_selection, model_name=selected_model)
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your files and try again.")

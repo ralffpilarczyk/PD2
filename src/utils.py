@@ -8,6 +8,9 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 # Thread-safe print lock
 print_lock = threading.Lock()
 
+# Timeout for API calls (seconds)
+TIMEOUT_VALUE = 300
+
 # Configurable global LLM concurrency (default 4). Bound to sane limits (1-16).
 try:
     _max_inflight = int(os.environ.get("LLM_MAX_INFLIGHT", "4"))
@@ -228,51 +231,90 @@ def _fix_single_table(table_lines: list) -> list:
     return table_lines
 
 
-def retry_with_backoff(func, max_retries=3, base_delay=10.0, context="", timeout=120):
+# Configurable inter-call delay to prevent rate limit bursts
+try:
+    _inter_call_delay = float(os.environ.get("LLM_INTER_CALL_DELAY", "5.0"))
+    if _inter_call_delay < 0:
+        _inter_call_delay = 0
+    if _inter_call_delay > 10:
+        _inter_call_delay = 10
+except (ValueError, TypeError):
+    _inter_call_delay = 5.0
+
+# Track last API call time for throttling
+_last_call_time = 0.0
+_last_call_lock = threading.Lock()
+
+
+def retry_with_backoff(func, max_retries=5, base_delay=30.0, context="", timeout=TIMEOUT_VALUE):
     """Retry function with exponential backoff for rate limits and timeout protection
 
     Args:
         func: Function to execute
-        max_retries: Maximum number of retry attempts
-        base_delay: Base delay for exponential backoff (seconds)
+        max_retries: Maximum number of retry attempts (default 5)
+        base_delay: Base delay for exponential backoff in seconds (default 30)
         context: Context string for logging
-        timeout: Timeout for each function call (seconds, default 120)
+        timeout: Timeout for each function call (seconds, default 300)
+
+    Rate limit handling:
+        - Retries: 5 attempts with delays of ~30s, ~60s, ~120s, ~240s, then fail
+        - Total max wait: ~450s before giving up
+        - Inter-call delay: LLM_INTER_CALL_DELAY env var (default 5.0s)
     """
+    global _last_call_time
+
     context_str = f"Section {context} - " if context else ""
+
     for attempt in range(max_retries):
         try:
             # Simple global gate to avoid burst concurrency
             _llm_semaphore.acquire()
             try:
+                # Enforce inter-call delay to prevent bursts
+                with _last_call_lock:
+                    elapsed = time.time() - _last_call_time
+                    if elapsed < _inter_call_delay:
+                        time.sleep(_inter_call_delay - elapsed)
+
                 # Execute function with timeout protection
                 with ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(func)
-                    return future.result(timeout=timeout)
+                    result = future.result(timeout=timeout)
+
+                # Update last call time after successful call
+                with _last_call_lock:
+                    _last_call_time = time.time()
+
+                return result
             finally:
                 _llm_semaphore.release()
+
         except FuturesTimeoutError:
             # Treat timeout like rate limit - retry with backoff
             if attempt < max_retries - 1:
-                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 2)
                 thread_safe_print(f"{context_str}Timeout after {timeout}s, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
                 time.sleep(delay)
                 continue
             else:
                 thread_safe_print(f"{context_str}Max retries exceeded after timeout")
                 raise
+
         except Exception as e:
             error_str = str(e)
-            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower() or "resource" in error_str.lower():
                 if attempt < max_retries - 1:
-                    # Extract retry delay from error if available
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                    if "retry_delay" in error_str:
+                    # Calculate delay with exponential backoff
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
+
+                    # Extract retry delay from error if available (Gemini sometimes provides this)
+                    if "retry_delay" in error_str or "Retry-After" in error_str:
                         try:
-                            delay_match = re.search(r'seconds:\s*(\d+)', error_str)
+                            delay_match = re.search(r'seconds?[:\s]+(\d+)', error_str, re.IGNORECASE)
                             if delay_match:
-                                delay = max(delay, int(delay_match.group(1)))
+                                server_delay = int(delay_match.group(1))
+                                delay = max(delay, server_delay + random.uniform(1, 5))
                         except (ValueError, AttributeError):
-                            # Unable to parse retry delay from error message
                             pass
 
                     thread_safe_print(f"{context_str}Rate limit hit, retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
@@ -284,4 +326,5 @@ def retry_with_backoff(func, max_retries=3, base_delay=10.0, context="", timeout
             else:
                 # Non-rate-limit error, don't retry
                 raise
+
     return None 

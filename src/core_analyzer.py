@@ -14,7 +14,7 @@ class CoreAnalyzer:
     INITIAL_WORDS = 1000      # Initial draft + completeness critique target
     INSIGHT_WORDS = 500       # Insight critique target - distill key patterns
     POLISH_WORDS = 300        # Polish critique target - final concise output
-    SECTION_32_EXEMPT = 33    # Section number that is exempt from word limits (Data Book)
+    SECTION_32_EXEMPT = 34    # Section number that is exempt from word limits (Data Book)
     
     # Temperature configuration for different cognitive phases
     LOW_TEMP = 0.2           # Systematic, methodical analysis (completeness)
@@ -132,10 +132,13 @@ CRITICAL LIST FORMATTING RULES:
 
 Your goal is to create a strong, fact-based draft that applies proven analytical techniques and is well-structured within the target word count.
 """
-        
+
+        # Section 34 (Data Book) needs longer timeout due to large table processing
+        timeout_value = 300 if section['number'] == self.SECTION_32_EXEMPT else 120
         result = retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context=section['number']
+            context=section['number'],
+            timeout=timeout_value
         )
         
         # Validate and fix tables BEFORE size check
@@ -450,12 +453,12 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
         return result
 
     # =========================================================================
-    # Section 34: Financial Pattern Analysis - 4-Layer Hypothesis-Driven Pipeline
+    # Section 33: Financial Pattern Analysis - 4-Layer Hypothesis-Driven Pipeline
     # =========================================================================
 
-    SECTION_34_PATTERN_ANALYSIS = 34
+    SECTION_33_PATTERN_ANALYSIS = 33
 
-    def _section34_layer1_identify_patterns(self, company_name: str) -> str:
+    def _section33_layer1_identify_patterns(self, company_name: str) -> str:
         """
         Layer 1: Identify 3 material financial patterns worth investigating.
         Attach: Source document
@@ -466,6 +469,8 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
 Identify exactly three relationships where metrics that should move together are diverging disproportionately—where the gap is too large to be explained by normal operating variance, has persisted across multiple periods, or represents a significant deviation from the company's own history.
 
 Focus on patterns that are MATERIAL to the company's prospects—patterns that would affect an investor's view of valuation, risk, or growth trajectory.
+
+CRITICAL: The three patterns must be DIVERSE—they should examine different aspects of the business (e.g., operations, capital structure, cash flow, segments, governance). Do NOT select patterns where one explains or causes another. Each pattern should stand independently.
 
 For each pattern, provide:
 
@@ -481,10 +486,10 @@ DOCUMENTS:
 """
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context="Section 34 Layer 1"
+            context="Section 33 Layer 1"
         )
 
-    def _section34_layer2_generate_hypotheses(self, company_name: str, pattern_text: str) -> str:
+    def _section33_layer2_generate_hypotheses(self, company_name: str, pattern_text: str) -> str:
         """
         Layer 2: Generate 3 candidate explanations for a pattern.
         Attach: Nothing (intentional - broad hypothesis generation)
@@ -510,10 +515,10 @@ Present as EXPLANATION 1, EXPLANATION 2, EXPLANATION 3.
 """
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context="Section 34 Layer 2"
+            context="Section 33 Layer 2"
         )
 
-    def _section34_layer3_test_hypothesis(self, company_name: str, pattern_text: str, explanation_text: str) -> str:
+    def _section33_layer3_test_hypothesis(self, company_name: str, pattern_text: str, explanation_text: str) -> str:
         """
         Layer 3: Test a hypothesis against document evidence.
         Attach: Source document
@@ -543,10 +548,10 @@ DOCUMENTS:
 """
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content(prompt).text,
-            context="Section 34 Layer 3"
+            context="Section 33 Layer 3"
         )
 
-    def _section34_layer4_synthesize(self, company_name: str, pattern_text: str,
+    def _section33_layer4_synthesize(self, company_name: str, pattern_text: str,
                                       explanations_and_verdicts: str) -> str:
         """
         Layer 4: Write analytical summary for a pattern.
@@ -580,10 +585,10 @@ DOCUMENTS:
 """
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text,
-            context="Section 34 Layer 4"
+            context="Section 33 Layer 4"
         )
 
-    def _section34_parse_patterns(self, layer1_output: str) -> list:
+    def _section33_parse_patterns(self, layer1_output: str) -> list:
         """Parse Layer 1 output into list of pattern dicts."""
         patterns = []
 
@@ -619,16 +624,16 @@ DOCUMENTS:
 
         return patterns[:3]
 
-    def _section34_parse_explanations(self, layer2_output: str) -> list:
+    def _section33_parse_explanations(self, layer2_output: str) -> list:
         """Parse Layer 2 output into list of explanation dicts."""
         explanations = []
 
-        # Split by EXPLANATION markers
-        exp_blocks = re.split(r'\n(?=EXPLANATION\s*\d)', layer2_output, flags=re.IGNORECASE)
+        # Split by EXPLANATION markers (handles plain text and markdown bold **EXPLANATION**)
+        exp_blocks = re.split(r'\n(?=\*{0,2}EXPLANATION\s*\d)', layer2_output, flags=re.IGNORECASE)
 
         for block in exp_blocks:
             block = block.strip()
-            if not block or not re.match(r'EXPLANATION\s*\d', block, re.IGNORECASE):
+            if not block or not re.match(r'\*{0,2}EXPLANATION\s*\d', block, re.IGNORECASE):
                 continue
 
             explanation = {"raw": block}
@@ -648,16 +653,16 @@ DOCUMENTS:
 
         return explanations[:3]
 
-    def _section34_extract_verdict(self, layer3_output: str) -> str:
+    def _section33_extract_verdict(self, layer3_output: str) -> str:
         """Extract the overall verdict from Layer 3 output."""
         verdict_match = re.search(r'OVERALL VERDICT:\s*(.+?)(?:\n\n|$)', layer3_output, re.IGNORECASE | re.DOTALL)
         if verdict_match:
             return verdict_match.group(1).strip()
         return "Verdict: Unable to determine"
 
-    def analyze_section_34(self, company_name: str, file_manager, worker_display=None) -> str:
+    def analyze_section_33(self, company_name: str, file_manager, worker_display=None) -> str:
         """
-        Orchestrate the 4-layer pipeline for Section 34: Financial Pattern Analysis.
+        Orchestrate the 4-layer pipeline for Section 33: Financial Pattern Analysis.
 
         Execution flow:
         1. Layer 1: 1 call -> 3 patterns
@@ -671,23 +676,23 @@ DOCUMENTS:
         """
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        section_dir = f"runs/run_{self.run_timestamp}/section_34"
+        section_dir = f"runs/run_{self.run_timestamp}/section_33"
         os.makedirs(section_dir, exist_ok=True)
 
         # ===================
         # LAYER 1: Identify Patterns
         # ===================
         if worker_display:
-            worker_display.update_status(0, "Layer 1 (Patterns)")
+            worker_display.update(33, "Layer 1")
         thread_safe_print("  Layer 1: Identifying financial patterns...")
 
-        layer1_output = self._section34_layer1_identify_patterns(company_name)
+        layer1_output = self._section33_layer1_identify_patterns(company_name)
 
         # Save Layer 1 output
-        file_manager.save_step_output(34, "layer1_patterns.txt", layer1_output)
+        file_manager.save_step_output(33, "layer1_patterns.txt", layer1_output)
 
         # Parse patterns
-        patterns = self._section34_parse_patterns(layer1_output)
+        patterns = self._section33_parse_patterns(layer1_output)
         thread_safe_print(f"    Found {len(patterns)} patterns")
 
         # ===================
@@ -699,16 +704,16 @@ DOCUMENTS:
 
         for pattern_idx, pattern in enumerate(patterns):
             if worker_display:
-                worker_display.update_status(0, f"Layer 2 (Hypotheses) [{pattern_idx+1}/3]")
+                worker_display.update(33, f"L2 [{pattern_idx+1}/3]")
             try:
-                layer2_output = self._section34_layer2_generate_hypotheses(
+                layer2_output = self._section33_layer2_generate_hypotheses(
                     company_name,
                     pattern["raw"]
                 )
                 # Save Layer 2 output
-                file_manager.save_step_output(34, f"layer2_pattern{pattern_idx+1}_hypotheses.txt", layer2_output)
+                file_manager.save_step_output(33, f"layer2_pattern{pattern_idx+1}_hypotheses.txt", layer2_output)
                 # Parse explanations
-                explanations = self._section34_parse_explanations(layer2_output)
+                explanations = self._section33_parse_explanations(layer2_output)
                 all_explanations[pattern_idx] = explanations
                 thread_safe_print(f"    Pattern {pattern_idx+1}: {len(explanations)} hypotheses")
             except Exception as e:
@@ -727,21 +732,21 @@ DOCUMENTS:
             for exp_idx in range(3):
                 call_count += 1
                 if worker_display:
-                    worker_display.update_status(0, f"Layer 3 (Testing) [{call_count}/9]")
+                    worker_display.update(33, f"L3 [{call_count}/9]")
 
                 pattern = patterns[pattern_idx]
                 explanation = all_explanations.get(pattern_idx, [{"raw": "N/A"}] * 3)[exp_idx]
 
                 try:
-                    layer3_output = self._section34_layer3_test_hypothesis(
+                    layer3_output = self._section33_layer3_test_hypothesis(
                         company_name,
                         pattern["raw"],
                         explanation["raw"]
                     )
                     # Save Layer 3 output
-                    file_manager.save_step_output(34, f"layer3_pattern{pattern_idx+1}_hyp{exp_idx+1}_verdict.txt", layer3_output)
+                    file_manager.save_step_output(33, f"layer3_pattern{pattern_idx+1}_hyp{exp_idx+1}_verdict.txt", layer3_output)
                     # Extract verdict
-                    verdict = self._section34_extract_verdict(layer3_output)
+                    verdict = self._section33_extract_verdict(layer3_output)
                     all_verdicts[(pattern_idx, exp_idx)] = verdict
                     # Show progress with abbreviated verdict
                     verdict_short = verdict[:60] + "..." if len(verdict) > 60 else verdict
@@ -761,7 +766,7 @@ DOCUMENTS:
 
         for pattern_idx in range(3):
             if worker_display:
-                worker_display.update_status(0, f"Layer 4 (Synthesis) [{pattern_idx+1}/3]")
+                worker_display.update(33, f"L4 [{pattern_idx+1}/3]")
 
             pattern = patterns[pattern_idx]
 
@@ -775,13 +780,13 @@ DOCUMENTS:
             exp_verdicts_text = "\n".join(exp_and_verdicts)
 
             try:
-                summary = self._section34_layer4_synthesize(
+                summary = self._section33_layer4_synthesize(
                     company_name,
                     pattern["raw"],
                     exp_verdicts_text
                 )
                 # Save Layer 4 output
-                file_manager.save_step_output(34, f"layer4_pattern{pattern_idx+1}_synthesis.md", summary)
+                file_manager.save_step_output(33, f"layer4_pattern{pattern_idx+1}_synthesis.md", summary)
                 all_summaries[pattern_idx] = summary
                 thread_safe_print(f"    Pattern {pattern_idx+1}: Synthesis complete")
             except Exception as e:
@@ -792,9 +797,9 @@ DOCUMENTS:
         # COMBINE INTO FINAL OUTPUT
         # ===================
         if worker_display:
-            worker_display.update_status(0, "Finalizing")
+            worker_display.update(33, "Final")
 
-        final_output = "## Section 34: Financial Pattern Analysis\n\n"
+        final_output = "## Section 33: Financial Pattern Analysis\n\n"
 
         for pattern_idx in range(3):
             pattern = patterns[pattern_idx]
@@ -805,8 +810,8 @@ DOCUMENTS:
             final_output += summary.strip() + "\n\n"
 
         # Save final section output
-        file_manager.save_step_output(34, "step_4_final_section.md", final_output)
+        file_manager.save_step_output(33, "step_4_final_section.md", final_output)
 
-        thread_safe_print("  Section 34 complete: 16 API calls executed")
+        thread_safe_print("  Section 33 complete: 16 API calls executed")
 
         return final_output

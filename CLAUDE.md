@@ -28,8 +28,8 @@ pip install -r requirements.txt
 
 ### Core System Principles
 1. **API Operations**: All external API calls must implement exponential backoff and respect rate limits
-2. **Special Cases**: Section 33 (Data Book) has no word limits - pure extraction mode
-3. **Special Cases**: Section 34 (Financial Pattern Analysis) uses a custom 4-layer hypothesis-driven pipeline (16 API calls)
+2. **Special Cases**: Section 33 (Financial Pattern Analysis) uses a custom 4-layer hypothesis-driven pipeline (16 API calls)
+3. **Special Cases**: Section 34 (Data Book) has no word limits - pure extraction mode
 4. **Concurrency**: Use thread-safe operations for all parallel processing contexts
 5. **PDF Processing**: Support both LLM-enhanced and basic conversion modes with appropriate worker counts
 6. **Output Quality**: All analysis must pass the relevance filter: "Does this change an investor's view?"
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 - **LLM-Enhanced PDF Conversion**: Uses AI for better table/chart extraction (2 workers - API-bound)
 - **Basic PDF Conversion**: Standard Marker library conversion (3-5 workers - CPU-bound)
 - **Parallel Section Analysis**: Configurable worker count (1-8) based on API quotas
-- **Three-Phase Scheduling**: Process sections 1-32 first, then section 34, then section 33 separately
+- **Three-Phase Scheduling**: Process sections 1-32 first, then section 33 (Pattern Analysis), then section 34 (Data Book)
 
 ## Code Style & Communication
 1. **No Emojis**: Do not use emojis in code, comments, commit messages, or documentation

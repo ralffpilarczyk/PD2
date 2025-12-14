@@ -446,9 +446,9 @@ class IntelligentAnalyst:
             # Get relevant memory for this section
             relevant_memory = self.insight_memory.get_relevant_memory(section_num)
 
-            # Special handling for Section 34: Financial Pattern Analysis
+            # Special handling for Section 33: Financial Pattern Analysis
             # Uses a custom 4-layer hypothesis-driven pipeline (16 API calls)
-            if section_num == 34:
+            if section_num == 33:
                 # Extract company name for the prompts
                 from src.profile_generator import ProfileGenerator
                 temp_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
@@ -456,7 +456,7 @@ class IntelligentAnalyst:
 
                 # Run the 4-layer pipeline
                 worker_display = getattr(self, 'worker_display', None)
-                final_output = self.core_analyzer.analyze_section_34(
+                final_output = self.core_analyzer.analyze_section_33(
                     company_name,
                     self.file_manager,
                     worker_display=worker_display
@@ -490,7 +490,7 @@ class IntelligentAnalyst:
             improved_draft = None
             step4_output = None
 
-            # For Section 33 (Data Book), the initial draft is the final output. No critiques needed.
+            # For Section 34 (Data Book), the initial draft is the final output. No critiques needed.
             if section['number'] == self.core_analyzer.SECTION_32_EXEMPT:
                 final_output = initial_draft
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
@@ -534,7 +534,7 @@ class IntelligentAnalyst:
                 else:
                     final_output = final_chosen
             else:
-                # Section 33 (Data Book) special-case placeholder if empty
+                # Section 34 (Data Book) special-case placeholder if empty
                 if _is_empty(final_output, minimum=200):
                     thread_safe_print(f"Section {section_num} ⚠ Appendix empty, using placeholder")
                     final_output = "_Appendix could not be generated from the provided documents in this run._"
@@ -557,7 +557,7 @@ class IntelligentAnalyst:
             return f"Section {section_num} failed."
 
     def process_all_sections(self, section_numbers: List[int] = None, max_workers: int = 3):
-        """Process multiple sections with two-phase scheduling (Section 33 Data Book deferred)."""
+        """Process multiple sections with three-phase scheduling (Section 34 Data Book deferred)."""
         if section_numbers is None:
             section_numbers = [s['number'] for s in sections]
 
@@ -618,14 +618,14 @@ class IntelligentAnalyst:
             return local
 
         # Special sections that run in their own phases
-        SECTION_33_DATA_BOOK = 33
-        SECTION_34_PATTERN_ANALYSIS = 34
-        special_sections = {SECTION_33_DATA_BOOK, SECTION_34_PATTERN_ANALYSIS}
+        SECTION_33_PATTERN_ANALYSIS = 33
+        SECTION_34_DATA_BOOK = 34
+        special_sections = {SECTION_33_PATTERN_ANALYSIS, SECTION_34_DATA_BOOK}
 
         # Phase 1: run all sections except 33 and 34
         regular_sections = [n for n in section_numbers if n not in special_sections]
-        has33 = SECTION_33_DATA_BOOK in section_numbers
-        has34 = SECTION_34_PATTERN_ANALYSIS in section_numbers
+        has33 = SECTION_33_PATTERN_ANALYSIS in section_numbers
+        has34 = SECTION_34_DATA_BOOK in section_numbers
         phase1 = _run_parallel(regular_sections)
         results.update(phase1)
 
@@ -646,33 +646,33 @@ class IntelligentAnalyst:
         except Exception as e:
             thread_safe_print(f"{WARNING} Profile generation failed: {e}")
 
-        # Phase 2: run Section 34 (Financial Pattern Analysis) if selected
-        if has34:
+        # Phase 2: run Section 33 (Financial Pattern Analysis) if selected
+        if has33:
             thread_safe_print(f"\n{'='*60}")
-            thread_safe_print(f"{BOLD}Generating Financial Pattern Analysis (Section 34){RESET}")
+            thread_safe_print(f"{BOLD}Generating Financial Pattern Analysis (Section 33){RESET}")
             thread_safe_print(f"{'='*60}")
             try:
-                res34 = self.analyze_section(SECTION_34_PATTERN_ANALYSIS)
-                results[SECTION_34_PATTERN_ANALYSIS] = res34
+                res33 = self.analyze_section(SECTION_33_PATTERN_ANALYSIS)
+                results[SECTION_33_PATTERN_ANALYSIS] = res33
             except Exception as e:
                 thread_safe_print(f"{WARNING} Pattern analysis generation failed: {e}")
-            # Regenerate profile with Section 34 included
+            # Regenerate profile with Section 33 included
             try:
                 profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-                sections_so_far = regular_sections + [SECTION_34_PATTERN_ANALYSIS]
+                sections_so_far = regular_sections + [SECTION_33_PATTERN_ANALYSIS]
                 profile_generator.generate_html_profile(results, sections_so_far, self.full_context, sections)
                 thread_safe_print(f"{CYAN}{CHECK}{RESET} Pattern analysis complete - Profile updated")
             except Exception as e:
                 thread_safe_print(f"{WARNING} Profile update failed: {e}")
 
-        # Phase 3: run Section 33 (Data Book) if selected
-        if has33:
+        # Phase 3: run Section 34 (Data Book) if selected
+        if has34:
             thread_safe_print(f"\n{'='*60}")
-            thread_safe_print(f"{BOLD}Generating Data Appendix (Section 33){RESET}")
+            thread_safe_print(f"{BOLD}Generating Data Appendix (Section 34){RESET}")
             thread_safe_print(f"{'='*60}")
             try:
-                res33 = self.analyze_section(SECTION_33_DATA_BOOK)
-                results[SECTION_33_DATA_BOOK] = res33
+                res34 = self.analyze_section(SECTION_34_DATA_BOOK)
+                results[SECTION_34_DATA_BOOK] = res34
             except Exception as e:
                 thread_safe_print(f"{WARNING} Appendix generation failed: {e}")
             # Regenerate profile with full set
@@ -868,13 +868,13 @@ SECTION_GROUPS = {
         "sections": list(range(27, 33)),  # 27-32
         "prompt": "4. Buyside Due Diligence (sections 27-32) (y/n): "
     },
-    "Data Book": {
-        "sections": [33],
-        "prompt": "5. Data Book (section 33) (y/n): "
-    },
     "Financial Pattern Analysis": {
+        "sections": [33],
+        "prompt": "5. Financial Pattern Analysis (section 33) (y/n): "
+    },
+    "Data Book": {
         "sections": [34],
-        "prompt": "6. Financial Pattern Analysis (section 34) (y/n): "
+        "prompt": "6. Data Book (section 34) (y/n): "
     }
 }
 

@@ -39,8 +39,8 @@ Comprehensive 34-section company analysis for deep M&A and investment evaluation
    - Strategy and SWOT (sections 14-19)
    - Sellside Positioning (sections 20-26)
    - Buyside Due Diligence (sections 27-32)
-   - Data Book (section 33)
-   - Financial Pattern Analysis (section 34)
+   - Financial Pattern Analysis (section 33)
+   - Data Book (section 34)
 5. Set parallel workers (1-5, default 2)
 6. Wait for processing (~30-60 minutes for full profile)
 

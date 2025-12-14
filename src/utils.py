@@ -228,7 +228,7 @@ def _fix_single_table(table_lines: list) -> list:
     return table_lines
 
 
-def retry_with_backoff(func, max_retries=3, base_delay=1.0, context="", timeout=120):
+def retry_with_backoff(func, max_retries=3, base_delay=10.0, context="", timeout=120):
     """Retry function with exponential backoff for rate limits and timeout protection
 
     Args:

@@ -553,9 +553,9 @@ CONDENSING INSTRUCTIONS:
 4. **SMART CONDENSING**:
    - Remove generic statements and obvious observations
    - Cut repetitive points - state each insight once
-   - Eliminate elaborate explanations - let the data speak
+   - Eliminate elaborate explanations - let the data speak and order it so it tells a story 
    - Focus on what's surprising, notable, or value-affecting
-   - Deliver deep insights
+   - Deliver deep insights and consider the flow of the text to get there, but do not add language for the sake of it
    - Combine related facts in one multi-fact sentence to the extent possible and sensible. Example: "Malaysia generates 35% of revenue and Indonesia 28%, with combined growth of 12% YoY" (3 facts, 1 sentence)
    - Be brutal yet constructive when condensing
 
@@ -577,7 +577,7 @@ CRITICAL OUTPUT RULES:
 - Output ONLY the bullet points for this section
 - Start directly with the first bullet point (starting with *)
 - No commentary about what you are doing - just output the bullets
-- No corporate poetry, no consulting buzz words, but chairman-friendly language
+- No corporate poetry, no consulting buzz words, but chairman-friendly prose
 - No statements about missing data or need to analyse further, but factual observations
 
 Generate the condensed version of this section only."""

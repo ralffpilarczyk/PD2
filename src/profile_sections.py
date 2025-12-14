@@ -713,7 +713,7 @@ sections = [
     },
 
     {
-        "number": 33,
+        "number": 34,
         "title": "Appendix: Data Book",
         "specs": """
 You will be provided with a large block of text containing all tables extracted from multiple source documents, formatted in Markdown.
@@ -744,7 +744,7 @@ Your output must be a single, well-formed block of HTML representing the entire 
     },
 
     {
-        "number": 34,
+        "number": 33,
         "title": "Financial Pattern Analysis",
         "specs": """
 This section uses a custom 4-layer hypothesis-driven analysis pipeline to identify and investigate

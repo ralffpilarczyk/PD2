@@ -7,7 +7,7 @@ ProfileDash 2.2 (PD2) is a sophisticated financial document analysis system that
 **Key Metrics**:
 - 34 analytical sections organized into 6 groups
 - 4-step progressive refinement pipeline per section (sections 1-32)
-- Custom 4-layer hypothesis-driven pipeline for Section 34 (Financial Pattern Analysis)
+- Custom 4-layer hypothesis-driven pipeline for Section 33 (Financial Pattern Analysis)
 - Configurable 1-8 parallel workers
 - Professional PDF output with page footers and numbering
 
@@ -156,10 +156,10 @@ class IntelligentAnalyst:
    - Implements 6-step pipeline (delegated to CoreAnalyzer)
    - Integrates with WorkerDisplay for progress tracking
    - Three status updates: "Draft" → "Refine" → "Polish"
-   - Special handling for Section 33 (skip refinement steps)
+   - Special handling for Section 34 (Data Book - skip refinement steps)
 
 3. **`run_analysis(section_numbers, workers)`**
-   - Two-phase scheduling: sections 1-32, then section 33
+   - Three-phase scheduling: sections 1-32, then section 33 (Pattern Analysis), then section 34 (Data Book)
    - ThreadPoolExecutor with configurable workers (1-8)
    - Progress tracking with completion counts
    - Calls ProfileGenerator for final PDF output
@@ -261,7 +261,14 @@ def deep_analysis_and_polish(self, section, enhanced_draft):
 
 #### Special Handling
 
-**Section 33 (Data Book)**:
+**Section 33 (Financial Pattern Analysis)**:
+- Uses custom 4-layer hypothesis-driven pipeline (16 API calls)
+- Layer 1: Identify 3 material financial patterns
+- Layer 2: Generate 3 candidate explanations per pattern
+- Layer 3: Test each explanation against document evidence
+- Layer 4: Synthesize analytical summaries
+
+**Section 34 (Data Book)**:
 - Skips Steps 2-4 (completeness, enhancement, polish)
 - Pure extraction mode with no word limits
 - Preserves all data tables and numerical content
@@ -418,7 +425,7 @@ Markdown sections → Combine → Add cover page → CSS styling → HTML → We
    - Removes markdown/HTML code block wrappers
    - Strips duplicate section titles
    - Ensures blank lines before tables and lists
-   - Preserves Section 33 code blocks
+   - Preserves Section 34 code blocks
 
 4. **`_manage_footnotes(markdown) -> str`**
    - Scopes footnote labels per section
@@ -544,8 +551,14 @@ sections = [
 31. Financial Performance - Financial health assessment
 32. Management - Management quality and governance
 
-**Group 5: Data Book (Section 33)**
-33. Appendix: Data Book - Complete data extraction
+**Group 5: Financial Pattern Analysis (Section 33)**
+33. Financial Pattern Analysis - Hypothesis-driven pattern investigation
+   - 4-layer pipeline (16 API calls)
+   - Identifies material financial patterns
+   - Tests hypotheses against document evidence
+
+**Group 6: Data Book (Section 34)**
+34. Appendix: Data Book - Complete data extraction
    - No word limits
    - All tables and numbers
    - Pure extraction mode

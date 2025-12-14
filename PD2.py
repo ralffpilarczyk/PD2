@@ -446,6 +446,26 @@ class IntelligentAnalyst:
             # Get relevant memory for this section
             relevant_memory = self.insight_memory.get_relevant_memory(section_num)
 
+            # Special handling for Section 34: Financial Pattern Analysis
+            # Uses a custom 4-layer hypothesis-driven pipeline (16 API calls)
+            if section_num == 34:
+                # Extract company name for the prompts
+                from src.profile_generator import ProfileGenerator
+                temp_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
+                company_name = temp_generator._extract_company_name(self.full_context)
+
+                # Run the 4-layer pipeline
+                worker_display = getattr(self, 'worker_display', None)
+                final_output = self.core_analyzer.analyze_section_34(
+                    company_name,
+                    self.file_manager,
+                    worker_display=worker_display
+                )
+
+                # Calculate quality metrics for the section
+                self.quality_tracker.calculate_section_metrics(section_num, final_output)
+                return f"Section {section_num} completed."
+
             # Step 1: Initial Draft
             if hasattr(self, 'worker_display') and self.worker_display:
                 self.worker_display.update(section_num, "Draft")
@@ -520,14 +540,12 @@ class IntelligentAnalyst:
                     final_output = "_Appendix could not be generated from the provided documents in this run._"
                     self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
 
-            # Step 6: Learning Extraction (Applied to the final output)
-            # Run learning extraction only on analytical sections
-            if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
-                learning = self.core_analyzer.extract_learning(section, final_output)
-                # Convert learning (which can be a dict or string) to a formatted JSON string
-                learning_str = json.dumps(learning, indent=4)
-                self.file_manager.save_step_output(section_num, "step_6_learning.json", learning_str)
-                # Note: Learning will be processed in post-run memory review
+            # Step 6: Learning Extraction - DISABLED
+            # Learning extraction has been disabled. Code retained for potential future use.
+            # if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
+            #     learning = self.core_analyzer.extract_learning(section, final_output)
+            #     learning_str = json.dumps(learning, indent=4)
+            #     self.file_manager.save_step_output(section_num, "step_6_learning.json", learning_str)
 
             # Calculate quality metrics for the section
             self.quality_tracker.calculate_section_metrics(section_num, final_output)
@@ -599,10 +617,16 @@ class IntelligentAnalyst:
                         local[s_num] = f"Processing failed: {e}"
             return local
 
-        # Phase 1: run all sections except 33 (Data Book)
-        non32 = [n for n in section_numbers if n != self.core_analyzer.SECTION_32_EXEMPT]
-        has32 = any(n == self.core_analyzer.SECTION_32_EXEMPT for n in section_numbers)
-        phase1 = _run_parallel(non32)
+        # Special sections that run in their own phases
+        SECTION_33_DATA_BOOK = 33
+        SECTION_34_PATTERN_ANALYSIS = 34
+        special_sections = {SECTION_33_DATA_BOOK, SECTION_34_PATTERN_ANALYSIS}
+
+        # Phase 1: run all sections except 33 and 34
+        regular_sections = [n for n in section_numbers if n not in special_sections]
+        has33 = SECTION_33_DATA_BOOK in section_numbers
+        has34 = SECTION_34_PATTERN_ANALYSIS in section_numbers
+        phase1 = _run_parallel(regular_sections)
         results.update(phase1)
 
         # Save quality metrics and run summary for Phase 1
@@ -611,27 +635,44 @@ class IntelligentAnalyst:
         self.file_manager.save_quality_metrics(quality_scores, run_number)
         self._generate_run_summary(results)
 
-        # Generate profile with Phase 1 results (and potential placeholder for 33)
+        # Generate profile with Phase 1 results
         thread_safe_print(f"\n{'='*60}")
         thread_safe_print(f"{BOLD}Generating Profile{RESET}")
         thread_safe_print(f"{'='*60}")
         try:
             profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-            # Include 33 in list so placeholder (if present) is picked up
-            phase1_list = non32 + ([self.core_analyzer.SECTION_32_EXEMPT] if has32 else [])
-            profile_generator.generate_html_profile(results, phase1_list, self.full_context, sections)
+            profile_generator.generate_html_profile(results, regular_sections, self.full_context, sections)
             thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
         except Exception as e:
             thread_safe_print(f"{WARNING} Profile generation failed: {e}")
 
-        # Phase 2: run Section 33 (Data Book) alone (sequential) and regenerate
-        if has32:
+        # Phase 2: run Section 34 (Financial Pattern Analysis) if selected
+        if has34:
+            thread_safe_print(f"\n{'='*60}")
+            thread_safe_print(f"{BOLD}Generating Financial Pattern Analysis (Section 34){RESET}")
+            thread_safe_print(f"{'='*60}")
+            try:
+                res34 = self.analyze_section(SECTION_34_PATTERN_ANALYSIS)
+                results[SECTION_34_PATTERN_ANALYSIS] = res34
+            except Exception as e:
+                thread_safe_print(f"{WARNING} Pattern analysis generation failed: {e}")
+            # Regenerate profile with Section 34 included
+            try:
+                profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
+                sections_so_far = regular_sections + [SECTION_34_PATTERN_ANALYSIS]
+                profile_generator.generate_html_profile(results, sections_so_far, self.full_context, sections)
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} Pattern analysis complete - Profile updated")
+            except Exception as e:
+                thread_safe_print(f"{WARNING} Profile update failed: {e}")
+
+        # Phase 3: run Section 33 (Data Book) if selected
+        if has33:
             thread_safe_print(f"\n{'='*60}")
             thread_safe_print(f"{BOLD}Generating Data Appendix (Section 33){RESET}")
             thread_safe_print(f"{'='*60}")
             try:
-                res32 = self.analyze_section(self.core_analyzer.SECTION_32_EXEMPT)
-                results[self.core_analyzer.SECTION_32_EXEMPT] = res32
+                res33 = self.analyze_section(SECTION_33_DATA_BOOK)
+                results[SECTION_33_DATA_BOOK] = res33
             except Exception as e:
                 thread_safe_print(f"{WARNING} Appendix generation failed: {e}")
             # Regenerate profile with full set
@@ -642,15 +683,16 @@ class IntelligentAnalyst:
             except Exception as e:
                 thread_safe_print(f"{WARNING} Profile update failed: {e}")
 
-        # Post-run memory review AFTER profile delivery
-        if len(section_numbers) > 1:
-            thread_safe_print(f"\n{'='*60}")
-            thread_safe_print(f"{BOLD}Learning Review{RESET}")
-            thread_safe_print(f"{'='*60}")
-            try:
-                self._conduct_memory_review()
-            except Exception as e:
-                thread_safe_print(f"{WARNING} Memory review failed: {e}")
+        # Post-run memory review - DISABLED
+        # Learning review has been disabled. Code retained for potential future use.
+        # if len(section_numbers) > 1:
+        #     thread_safe_print(f"\n{'='*60}")
+        #     thread_safe_print(f"{BOLD}Learning Review{RESET}")
+        #     thread_safe_print(f"{'='*60}")
+        #     try:
+        #         self._conduct_memory_review()
+        #     except Exception as e:
+        #         thread_safe_print(f"{WARNING} Memory review failed: {e}")
 
         return results
     
@@ -829,6 +871,10 @@ SECTION_GROUPS = {
     "Data Book": {
         "sections": [33],
         "prompt": "5. Data Book (section 33) (y/n): "
+    },
+    "Financial Pattern Analysis": {
+        "sections": [34],
+        "prompt": "6. Financial Pattern Analysis (section 34) (y/n): "
     }
 }
 
@@ -952,7 +998,7 @@ if __name__ == "__main__":
     # Clear terminal screen
     print("\033[2J\033[H", end='')
 
-    thread_safe_print(f"PROFILEDASH {__version__} - with Learning Memory")
+    thread_safe_print(f"PROFILEDASH {__version__}")
     thread_safe_print("="*60)
     
     # Pre-flight checks
@@ -1000,13 +1046,13 @@ if __name__ == "__main__":
     # Model selection
     thread_safe_print("Select LLM model:")
     thread_safe_print("  1) gemini-2.5-flash")
-    thread_safe_print("  2) gemini-2.5-pro")
+    thread_safe_print("  2) gemini-3-pro-preview")
     selected_model = None
     choice = prompt_single_digit("Choose model [1/2] (default 1): ", valid_digits="12", default_digit="1")
     if choice == "1":
         selected_model = 'gemini-2.5-flash'
     else:
-        selected_model = 'gemini-2.5-pro'
+        selected_model = 'gemini-3-pro-preview'
 
     # Optional LLM warm-up to reduce first-call latency (uses selected model)
     try:

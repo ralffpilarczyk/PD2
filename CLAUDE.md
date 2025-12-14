@@ -3,13 +3,13 @@
 This file provides guidance to AI assistants when working with code in this repository.
 
 ## Project Overview
-ProfileDash 2.1 is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 33 analytical sections using Google's Gemini API.
+ProfileDash 2.2 is an intelligent document analysis system that processes PDF financial documents (annual reports, financial statements, investor presentations) and generates comprehensive company profiles with 34 analytical sections using Google's Gemini API.
 
 ## Architecture Principles
 The system follows a clean modular architecture with separation of concerns:
 - **Orchestration Layer**: Main entry point handles user interaction and coordinates all components
 - **Analysis Pipeline**: Multi-step refinement process with progressive condensation
-- **Learning System**: Captures and reuses analytical patterns across runs
+- **Learning System**: Captures and reuses analytical patterns across runs (currently disabled)
 - **Output Generation**: Professional PDF reports with HTML intermediate format
 - **Utilities Layer**: Shared functionality for thread safety, rate limiting, and data cleaning
 - **File Management**: Handles I/O operations and markdown preprocessing
@@ -28,8 +28,8 @@ pip install -r requirements.txt
 
 ### Core System Principles
 1. **API Operations**: All external API calls must implement exponential backoff and respect rate limits
-2. **Learning System**: Insights must be high-quality (9-10 score), concise (max 30 words), and section-specific
-3. **Special Cases**: Section 33 (Data Book) has no word limits - pure extraction mode
+2. **Special Cases**: Section 33 (Data Book) has no word limits - pure extraction mode
+3. **Special Cases**: Section 34 (Financial Pattern Analysis) uses a custom 4-layer hypothesis-driven pipeline (16 API calls)
 4. **Concurrency**: Use thread-safe operations for all parallel processing contexts
 5. **PDF Processing**: Support both LLM-enhanced and basic conversion modes with appropriate worker counts
 6. **Output Quality**: All analysis must pass the relevance filter: "Does this change an investor's view?"
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 - **LLM-Enhanced PDF Conversion**: Uses AI for better table/chart extraction (2 workers - API-bound)
 - **Basic PDF Conversion**: Standard Marker library conversion (3-5 workers - CPU-bound)
 - **Parallel Section Analysis**: Configurable worker count (1-8) based on API quotas
-- **Two-Phase Scheduling**: Process sections 1-32 first, then section 33 separately
+- **Three-Phase Scheduling**: Process sections 1-32 first, then section 34, then section 33 separately
 
 ## Code Style & Communication
 1. **No Emojis**: Do not use emojis in code, comments, commit messages, or documentation
@@ -195,13 +195,21 @@ When analyzing company data, always apply multi-layer analytical thinking:
 **Quality Standard**: Would this insight change an investor's view of the company's prospects? If no, remove it.
 
 ## Analysis Pipeline Architecture
-Each section follows a progressive refinement approach with multiple stages:
+Sections 1-32 follow a progressive refinement approach with 4 stages:
 1. **Initial Draft** - Comprehensive analysis capturing all relevant data (~1000 words)
 2. **Completeness Check** - Validates against source documents, identifies gaps
 3. **Enhanced Draft** - Incorporates missing elements from validation
 4. **Deep Analysis & Polish** - Condenses to essential insights (~500 words) with investor relevance filter
-5. **Discovery Pipeline** (Optional) - Six-stage deep pattern finding for quantitative insights
-6. **Learning Extraction** - Captures reusable analytical methodologies for future runs
+
+### Section 34: Financial Pattern Analysis
+Section 34 uses a unique 4-layer hypothesis-driven pipeline (16 API calls total):
+1. **Layer 1** (1 call) - Identify 3 material financial patterns with diverging metrics
+2. **Layer 2** (3 calls, parallel) - Generate 3 candidate explanations per pattern (benign to concerning)
+3. **Layer 3** (9 calls, parallel) - Test each hypothesis against document evidence with predictions
+4. **Layer 4** (3 calls, parallel) - Synthesize 200-300 word analytical summaries per pattern
+
+Output format: 3 pattern subsections (Pattern 1, Pattern 2, Pattern 3) each containing:
+- THESIS, KEY EVIDENCE, SUSTAINABILITY, VALUATION IMPLICATION, DILIGENCE PRIORITIES
 
 ## Design Patterns & Conventions
 
@@ -224,7 +232,7 @@ Each section follows a progressive refinement approach with multiple stages:
 - **Cache Aggressively**: SHA-256 based caching prevents redundant PDF conversions
 
 ### Output Delivery Patterns
-- **Two-Phase Generation**: Sections 1-32 first, then Section 33 separately
+- **Three-Phase Generation**: Sections 1-32 first, then Section 34, then Section 33 separately
 - **Progressive Refinement**: Multiple passes with increasing constraints
 - **Format Chain**: Markdown → HTML → PDF with WeasyPrint
 - **Professional Styling**: Consistent typography, pagination, footers with generation metadata
@@ -239,12 +247,17 @@ No formal test suite exists. Testing approach:
 ## Output Structure
 ```
 runs/run_YYYY_MM_DD_HH_MM_SS/    # Timestamped run directory
-├── section_*/                    # Individual section work products
+├── section_*/                    # Individual section work products (1-32)
 │   ├── step_1_initial_draft.md
 │   ├── step_2_completeness_check.txt
 │   ├── step_3_enhanced_draft.md
-│   ├── step_4_final_section.md
-│   └── step_6_learning.json
+│   └── step_4_final_section.md
+├── section_34/                   # Financial Pattern Analysis
+│   ├── layer1_patterns.txt
+│   ├── layer2_pattern*_hypotheses.txt
+│   ├── layer3_pattern*_hyp*_verdict.txt
+│   ├── layer4_pattern*_synthesis.md
+│   └── step_4_final_section.md
 ├── [Company]_profile.md          # Combined markdown
 └── run_summary.txt               # Processing log
 
@@ -255,6 +268,5 @@ ReportFiles/                      # Final deliverables
 ## Known Constraints & Limitations
 - **PDF Conversion**: Marker library can corrupt tables during extraction
 - **Process Isolation**: PDF conversion requires separate processes due to PyTorch memory constraints
-- **Quality Filtering**: Learning system requires aggressive 9-10 threshold to prevent noise
 - **No Formal Testing**: Manual validation only - no automated test suite
-- **Memory Accumulation**: Learning insights grow unbounded over time
+- **Section 34 API Usage**: 16 API calls per run regardless of other sections selected

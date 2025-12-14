@@ -2,14 +2,14 @@
 
 ## Executive Summary
 
-ProfileDash 2.1 (PD2) is a sophisticated financial document analysis system that transforms PDF documents into comprehensive 33-section company profiles using Google's Gemini LLM API. The system employs a multi-stage refinement pipeline with parallel processing, intelligent caching, and a learning system that captures analytical patterns for continuous improvement.
+ProfileDash 2.2 (PD2) is a sophisticated financial document analysis system that transforms PDF documents into comprehensive 34-section company profiles using Google's Gemini LLM API. The system employs a multi-stage refinement pipeline with parallel processing and intelligent caching.
 
 **Key Metrics**:
-- 33 analytical sections organized into 5 groups
-- 6-step progressive refinement pipeline per section
+- 34 analytical sections organized into 6 groups
+- 4-step progressive refinement pipeline per section (sections 1-32)
+- Custom 4-layer hypothesis-driven pipeline for Section 34 (Financial Pattern Analysis)
 - Configurable 1-8 parallel workers
 - Professional PDF output with page footers and numbering
-- Learning system with quality-filtered insight accumulation
 
 ## Architecture Overview
 
@@ -58,8 +58,6 @@ ProfileDash 2.1 (PD2) is a sophisticated financial document analysis system that
 Analysis proceeds through multiple stages, each with specific goals:
 - **Expansion phase** (Steps 1-3): Capture all relevant data, identify gaps
 - **Condensation phase** (Step 4): Distill to essential insights with investor relevance filter
-- **Discovery phase** (Step 5): Optional deep pattern finding
-- **Learning phase** (Step 6): Extract reusable methodologies
 
 ### 2. Parallel Processing Architecture
 - **Process pools** for PDF conversion (CPU-intensive, PyTorch isolation required)
@@ -160,7 +158,7 @@ class IntelligentAnalyst:
    - Three status updates: "Draft" → "Refine" → "Polish"
    - Special handling for Section 33 (skip refinement steps)
 
-3. **`run_analysis(section_numbers, enable_discovery, workers)`**
+3. **`run_analysis(section_numbers, workers)`**
    - Two-phase scheduling: sections 1-32, then section 33
    - ThreadPoolExecutor with configurable workers (1-8)
    - Progress tracking with completion counts
@@ -200,15 +198,14 @@ if __name__ == "__main__":
     #    - Buyside Due Diligence (27-32)
     #    - Data Book (33)
     #    - Custom selection
-    # 6. Enable/disable discovery pipeline
-    # 7. Set worker count (1-8, default 2)
-    # 8. Run analysis with progress tracking
-    # 9. Generate PDF report
+    # 6. Set worker count (1-8, default 2)
+    # 7. Run analysis with progress tracking
+    # 8. Generate PDF report
 ```
 
 ### 2. src/core_analyzer.py - Analysis Pipeline
 
-**Purpose**: Implements the 6-step progressive refinement pipeline for each section.
+**Purpose**: Implements the 4-step progressive refinement pipeline for each section.
 
 #### CoreAnalyzer Class
 
@@ -221,7 +218,7 @@ class CoreAnalyzer:
         self.file_manager = FileManager(run_timestamp)
 ```
 
-#### The 6-Step Pipeline
+#### The 4-Step Pipeline
 
 **Step 1: Initial Draft**
 ```python
@@ -262,34 +259,10 @@ def deep_analysis_and_polish(self, section, enhanced_draft):
     # Quality focus: Remove corporate fluff, maximize insight density
 ```
 
-**Step 5: Discovery Pipeline (Optional)**
-```python
-def run_discovery_pipeline(self, section, polished_content):
-    # Six sub-stages:
-    # 1. Extract all quantifiable data
-    # 2. Calculate relationships and ratios
-    # 3. Identify anomalies and outliers
-    # 4. Investigate root causes
-    # 5. Assess business impact
-    # 6. Generate comprehensive insight summary
-    # Purpose: Find hidden patterns in data
-```
-
-**Step 6: Learning Extraction**
-```python
-def extract_learning(self, section_num, final_content):
-    # Temperature: 0.2 (precise extraction)
-    # Captures: Analytical techniques, patterns, methodologies
-    # Format: JSON with instruction + quality score
-    # Threshold: Only scores 9-10 saved
-    # Max length: 30 words per insight
-    # Returns: Learning object for InsightMemory
-```
-
 #### Special Handling
 
 **Section 33 (Data Book)**:
-- Skips Steps 2-5 (completeness, enhancement, polish, discovery)
+- Skips Steps 2-4 (completeness, enhancement, polish)
 - Pure extraction mode with no word limits
 - Preserves all data tables and numerical content
 - Single-pass processing
@@ -437,7 +410,7 @@ Markdown sections → Combine → Add cover page → CSS styling → HTML → We
 
 2. **`_collect_section_markdown() -> (str, List[tuple])`**
    - Scans run directory for section files
-   - Prioritizes discovery-augmented over final over draft
+   - Prioritizes final over draft
    - Applies markdown cleaning pipeline
    - Returns: (combined_markdown, processed_sections list)
 
@@ -463,7 +436,7 @@ Markdown sections → Combine → Add cover page → CSS styling → HTML → We
 
 6. **`_generate_cover_page(sections, company_name) -> str`**
    - Company name (large, centered)
-   - Product name: "ProfileDash 2.1"
+   - Product name: "ProfileDash 2.2"
    - Generation info: Model and date
    - Table of contents grouped by category:
      - Company Profile (1-13)
@@ -489,7 +462,7 @@ Markdown sections → Combine → Add cover page → CSS styling → HTML → We
    - A4 page sizing with explicit margins
    - Pixel-based font sizes (12px base for consistent PDF rendering)
    - Page footer CSS:
-     - `@bottom-left`: "Generated by ProfileDash 2.1 on [date]"
+     - `@bottom-left`: "Generated by ProfileDash 2.2 on [date]"
      - `@bottom-right`: "Page X of Y"
      - 7px font, blue color (#2d5a87)
    - Table styling with alternating row colors
@@ -679,13 +652,6 @@ For each section (ThreadPoolExecutor, 1-8 workers):
          │  • Display: "Sec. N → Polish"
          │  • Apply investor relevance filter
          ↓
-    [Optional] Step 5: Discovery Pipeline
-         │  • 6-stage quantitative pattern finding
-         ↓
-    Step 6: Learning Extraction
-         │  • Capture methodologies
-         │  • Quality filter (9-10 only)
-         ↓
     Save to: runs/run_*/section_N/
          │
          ↓
@@ -696,7 +662,7 @@ For each section (ThreadPoolExecutor, 1-8 workers):
 ```
 1. Collect Section Markdown
    ├─> Scan runs/run_*/ directories
-   ├─> Prioritize: discovery_augmented > final > draft
+   ├─> Prioritize: final > draft
    └─> Apply markdown cleaning
 
 2. Generate HTML
@@ -832,18 +798,11 @@ runs/run_YYYY_MM_DD_HH_MM_SS/
 │   ├── step_1_initial_draft.md
 │   ├── step_2_completeness_check.txt
 │   ├── step_3_enhanced_draft.md
-│   ├── step_4_final_section.md
-│   ├── step_5_discovery_augmented.md  # Optional
-│   └── step_6_learning.json
+│   └── step_4_final_section.md
 ├── section_2/
 │   └── ...
 ├── [Company]_profile.md
 └── run_summary.txt
-
-memory/
-├── learning_memory.json
-└── snapshots/
-    └── memory_YYYY_MM_DD_HH_MM_SS.json
 ```
 
 ## Key Algorithms & Techniques
@@ -857,25 +816,8 @@ Output: Polished section content (~500 words)
 2. VALIDATE: Check completeness against source
 3. ENHANCE: Incorporate missing elements
 4. CONDENSE: Apply relevance filter, distill to 500 words
-5. DISCOVER: (Optional) Find hidden quantitative patterns
-6. LEARN: Extract reusable analytical techniques
 
 Quality gate at each step: minimum content requirements
-```
-
-### 2. Learning Memory Algorithm
-```
-Input: Section analysis output
-Output: High-quality insights (9-10 score only)
-
-1. LLM extracts analytical techniques from output
-2. Assign quality score (1-10 scale)
-3. Filter: Keep only 9-10 scores
-4. Deduplicate: Fuzzy match against existing insights
-5. Limit: Top 6 insights per section (by score)
-6. Store: Append to learning_memory.json
-
-Retrieval: Return all insights for section as context
 ```
 
 ### 3. Table Cleaning Algorithm
@@ -981,7 +923,7 @@ Prevents: Cross-section footnote collisions
 
 ## Conclusion
 
-ProfileDash 2.1 represents a sophisticated document analysis pipeline with careful attention to:
+ProfileDash 2.2 represents a sophisticated document analysis pipeline with careful attention to:
 - **Parallel processing** for performance
 - **Progressive refinement** for quality
 - **Learning accumulation** for continuous improvement

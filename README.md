@@ -1,7 +1,7 @@
-# ProfileDash 2.1 & OnePageProfile 1.3
+# ProfileDash 2.2 & OnePageProfile 1.3
 
 Intelligent document analysis tools for M&A and investment analysis:
-- **PD2** (ProfileDash 2.1): Comprehensive 33-section company profiles with deep analytical insights
+- **PD2** (ProfileDash 2.2): Comprehensive 34-section company profiles with deep analytical insights
 - **OPP** (OnePageProfile v1.3): Concise one-page profiles for quick M&A evaluation
 
 ## Quick Start
@@ -21,13 +21,13 @@ Intelligent document analysis tools for M&A and investment analysis:
 
 3. **Run**:
    ```bash
-   python PD2.py      # For comprehensive 33-section profiles
+   python PD2.py      # For comprehensive 34-section profiles
    python OPP.py      # For one-page M&A profiles
    ```
 
-## ProfileDash 2.1 (PD2)
+## ProfileDash 2.2 (PD2)
 
-Comprehensive 33-section company analysis for deep M&A and investment evaluation.
+Comprehensive 34-section company analysis for deep M&A and investment evaluation.
 
 **Usage:**
 
@@ -40,6 +40,7 @@ Comprehensive 33-section company analysis for deep M&A and investment evaluation
    - Sellside Positioning (sections 20-26)
    - Buyside Due Diligence (sections 27-32)
    - Data Book (section 33)
+   - Financial Pattern Analysis (section 34)
 5. Set parallel workers (1-5, default 2)
 6. Wait for processing (~30-60 minutes for full profile)
 
@@ -132,7 +133,7 @@ Custom profiles use distinct output naming for easy identification.
 
 **Learning System (PD2 only):**
 PD2 learns and improves over time:
-- Memory: `memory/pd2_learning_memory.json` (33 sections, detailed analysis)
+- Memory: `memory/pd2_learning_memory.json` (34 sections, detailed analysis)
 - Archives: `memory/memory_library/pd2_memory_{timestamp}.json`
 - Extracts universal analytical methodologies (9-10/10 quality only)
 - Applies learned patterns to future runs

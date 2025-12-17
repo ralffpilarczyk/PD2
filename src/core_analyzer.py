@@ -475,20 +475,37 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
         """
         prompt = f"""You are analysing the financial statements and disclosures of {company_name}.
 
-Identify exactly three relationships where metrics that should move together are diverging disproportionately—where the gap is too large to be explained by normal operating variance, has persisted across multiple periods, or represents a significant deviation from the company's own history.
+Identify exactly THREE financial patterns where quantitative metrics that should move together are diverging disproportionately.
 
-Focus on patterns that are MATERIAL to the company's prospects—patterns that would affect an investor's view of valuation, risk, or growth trajectory.
+REQUIREMENTS FOR EACH PATTERN:
+1. BOTH sides must be QUANTITATIVE with specific numbers from the documents
+2. The divergence must be MATERIAL (>10% gap or multi-period trend)
+3. Patterns must be INDEPENDENT - do not select patterns where one causes another
 
-CRITICAL: The three patterns must be DIVERSE—they should examine different aspects of the business (e.g., operations, capital structure, cash flow, segments, governance). Do NOT select patterns where one explains or causes another. Each pattern should stand independently.
+GOOD PATTERN EXAMPLES:
+- Revenue +15% while Production Volume -12% (price masking volume decline)
+- Capex 450M vs Depreciation 900M (underinvestment vs asset consumption)
+- Reported Profit +20% while Operating Cash Flow -5% (earnings quality question)
+- Domestic Sales +8% while Export Sales -25% (geographic divergence)
 
-For each pattern, provide:
+BAD PATTERN EXAMPLES (DO NOT USE):
+- "Strong governance despite industry challenges" (qualitative, not quantitative)
+- "Revenue growth vs Volume decline" AND "Profit growth vs Volume decline" (same root cause)
+- "Management claims vs Reality" (not measurable divergence)
 
-PATTERN: A concise name
-OBSERVATION: What you observe, with specific figures. ALWAYS use the most recent data available. Include currency/units and time periods in parentheses, e.g., Revenue: RM8.7bn (FY2024)
-PERSISTENCE: Number of periods this has occurred
-WHY NOTABLE: Why this warrants investigation
+For each pattern provide:
 
-Present as a numbered list (1, 2, 3).
+1. PATTERN: Concise name describing the two diverging metrics
+   METRIC A: [Metric name]: [Value] ([Period]) - Direction: [Up/Down X%]
+   METRIC B: [Metric name]: [Value] ([Period]) - Direction: [Up/Down X%]
+   PERSISTENCE: [Number] periods
+   WHY NOTABLE: [One sentence on investor relevance]
+
+2. [Same format]
+
+3. [Same format]
+
+CRITICAL: If you cannot find three genuinely independent quantitative divergences, report only what you find. Do not pad with qualitative observations.
 """
         # Use cached model if available, else fallback to pdf_parts
         if self.cached_model_medium_temp:
@@ -606,12 +623,15 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
         """Parse Layer 1 output into list of pattern dicts."""
         patterns = []
 
-        # Split by pattern numbers (1., 2., 3. or 1), 2), 3))
-        pattern_blocks = re.split(r'\n(?=\d[\.\)]\s)', layer1_output)
+        # Split by pattern numbers - handles multiple formats:
+        # - Plain: 1. or 1)
+        # - Markdown headers: ### 1. or ## 1.
+        # - Bold: **1.** or **1)**
+        pattern_blocks = re.split(r'\n(?=(?:#{1,3}\s*)?\*{0,2}\d[\.\)]\*{0,2}\s)', layer1_output)
 
         for block in pattern_blocks:
             block = block.strip()
-            if not block or not block[0].isdigit():
+            if not block or not re.match(r'^(?:#{1,3}\s*)?\*{0,2}\d[\.\)]', block):
                 continue
 
             pattern = {"raw": block}
@@ -621,9 +641,9 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
             if pattern_match:
                 pattern["name"] = pattern_match.group(1).strip()
             else:
-                # Try to get first line after number
+                # Try to get first line after number (handles markdown prefixes)
                 first_line = block.split('\n')[0]
-                pattern["name"] = re.sub(r'^\d[\.\)]\s*', '', first_line).strip()
+                pattern["name"] = re.sub(r'^(?:#{1,3}\s*)?\*{0,2}\d[\.\)]\*{0,2}\s*', '', first_line).strip()
 
             # Extract OBSERVATION
             obs_match = re.search(r'OBSERVATION:\s*(.+?)(?=\n[A-Z]+:|$)', block, re.IGNORECASE | re.DOTALL)
@@ -637,6 +657,52 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
             patterns.append({"raw": f"Pattern {len(patterns)+1}: Unable to identify", "name": f"Pattern {len(patterns)+1}"})
 
         return patterns[:3]
+
+    def _section33_validate_pattern_diversity(self, patterns: list) -> list:
+        """
+        Check for redundant patterns and warn if detected.
+        Uses text similarity rather than hardcoded keywords.
+        """
+        if len(patterns) < 2:
+            return patterns
+
+        def extract_significant_words(text: str) -> set:
+            """Extract significant words (excluding common stopwords)."""
+            stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
+                         'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+                         'would', 'could', 'should', 'may', 'might', 'must', 'shall',
+                         'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in',
+                         'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into',
+                         'through', 'during', 'before', 'after', 'above', 'below',
+                         'between', 'under', 'again', 'further', 'then', 'once',
+                         'here', 'there', 'when', 'where', 'why', 'how', 'all',
+                         'each', 'few', 'more', 'most', 'other', 'some', 'such',
+                         'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than',
+                         'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because',
+                         'until', 'while', 'this', 'that', 'these', 'those', 'what',
+                         'which', 'who', 'whom', 'its', 'it', 'they', 'them', 'their',
+                         'we', 'us', 'our', 'you', 'your', 'he', 'him', 'his', 'she',
+                         'her', 'vs', 'per', 'also', 'however', 'therefore', 'thus'}
+            words = re.findall(r'\b[a-z]{3,}\b', text.lower())
+            return {w for w in words if w not in stopwords}
+
+        # Extract significant words from each pattern
+        pattern_words = [extract_significant_words(p.get("raw", "")) for p in patterns]
+
+        # Check for high overlap (Jaccard similarity)
+        for i in range(len(patterns)):
+            for j in range(i+1, len(patterns)):
+                if not pattern_words[i] or not pattern_words[j]:
+                    continue
+                intersection = pattern_words[i] & pattern_words[j]
+                union = pattern_words[i] | pattern_words[j]
+                similarity = len(intersection) / len(union) if union else 0
+
+                if similarity > 0.4:  # >40% word overlap suggests redundancy
+                    shared_sample = ', '.join(sorted(intersection)[:5])
+                    thread_safe_print(f"    WARNING: Patterns {i+1} and {j+1} may be redundant ({similarity:.0%} overlap: {shared_sample}...)")
+
+        return patterns
 
     def _section33_parse_explanations(self, layer2_output: str) -> list:
         """Parse Layer 2 output into list of explanation dicts."""
@@ -705,9 +771,14 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
         # Save Layer 1 output
         file_manager.save_step_output(33, "layer1_patterns.txt", layer1_output)
 
-        # Parse patterns
+        # Parse and validate patterns
         patterns = self._section33_parse_patterns(layer1_output)
-        thread_safe_print(f"    Found {len(patterns)} patterns")
+        patterns = self._section33_validate_pattern_diversity(patterns)
+
+        # Display pattern names
+        for i, p in enumerate(patterns):
+            name_short = p.get("name", "Unknown")[:50]
+            thread_safe_print(f"    [{i+1}] {name_short}")
 
         # ===================
         # LAYER 2: Generate Hypotheses (3 calls, sequential)
@@ -729,9 +800,12 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
                 # Parse explanations
                 explanations = self._section33_parse_explanations(layer2_output)
                 all_explanations[pattern_idx] = explanations
-                thread_safe_print(f"    Pattern {pattern_idx+1}: {len(explanations)} hypotheses")
+                # Show pattern name and hypothesis names
+                pattern_name = pattern.get("name", f"Pattern {pattern_idx+1}")[:30]
+                hyp_names = " | ".join([e.get("name", "?")[:20] for e in explanations])
+                thread_safe_print(f"    [{pattern_idx+1}] {pattern_name}: {hyp_names}")
             except Exception as e:
-                thread_safe_print(f"    Pattern {pattern_idx+1}: Error - {e}")
+                thread_safe_print(f"    [{pattern_idx+1}] Error - {e}")
                 all_explanations[pattern_idx] = [{"raw": "Error generating hypothesis", "name": "Error"}] * 3
 
         # ===================
@@ -762,9 +836,21 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
                     # Extract verdict
                     verdict = self._section33_extract_verdict(layer3_output)
                     all_verdicts[(pattern_idx, exp_idx)] = verdict
-                    # Show progress with abbreviated verdict
-                    verdict_short = verdict[:60] + "..." if len(verdict) > 60 else verdict
-                    thread_safe_print(f"    [{call_count}/9] P{pattern_idx+1}H{exp_idx+1}: {verdict_short}")
+                    # Extract just the verdict category
+                    verdict_category = "Unknown"
+                    verdict_lower = verdict.lower()
+                    if "strongly supported" in verdict_lower:
+                        verdict_category = "Strongly Supported"
+                    elif "strongly refuted" in verdict_lower:
+                        verdict_category = "Strongly Refuted"
+                    elif "supported" in verdict_lower:
+                        verdict_category = "Supported"
+                    elif "refuted" in verdict_lower:
+                        verdict_category = "Refuted"
+                    elif "indeterminate" in verdict_lower:
+                        verdict_category = "Indeterminate"
+                    exp_name = explanation.get("name", "Hyp")[:20]
+                    thread_safe_print(f"    [{call_count}/9] P{pattern_idx+1}-{exp_name}: {verdict_category}")
                 except Exception as e:
                     thread_safe_print(f"    Pattern {pattern_idx+1} Hyp {exp_idx+1}: Error - {e}")
                     all_verdicts[(pattern_idx, exp_idx)] = "Error: Unable to test"
@@ -802,7 +888,8 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
                 # Save Layer 4 output
                 file_manager.save_step_output(33, f"layer4_pattern{pattern_idx+1}_synthesis.md", summary)
                 all_summaries[pattern_idx] = summary
-                thread_safe_print(f"    Pattern {pattern_idx+1}: Synthesis complete")
+                pattern_name = pattern.get("name", f"Pattern {pattern_idx+1}")[:40]
+                thread_safe_print(f"    [{pattern_idx+1}] {pattern_name}: Complete")
             except Exception as e:
                 thread_safe_print(f"    Pattern {pattern_idx+1}: Error - {e}")
                 all_summaries[pattern_idx] = f"Error generating synthesis: {e}"
@@ -817,7 +904,10 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
 
         for pattern_idx in range(3):
             pattern = patterns[pattern_idx]
+            # Clean pattern name - remove any markdown artifacts
             pattern_name = pattern.get("name", f"Pattern {pattern_idx+1}")
+            pattern_name = re.sub(r'^\*+|\*+$', '', pattern_name).strip()  # Remove leading/trailing asterisks
+            pattern_name = re.sub(r'\*\*$', '', pattern_name).strip()  # Remove trailing bold markers
             summary = all_summaries.get(pattern_idx, "Summary not available")
 
             final_output += f"### Pattern {pattern_idx+1}: {pattern_name}\n\n"

@@ -469,29 +469,37 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
 
     def _section33_layer1_identify_patterns(self, company_name: str) -> str:
         """
-        Layer 1: Identify 3 material financial patterns worth investigating.
+        Layer 1: Identify 3 material financial/operational patterns worth investigating.
         Attach: Source document
         Returns: Raw text with 3 patterns (to be parsed)
         """
-        prompt = f"""You are analysing the financial statements and disclosures of {company_name}.
+        prompt = f"""You are analysing the financial statements, operational KPIs, and disclosures of {company_name}.
 
-Identify exactly THREE financial patterns where quantitative metrics that should move together are diverging disproportionately.
+Identify patterns where quantitative metrics that should move together are diverging disproportionately. These can be financial metrics, operational KPIs, or combinations of both.
+
+FIRST: Identify the SINGLE most material pattern - the divergence that most affects the company's prospects. This is your primary pattern.
+
+THEN: Identify TWO additional patterns that are INDEPENDENT of the first. These must have different root causes - not different symptoms of the same issue.
+
+INDEPENDENCE TEST: If Pattern 2 or 3 would disappear if Pattern 1 were resolved, they are not independent. Find different patterns.
 
 REQUIREMENTS FOR EACH PATTERN:
 1. BOTH sides must be QUANTITATIVE with specific numbers from the documents
-2. The divergence must be MATERIAL (>10% gap or multi-period trend)
-3. Patterns must be INDEPENDENT - do not select patterns where one causes another
+2. The divergence must be SIGNIFICANT (>10% gap or multi-period trend)
+3. The pattern must be MATERIAL TO THE COMPANY'S PROSPECTS - does it affect future cash flows, operational sustainability, or competitive position? If no, it's not material.
 
 GOOD PATTERN EXAMPLES:
 - Revenue +15% while Production Volume -12% (price masking volume decline)
 - Capex 450M vs Depreciation 900M (underinvestment vs asset consumption)
 - Reported Profit +20% while Operating Cash Flow -5% (earnings quality question)
-- Domestic Sales +8% while Export Sales -25% (geographic divergence)
+- Headcount -15% while Output +8% (productivity or quality risk)
+- Customer Count +20% while Revenue per Customer -25% (mix deterioration)
 
 BAD PATTERN EXAMPLES (DO NOT USE):
 - "Strong governance despite industry challenges" (qualitative, not quantitative)
-- "Revenue growth vs Volume decline" AND "Profit growth vs Volume decline" (same root cause)
+- "Revenue growth vs Volume decline" AND "Profit growth vs Volume decline" (same root cause - not independent)
 - "Management claims vs Reality" (not measurable divergence)
+- "Net Profit vs OCI swing" (accounting volatility that doesn't affect operations or prospects)
 
 For each pattern provide:
 
@@ -499,13 +507,13 @@ For each pattern provide:
    METRIC A: [Metric name]: [Value] ([Period]) - Direction: [Up/Down X%]
    METRIC B: [Metric name]: [Value] ([Period]) - Direction: [Up/Down X%]
    PERSISTENCE: [Number] periods
-   WHY NOTABLE: [One sentence on investor relevance]
+   WHY MATERIAL: [One sentence on why this affects the company's prospects]
 
 2. [Same format]
 
 3. [Same format]
 
-CRITICAL: If you cannot find three genuinely independent quantitative divergences, report only what you find. Do not pad with qualitative observations.
+CRITICAL: If you cannot find three genuinely independent quantitative divergences that are material to prospects, report only what you find. Do not pad with accounting noise or patterns that share root causes with Pattern 1.
 """
         # Use cached model if available, else fallback to pdf_parts
         if self.cached_model_medium_temp:
@@ -529,11 +537,13 @@ CRITICAL: If you cannot find three genuinely independent quantitative divergence
 
 Generate exactly three candidate explanations spanning benign to concerning.
 
+CRITICAL: At least one hypothesis must challenge the validity or interpretation of the metrics themselves, not just explain the divergence. Consider: Is there an accounting explanation? A consolidation scope change? A timing distortion? A measurement issue?
+
 For each explanation, provide:
 
 NAME: Concise name
 MECHANISM: How this would produce the observed pattern
-PREDICTION A: First testable prediction—something else we should observe if this explanation is true
+PREDICTION A: First testable prediction - something else we should observe if this explanation is true
 PREDICTION B: Second testable prediction
 PREDICTION C: Third testable prediction
 
@@ -563,12 +573,13 @@ Search the document for evidence bearing on each prediction.
 
 For each prediction, report:
 - EVIDENCE FOUND: Quote relevant passages with page/note references. If nothing relevant exists, state "No evidence found in document."
+- DISCONFIRMING EVIDENCE: What evidence would REFUTE this prediction? Actively search for it and report what you find.
 - DIRECTION: Supports / Refutes / Ambiguous
 - STRENGTH: Strong / Moderate / Weak / No evidence
 
 Do not infer or fabricate evidence. Only cite what is explicitly stated in the document.
 
-OVERALL VERDICT: Rate as strongly supported / supported / indeterminate / weakly refuted / strongly refuted. Explain in two sentences.
+OVERALL VERDICT: Rate as strongly supported / supported / indeterminate / weakly refuted / strongly refuted. Explain in two sentences, weighing both supporting and disconfirming evidence.
 """
         # Use cached model if available, else fallback to pdf_parts
         if self.cached_model_low_temp:
@@ -585,7 +596,7 @@ OVERALL VERDICT: Rate as strongly supported / supported / indeterminate / weakly
         """
         Layer 4: Write analytical summary for a pattern.
         Attach: Source document
-        Returns: 200-300 word analytical summary
+        Returns: Max 200 word analytical summary
         """
         prompt = f"""You have investigated a pattern in {company_name}'s financials.
 
@@ -599,15 +610,15 @@ Write an analytical summary for a senior banker.
 
 THESIS: One paragraph stating what is actually happening and why. Take a position.
 
-KEY EVIDENCE: Three to five specific figures from the document that support your thesis. ALWAYS use the most recent data available. Include currency/units and time periods in parentheses.
+KEY EVIDENCE: Three to five specific figures from the document that support your thesis. ALWAYS use the most recent data available. Include currency/units and time periods.
 
 SUSTAINABILITY: Is this trajectory sustainable? What breaks it and when?
 
-VALUATION IMPLICATION: What adjustment to normalised earnings or cash flow? Quantify.
+VALUATION DRIVERS: What is this pattern doing to the key value drivers (earnings quality, growth sustainability, capital efficiency, risk profile)? Be specific about WHAT is affected.
 
-DILIGENCE PRIORITIES: Two questions to ask management.
+NARRATIVE GAP: State what management has NOT explained. Identify the specific gap between their narrative and the data.
 
-Direct prose. No bullet points. No reference to hypotheses or methodology. 200-300 words.
+Maximum 200 words. Direct prose. No bullet points. No reference to hypotheses or methodology. No explicit diligence questions - the analysis should make them obvious.
 """
         # Use cached model if available, else fallback to pdf_parts
         if self.cached_model_medium_temp:
@@ -718,10 +729,12 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
 
             explanation = {"raw": block}
 
-            # Extract NAME
-            name_match = re.search(r'NAME:\s*(.+?)(?:\n|$)', block, re.IGNORECASE)
+            # Extract NAME (handles **NAME**: and *NAME*: formats)
+            name_match = re.search(r'\*{0,2}NAME\*{0,2}:\s*(.+?)(?:\n|$)', block, re.IGNORECASE)
             if name_match:
-                explanation["name"] = name_match.group(1).strip()
+                name = name_match.group(1).strip()
+                name = re.sub(r'^\*+|\*+$', '', name).strip()  # Remove markdown artifacts
+                explanation["name"] = name
             else:
                 explanation["name"] = f"Explanation {len(explanations)+1}"
 
@@ -735,7 +748,8 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
 
     def _section33_extract_verdict(self, layer3_output: str) -> str:
         """Extract the overall verdict from Layer 3 output."""
-        verdict_match = re.search(r'OVERALL VERDICT:\s*(.+?)(?:\n\n|$)', layer3_output, re.IGNORECASE | re.DOTALL)
+        # Handle **OVERALL VERDICT**: format
+        verdict_match = re.search(r'\*{0,2}OVERALL VERDICT\*{0,2}:\s*(.+?)(?:\n\n|$)', layer3_output, re.IGNORECASE | re.DOTALL)
         if verdict_match:
             return verdict_match.group(1).strip()
         return "Verdict: Unable to determine"
@@ -777,8 +791,9 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
 
         # Display pattern names
         for i, p in enumerate(patterns):
-            name_short = p.get("name", "Unknown")[:50]
-            thread_safe_print(f"    [{i+1}] {name_short}")
+            name = p.get("name", "Unknown")
+            name = re.sub(r'^\*+|\*+$', '', name).strip()  # Remove markdown artifacts
+            thread_safe_print(f"    [{i+1}] {name[:50]}")
 
         # ===================
         # LAYER 2: Generate Hypotheses (3 calls, sequential)
@@ -800,9 +815,13 @@ Direct prose. No bullet points. No reference to hypotheses or methodology. 200-3
                 # Parse explanations
                 explanations = self._section33_parse_explanations(layer2_output)
                 all_explanations[pattern_idx] = explanations
-                # Show pattern name and hypothesis names
-                pattern_name = pattern.get("name", f"Pattern {pattern_idx+1}")[:30]
-                hyp_names = " | ".join([e.get("name", "?")[:20] for e in explanations])
+                # Show pattern name and hypothesis names (clean markdown artifacts)
+                pattern_name = pattern.get("name", f"Pattern {pattern_idx+1}")
+                pattern_name = re.sub(r'^\*+|\*+$', '', pattern_name).strip()[:30]
+                def clean_hyp_name(n):
+                    n = re.sub(r'^\*+|\*+$', '', n).strip()
+                    return n[:20]
+                hyp_names = " | ".join([clean_hyp_name(e.get("name", "?")) for e in explanations])
                 thread_safe_print(f"    [{pattern_idx+1}] {pattern_name}: {hyp_names}")
             except Exception as e:
                 thread_safe_print(f"    [{pattern_idx+1}] Error - {e}")

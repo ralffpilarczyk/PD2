@@ -53,6 +53,14 @@ Every insight must pass these filters:
 3. **Data density**: Maximum insights per word. Eliminate fluff and corporate language.
 4. **Surface vs reality**: Flag where management narrative diverges from data.
 
+## LLM Pipeline Design
+
+1. **Hypothesis generation without document anchoring**: When generating hypotheses or independent analysis, strategically detach from source documents. Attaching documents during hypothesis generation causes the LLM to anchor to existing framing rather than reason independently. Generate hypotheses first, then test against documents.
+
+2. **Separate testing from synthesis**: Testing (verifying evidence) and synthesis (drawing conclusions) are different cognitive tasks requiring different temperatures. Testing needs precision (low temperature). Synthesis needs judgment (medium temperature). Don't combine them in one step.
+
+3. **Universal prompts with section-specific pointers**: When building multi-section analysis, keep the reasoning chain universal (same steps, same logic) but allow section-specific guidance through minimal pointers. Don't hardwire different algorithms per section - use one algorithm with parameterized inputs.
+
 ## Red Flags - Stop and Clarify
 
 - Implementing the same feature for the third time

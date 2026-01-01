@@ -97,16 +97,13 @@ def main():
 
     # Model selection (same as OPP.py)
     thread_safe_print("Select LLM model:")
-    thread_safe_print("  1) gemini-2.5-flash")
+    thread_safe_print("  1) gemini-3-flash-preview")
     thread_safe_print("  2) gemini-3-pro-preview")
-    thread_safe_print("  3) gemini-2.5-pro")
-    choice = prompt_single_digit("Choose model [1/2/3] (default 1): ", valid_digits="123", default_digit="1")
+    choice = prompt_single_digit("Choose model [1/2] (default 1): ", valid_digits="12", default_digit="1")
     if choice == "1":
-        selected_model = 'gemini-2.5-flash'
-    elif choice == "2":
-        selected_model = 'gemini-3-pro-preview'
+        selected_model = 'gemini-3-flash-preview'
     else:
-        selected_model = 'gemini-2.5-pro'
+        selected_model = 'gemini-3-pro-preview'
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Selected: {selected_model}\n")
 
     # Worker selection (same as OPP.py)

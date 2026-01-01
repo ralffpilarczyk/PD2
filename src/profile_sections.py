@@ -8,6 +8,7 @@ sections = [
     {
         "number": 1,
         "title": "Operating Footprint",
+        "ground_truth_pointer": "How do the company's physical assets and human capabilities enable or constrain how the company competes?",
         "specs": "Extract and analyze the company's operational presence and scale. Focus on understanding how the company's physical and human resources are distributed and how they support its business model.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -30,6 +31,7 @@ sections = [
     {
         "number": 2,
         "title": "Products and Services",
+        "ground_truth_pointer": "How does the company actually sell, deliver, price, and get paid for its products?",
         "specs": "Extract and analyze the company's product and service offerings. Focus on understanding the value proposition of each product or service from the customer's perspective.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -51,6 +53,7 @@ sections = [
     {
         "number": 3,
         "title": "Key Customers",
+        "ground_truth_pointer": "Why do customers buy from this company, stay, or leave?",
         "specs": "Extract and analyze the company's customer relationships. Focus on understanding the key customers and their contribution to the company's revenue.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -74,6 +77,7 @@ sections = [
     {
         "number": 4,
         "title": "Key Suppliers",
+        "ground_truth_pointer": "What supplier dependencies create risk or advantage?",
         "specs": "Extract and analyze the company's supplier relationships.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -97,6 +101,7 @@ sections = [
     {
         "number": 5,
         "title": "Key Competitors",
+        "ground_truth_pointer": "How does the company actually win or lose against specific competitors?",
         "specs": "Extract and analyze the company's competitive landscape.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -117,6 +122,7 @@ sections = [
     {
         "number": 6,
         "title": "Operational KPIs",
+        "ground_truth_pointer": "What do the actual metrics reveal about unit economics and operational health?",
         "specs": "Extract and analyze operational KPIs (not financial KPIs)that directly impact cash flow generation.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -138,6 +144,7 @@ sections = [
     {
         "number": 7,
         "title": "Summary Financials (Consolidated)",
+        "ground_truth_pointer": "What do the numbers reveal about earnings quality and cash generation?",
         "specs": "Extract and analyze the company's consolidated financial performance, both annually and interim periods.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -192,6 +199,7 @@ sections = [
     {
         "number": 8,
         "title": "Summary Financials (Segment)",
+        "ground_truth_pointer": "Which segments actually drive value and which destroy it?",
         "specs": "Extract and analyze financial performance by business segment.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -244,6 +252,7 @@ sections = [
     {
         "number": 9,
         "title": "Balance Sheet (Most Recent)",
+        "ground_truth_pointer": "What does the capital structure reveal about financial flexibility and risk?",
         "specs": "Extract and analyze the company's most recent balance sheet.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -293,6 +302,7 @@ sections = [
     {
         "number": 10,
         "title": "Top 10 Shareholders",
+        "ground_truth_pointer": "What does ownership structure reveal about control, alignment, and exit dynamics?",
         "specs": "Extract and analyze the company's ownership structure.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -316,6 +326,7 @@ sections = [
     {
         "number": 11,
         "title": "M&A Agenda and Material Corporate Activity",
+        "ground_truth_pointer": "What does transaction history reveal about strategic priorities and execution capability?",
         "specs": "Summarise the company's M&A agenda as follows:\\n"
                 "1. M&A objectives and strategy - including strategic rationale, target criteria (size, geography, capabilities), and how M&A fits into overall growth plans\\n"
                 "2. Any recent transactions (last 5 years) where a meaningful stake (at least 10%) of the company was traded, including date, buyer and why did the buyer buy, seller and why did the seller sell, valuation, pricing, consideration, deal multiples, cash or share consideration, structure, and any other relevant terms and conditions\\n"
@@ -343,6 +354,7 @@ sections = [
     {
         "number": 12,
         "title": "Key Decision Makers",
+        "ground_truth_pointer": "Who actually controls decisions and what are their incentives?",
         "specs": "Start with a list of the key senior executives and the a list of the Board of Directors.\\n"
                 "Include titles, roles, backgrounds, and relevant experience at other companies.\\n"
                 "Detail compensation structures including fixed, variable, shares, options, and incentive arrangements.\\n"
@@ -359,6 +371,7 @@ sections = [
     {
         "number": 13,
         "title": "Deep Dive Discoveries",
+        "ground_truth_pointer": "What material risks or contradictions are hidden beneath the surface of management's narrative?",
         "specs": "Extract risks or contradictions not immediately apparent. Focus on identifying those that could materially impact the company's prospects.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -374,6 +387,7 @@ sections = [
     {
         "number": 14,
         "title": "Strategic Objectives and Corporate Strategies",
+        "ground_truth_pointer": "What gap exists between stated strategy and actual resource allocation or competitive behavior?",
         "specs": "Extract and analyze the company's strategic goals and corporate strategy.\\n"
                 "\\n"
                 "Key areas to consider:\\n"
@@ -401,6 +415,7 @@ sections = [
     {
         "number": 15,
         "title": "Strategic Constraints",
+        "ground_truth_pointer": "Which constraints are structural versus self-imposed, and which does management acknowledge versus avoid?",
         "specs": "List the 3 most important constraints for the company to achieve its strategic objectives.\\n"
                 "Focus on constraints that make it very difficult to achieve the previously defined strategic objectives.\\n"
                 "Quantify the impact of constraints on business performance where possible.\\n"
@@ -417,6 +432,7 @@ sections = [
     {
         "number": 16,
         "title": "Strengths",
+        "ground_truth_pointer": "Are stated strengths actually defensible advantages or just features competitors could replicate?",
         "specs": "Describe the 3 most relevant strengths that enable the company to compete.\\n"
                 "Focus on existing strengths (not future plans or initiatives), and existing competitive moats.\\n"
                 "Prioritize strengths by how much they enable the company to compete.\\n"
@@ -439,6 +455,7 @@ sections = [
     {
         "number": 17,
         "title": "Weaknesses",
+        "ground_truth_pointer": "What weaknesses does management downplay or reframe as temporary that may be structural?",
         "specs": "Describe the 3 most relevant weaknesses that prevent the Company from serving its customers or competing with its main competitors\\n"
                 "Focus on company-specific weaknesses versus competitors (not market threats)\\n"
                 "Prioritize weaknesses that are material to the company's ability to compete today\\n"
@@ -457,6 +474,7 @@ sections = [
     {
         "number": 18,
         "title": "Opportunities",
+        "ground_truth_pointer": "Which opportunities are realistically capturable with existing capabilities versus aspirational?",
         "specs": "Describe 3 specific opportunities that are achievable within 12-24 months and could materially impact the Company's performance\\n"
                 "Focus only on opportunities where the Company has existing capabilities to capture value\\n"
                 "For each opportunity, quantify potential revenue, profit, and ROI where possible\\n"
@@ -474,6 +492,7 @@ sections = [
     {
         "number": 19,
         "title": "Threats",
+        "ground_truth_pointer": "What threats does management minimize that could fundamentally impair cash generation?",
         "specs": "Identify and analyze the 3 most significant threats to the Company's performance within the next 12-24 months.\\n"
                 "Prioritize threats based on potential financial impact and likelihood of occurrence.\\n"
                 "Include competitive threats, technological disruptions, regulatory changes, and other external factors.\\n"
@@ -491,6 +510,7 @@ sections = [
     {
         "number": 20,
         "title": "Sellside Positioning - Macro",
+        "ground_truth_pointer": "How dependent is the company's narrative on macro tailwinds that may reverse?",
         "specs": "Describe 3 most important macro trends which support the Company's performance and prospects.\\n"
                 "Focus on economic indicators, not industry dynamics, because that's a separate question later. Positive trends only.\\n"
                 "Include relevant macro indicators such as economic growth, interest rates, labor costs, supply chain indicators, and global trade.\\n"
@@ -505,6 +525,7 @@ sections = [
     {
         "number": 21,
         "title": "Sellside Positioning - Industry",
+        "ground_truth_pointer": "How does the company's industry positioning story compare to observable market share and pricing data?",
         "specs": "Describe 3 most important industry trends which support the Company's performance and prospects.\\n"
                 "Focus on industry indicators, not macro indicators. Positive trends only.\\n"
                 "Include demand, supply, pricing, and industry growth drivers relevant to the Company.\\n"
@@ -519,6 +540,7 @@ sections = [
     {
         "number": 22,
         "title": "Sellside Positioning - Competitive Positioning",
+        "ground_truth_pointer": "Are claimed competitive advantages supported by measurable outcomes like pricing power or share gains?",
         "specs": "Describe the 3 most important competitive advantages that materially impact the Company's economic performance over the next 12 months.\\n"
                 "Focus on specific, measurable advantages relative to named competitors in key markets and segments.\\n"
                 "Include both quantitative measures (market share, growth rates, margins, pricing power) and qualitative advantages (brand strength, customer relationships) supported by hard data.\n"
@@ -532,6 +554,7 @@ sections = [
     {
         "number": 23,
         "title": "Sellside Positioning - Operating Performance",
+        "ground_truth_pointer": "Do highlighted operational KPIs represent sustainable performance or cherry-picked periods?",
         "specs": "Describe the 3 most important operating performance metrics over the last 24 months that directly impact the Company's economic wellbeing.\\n"
                 "Focus on measurable KPIs such as market share evolution, volumes sold, pricing trends, revenue per customer or unit economics that show the Company in the best possible light.\\n"
                 "Highlight areas of particular strength and present data that demonstrates exceptional operating performance.\\n"
@@ -545,6 +568,7 @@ sections = [
     {
         "number": 24,
         "title": "Sellside Positioning - Financial Performance",
+        "ground_truth_pointer": "What is the quality of reported earnings and how sustainable is the cash generation?",
         "specs": "Describe the 3 most important financial achievements of the Company over the last 24 months.\\n"
                 "Focus on metrics that demonstrate exceptional financial performance, particularly those related to cash flow generation.\\n"
                 "Present quarterly data where available to highlight positive trends.\\n"
@@ -558,6 +582,7 @@ sections = [
     {
         "number": 25,
         "title": "Sellside Positioning - Management",
+        "ground_truth_pointer": "Do management's incentives and track record align with shareholder value creation?",
         "specs": "Describe 3 facts about the Company's management team and Board that highlight their strengths and capabilities.\\n"
                 "Focus on both individual executives and the management team as a whole.\\n"
                 "Quantify management capabilities and how they contribute to the Company's success.\\n"
@@ -571,6 +596,7 @@ sections = [
     {
         "number": 26,
         "title": "Sellside Positioning - Potential Investor Concerns and Mitigants",
+        "ground_truth_pointer": "Are the mitigants offered substantive or rhetorical, and do they address root causes?",
         "specs": "Describe the 5 most important potential investor concerns when considering investing in the Company.\\n"
                 "Focus on fundamental business concerns and valuation issues that could impact investor returns.\\n"
                 "For each concern, provide 2-3 bullet points explaining the issue, underpinned by specific data points.\\n"
@@ -585,6 +611,7 @@ sections = [
     {
         "number": 27,
         "title": "Buyside Due Diligence - Macro",
+        "ground_truth_pointer": "What macro exposures has management underestimated or failed to hedge?",
         "specs": "Identify 2-3 macroeconomic factors where the Company has demonstrated unusual sensitivity or disclosed specific exposure.\\n"
                 "Unusual sensitivity means: disclosed exposure that peers don't face, material increase in exposure over recent periods, \\n"
                 "explicit management statements about vulnerability to the factor, or incomplete hedging against a factor already moving adversely.\\n"
@@ -606,6 +633,7 @@ sections = [
     {
         "number": 28,
         "title": "Buyside Due Diligence - Industry",
+        "ground_truth_pointer": "What industry structural shifts pose existential risk that management has not adequately addressed?",
         "specs": "Identify 2-3 industry-specific factors where the Company has demonstrated unusual sensitivity or disclosed specific exposure.\\n"
                 "Unusual sensitivity means: exposure to industry structural shifts that peers avoid, regulatory changes that disproportionately impact the company's business model, \\n"
                 "technology transitions where the company lags adoption, competitive dynamics where market share is eroding, or customer concentration in declining end markets.\\n"
@@ -627,6 +655,7 @@ sections = [
     {
         "number": 29,
         "title": "Buyside Due Diligence - Competitive Positioning",
+        "ground_truth_pointer": "Where is competitive position actually deteriorating despite management's framing?",
         "specs": "Identify 2-3 competitive dynamics where the Company has demonstrated unusual weakness or disclosed deteriorating position.\\n"
                 "Unusual weakness means: market share losses accelerating versus prior periods, pricing power eroding with documented price realization declines, \\n"
                 "customer defection rates rising or key customer losses disclosed, win/loss ratios deteriorating, cost position disadvantaged versus named competitors, \\n"
@@ -649,6 +678,7 @@ sections = [
     {
         "number": 30,
         "title": "Buyside Due Diligence - Operating Performance",
+        "ground_truth_pointer": "What operational metrics reveal structural deterioration versus cyclical weakness?",
         "specs": "Identify 2-3 operating metrics where the Company has demonstrated unusual deterioration or disclosed weakening trends.\\n"
                 "Unusual deterioration means: volume or unit sales declining faster than industry growth rates, unit economics worsening with revenue per unit falling or cost per unit rising, \\n"
                 "customer acquisition costs increasing while customer lifetime value or retention rates decline, capacity utilization falling despite management claims of demand strength, \\n"
@@ -671,6 +701,7 @@ sections = [
     {
         "number": 31,
         "title": "Buyside Due Diligence - Financial Performance",
+        "ground_truth_pointer": "Where does cash generation diverge from reported profits, and why?",
         "specs": "Identify 2-3 financial metrics where the Company has demonstrated unusual deterioration or disclosed weakening cash generation quality.\\n"
                 "Unusual deterioration means: margins compressing faster than cost inflation or pricing weakness would suggest, cash conversion declining with cash flow from operations lagging reported earnings, \\n"
                 "working capital building with receivables aging or inventory turns slowing, capital intensity increasing without disclosed capacity additions, \\n"
@@ -692,6 +723,7 @@ sections = [
     {
         "number": 32,
         "title": "Buyside Due Diligence - Management",
+        "ground_truth_pointer": "What governance or incentive misalignments could impair execution or capital allocation?",
         "specs": "Identify 2-3 management or governance issues where the Company has demonstrated unusual risk signals or disclosed credibility concerns.\\n"
                 "Unusual risk signals mean: management missing previously stated targets or guidance across multiple periods, key executive turnover accelerating with departures not replaced or roles consolidated, \\n"
                 "compensation structures misaligned with shareholder value creation or rewarding metrics that don't correlate with cash generation, insider selling concentrated in periods before negative results disclosed, \\n"

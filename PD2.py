@@ -113,15 +113,19 @@ class WorkerDisplay:
 class IntelligentAnalyst:
     """Lightweight orchestrator for the intelligent document analysis system"""
 
-    def __init__(self, source_files: dict, model_name: str = 'gemini-2.5-flash'):
+    def __init__(self, source_files: dict, model_name: str = 'gemini-3-flash-preview', insights_enabled: bool = False):
         """Initialize ProfileDash with modular components
 
         Args:
             source_files: Dict with 'pdf_files' list
             model_name: Name of the Gemini model to use
+            insights_enabled: Whether to run the ground truth insights pipeline (Steps 5-9)
         """
         # Store model name
         self.model_name = model_name
+
+        # Store insights pipeline flag
+        self.insights_enabled = insights_enabled
 
         # Generate run timestamp
         self.run_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
@@ -390,6 +394,47 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
 
                 final_output = step4_output
 
+                # Steps 5-9: Ground Truth Insight Pipeline (only if enabled and section 1-32)
+                if self.insights_enabled and section_num <= 32:
+                    company_name = self._extract_company_name()
+
+                    # Step 5: Ground Truth Discovery
+                    if hasattr(self, 'worker_display') and self.worker_display:
+                        self.worker_display.update(section_num, "Ground")
+                    else:
+                        thread_safe_print(f"Section {section_num} → Ground truth...")
+                    step5_output = self.core_analyzer.ground_truth_discovery(section, company_name, self.file_manager)
+
+                    # Step 6: Hypothesis Generation (NO documents - prevents anchoring)
+                    if hasattr(self, 'worker_display') and self.worker_display:
+                        self.worker_display.update(section_num, "Hypo")
+                    else:
+                        thread_safe_print(f"Section {section_num} → Hypotheses...")
+                    step6_output = self.core_analyzer.hypothesis_generation(step5_output, section, company_name, self.file_manager)
+
+                    # Step 7: Hypothesis Testing
+                    if hasattr(self, 'worker_display') and self.worker_display:
+                        self.worker_display.update(section_num, "Test")
+                    else:
+                        thread_safe_print(f"Section {section_num} → Testing...")
+                    step7_output = self.core_analyzer.hypothesis_testing(step6_output, section, company_name, self.file_manager)
+
+                    # Step 8: Insight Synthesis
+                    if hasattr(self, 'worker_display') and self.worker_display:
+                        self.worker_display.update(section_num, "Synth")
+                    else:
+                        thread_safe_print(f"Section {section_num} → Synthesis...")
+                    step8_output = self.core_analyzer.insight_synthesis(step5_output, step7_output, section, company_name, self.file_manager)
+
+                    # Step 9: Insight Integration
+                    if hasattr(self, 'worker_display') and self.worker_display:
+                        self.worker_display.update(section_num, "Integrate")
+                    else:
+                        thread_safe_print(f"Section {section_num} → Integrating...")
+                    step9_output = self.core_analyzer.insight_integration(step4_output, step8_output, section, company_name, self.file_manager)
+
+                    final_output = step9_output
+
             # Final failsafe: choose the last non-empty among outputs
             if section['number'] != self.core_analyzer.SECTION_32_EXEMPT:
                 candidates = [final_output]
@@ -518,8 +563,15 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
             thread_safe_print(f"{'='*60}")
             try:
                 profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-                profile_generator.generate_html_profile(results, regular_sections, company_name, sections)
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
+                if self.insights_enabled:
+                    # Generate 3 PDF variants when insights pipeline is enabled
+                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="vanilla")
+                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="insights")
+                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="integrated")
+                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Profiles ready (vanilla, insights, integrated)")
+                else:
+                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections)
+                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
             except Exception as e:
                 thread_safe_print(f"{WARNING} Profile generation failed: {e}")
 
@@ -537,8 +589,14 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                 try:
                     profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
                     sections_so_far = regular_sections + [SECTION_33_PATTERN_ANALYSIS]
-                    profile_generator.generate_html_profile(results, sections_so_far, company_name, sections)
-                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Pattern analysis complete - Profile updated")
+                    if self.insights_enabled:
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections, pdf_variant="vanilla")
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections, pdf_variant="insights")
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections, pdf_variant="integrated")
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Pattern analysis complete - Profiles updated")
+                    else:
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections)
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Pattern analysis complete - Profile updated")
                 except Exception as e:
                     thread_safe_print(f"{WARNING} Profile update failed: {e}")
 
@@ -555,8 +613,14 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                 # Regenerate profile with full set
                 try:
                     profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-                    profile_generator.generate_html_profile(results, section_numbers, company_name, sections)
-                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profile updated")
+                    if self.insights_enabled:
+                        profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="vanilla")
+                        profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="insights")
+                        profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="integrated")
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profiles updated")
+                    else:
+                        profile_generator.generate_html_profile(results, section_numbers, company_name, sections)
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profile updated")
                 except Exception as e:
                     thread_safe_print(f"{WARNING} Profile update failed: {e}")
 
@@ -884,12 +948,12 @@ if __name__ == "__main__":
     
     # Model selection
     thread_safe_print("Select LLM model:")
-    thread_safe_print("  1) gemini-2.5-flash")
+    thread_safe_print("  1) gemini-3-flash-preview")
     thread_safe_print("  2) gemini-3-pro-preview")
     selected_model = None
     choice = prompt_single_digit("Choose model [1/2] (default 1): ", valid_digits="12", default_digit="1")
     if choice == "1":
-        selected_model = 'gemini-2.5-flash'
+        selected_model = 'gemini-3-flash-preview'
     else:
         selected_model = 'gemini-3-pro-preview'
 
@@ -938,7 +1002,16 @@ if __name__ == "__main__":
     thread_safe_print(f"\nSelected groups: {', '.join(selected_groups)}")
     thread_safe_print(f"Processing sections: {selected_sections}")
 
-    # Step 3: Ask about number of workers for section processing
+    # Step 3: Ask about insights pipeline (only if sections 1-32 are selected)
+    insights_enabled = False
+    if any(s <= 32 for s in selected_sections):
+        thread_safe_print("\nAdvanced Analysis")
+        insights_enabled = prompt_yes_no("Enable insights pipeline? (y/N): ")
+        if insights_enabled:
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Insights pipeline enabled (Steps 5-9 for sections 1-32)")
+            thread_safe_print(f"  {DIM}This will generate 3 PDFs: vanilla, insights, integrated{RESET}")
+
+    # Step 4: Ask about number of workers for section processing
     thread_safe_print("\nAnalysis Settings")
     while True:
         env_cap = int(os.environ.get("MAX_SECTION_WORKERS", "3"))
@@ -963,7 +1036,7 @@ if __name__ == "__main__":
     thread_safe_print("="*60)
 
     try:
-        analyst = IntelligentAnalyst(source_file_selection, model_name=selected_model)
+        analyst = IntelligentAnalyst(source_file_selection, model_name=selected_model, insights_enabled=insights_enabled)
     except Exception as e:
         thread_safe_print(f"\nFailed to initialize analyst: {e}")
         thread_safe_print("Please check your files and try again.")

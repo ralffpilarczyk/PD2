@@ -15,7 +15,7 @@ from markdown.extensions import tables
 class ProfileGenerator:
     """Handles generation of professional HTML profiles"""
     
-    def __init__(self, run_timestamp: str, model_name: str = 'gemini-2.5-flash'):
+    def __init__(self, run_timestamp: str, model_name: str = 'gemini-3-flash-preview'):
         """Initialize profile generator"""
         self.run_timestamp = run_timestamp
         self.model_name = model_name
@@ -25,13 +25,21 @@ class ProfileGenerator:
             generation_config=genai.types.GenerationConfig(temperature=0.6)
         )
     
-    def generate_html_profile(self, results: Dict, section_numbers: List[int], company_name: str, sections_param: List[Dict]):
-        """Generate complete markdown and HTML profile documents from existing section files"""
+    def generate_html_profile(self, results: Dict, section_numbers: List[int], company_name: str, sections_param: List[Dict], pdf_variant: str = None):
+        """Generate complete markdown and HTML profile documents from existing section files
+
+        Args:
+            results: Dictionary of section results (unused for file collection)
+            section_numbers: List of section numbers to include
+            company_name: Company name for titles and filenames
+            sections_param: Section definitions
+            pdf_variant: Optional variant type - None (default), "vanilla", "insights", or "integrated"
+        """
 
         # Company name is now passed directly (extracted using cached model in PD2.py)
 
         # Collect markdown from existing section files
-        combined_markdown, processed_sections = self._collect_section_markdown()
+        combined_markdown, processed_sections = self._collect_section_markdown(pdf_variant=pdf_variant)
         
         if not combined_markdown:
             thread_safe_print("⚠ No sections found!")
@@ -39,51 +47,91 @@ class ProfileGenerator:
         
         # Clean company name for filename
         clean_company_name = company_name.replace(' ', '_').replace('.', '').replace(',', '').replace('/', '_')
-        
-        # Save combined markdown file
-        md_filename = f"{clean_company_name}_profile.md"
+
+        # Save combined markdown file (include variant in filename if specified)
+        variant_suffix = f"_{pdf_variant}" if pdf_variant else ""
+        md_filename = f"{clean_company_name}{variant_suffix}_profile.md"
         md_path = f"runs/run_{self.run_timestamp}/{md_filename}"
-        
+
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(combined_markdown)
 
         # Generate HTML from combined markdown
-        html_path = self._generate_html_from_markdown(combined_markdown, processed_sections, company_name, clean_company_name)
+        html_path = self._generate_html_from_markdown(combined_markdown, processed_sections, company_name, clean_company_name, pdf_variant=pdf_variant)
         
         return html_path
     
-    def _collect_section_markdown(self):
-        """Collect all section markdown files from the current run directory"""
+    def _collect_section_markdown(self, pdf_variant: str = None):
+        """Collect all section markdown files from the current run directory
+
+        Args:
+            pdf_variant: Optional variant type - None (default), "vanilla", "insights", or "integrated"
+        """
         combined_markdown = ""
         processed_sections = []
-        
+
         run_dir = f"runs/run_{self.run_timestamp}"
-        
+
         # Look for section directories (section_01, section_02, etc.)
         section_dirs = glob.glob(f"{run_dir}/section_*")
         # Sort numerically by section number
         section_dirs = sorted(section_dirs, key=lambda x: int(os.path.basename(x).split('_')[1]))
-        
+
         for section_dir in section_dirs:
             section_num = int(os.path.basename(section_dir).split('_')[1])
             section_title = self._get_section_title(section_num)
-            
+
             # Look for markdown files in the section directory
             md_files = glob.glob(f"{section_dir}/*.md")
-            
+
             if md_files:
-                # Find the final section file - prioritize discovery augmented, then step_4
+                # Select file based on variant type
                 final_file = None
-                for md_file in md_files:
-                    if 'step_5_discovery_augmented.md' in md_file:
-                        final_file = md_file
-                        break
-                    elif 'step_4_final_section.md' in md_file:
-                        final_file = md_file
-                        # Don't break - keep looking for discovery augmented
-                    elif 'final_section.md' in md_file and not final_file:
-                        final_file = md_file
-                
+
+                if pdf_variant == "vanilla":
+                    # Vanilla: Use Step 4 output only (standard polished description)
+                    for md_file in md_files:
+                        if 'step_4_final_section.md' in md_file:
+                            final_file = md_file
+                            break
+                        elif 'final_section.md' in md_file and not final_file:
+                            final_file = md_file
+
+                elif pdf_variant == "insights":
+                    # Insights: Use Step 8 synthesis only (ground truth insights)
+                    for md_file in md_files:
+                        if 'step_8_synthesis.md' in md_file:
+                            final_file = md_file
+                            break
+                    # Fallback to step_4 if no insights available
+                    if not final_file:
+                        for md_file in md_files:
+                            if 'step_4_final_section.md' in md_file:
+                                final_file = md_file
+                                break
+
+                elif pdf_variant == "integrated":
+                    # Integrated: Use Step 9 integrated output (insights woven in)
+                    for md_file in md_files:
+                        if 'step_9_integrated.md' in md_file:
+                            final_file = md_file
+                            break
+                    # Fallback to step_4 if no integrated available
+                    if not final_file:
+                        for md_file in md_files:
+                            if 'step_4_final_section.md' in md_file:
+                                final_file = md_file
+                                break
+
+                else:
+                    # Default: Use step_4 output (standard polished description)
+                    for md_file in md_files:
+                        if 'step_4_final_section.md' in md_file:
+                            final_file = md_file
+                            break
+                        elif 'final_section.md' in md_file and not final_file:
+                            final_file = md_file
+
                 # If no final file found, use the first one
                 md_file = final_file if final_file else md_files[0]
 
@@ -239,11 +287,19 @@ class ProfileGenerator:
                 return section['title']
         return f"Section {section_num}"
     
-    def _generate_html_from_markdown(self, combined_markdown, processed_sections, company_name, clean_company_name):
-        """Generate HTML file from combined markdown"""
-        
-        # Generate cover page
-        cover_html = self._generate_cover_page(processed_sections, company_name)
+    def _generate_html_from_markdown(self, combined_markdown, processed_sections, company_name, clean_company_name, pdf_variant: str = None):
+        """Generate HTML file from combined markdown
+
+        Args:
+            combined_markdown: Combined markdown content
+            processed_sections: List of (section_num, section_title) tuples
+            company_name: Company name for titles
+            clean_company_name: Cleaned company name for filenames
+            pdf_variant: Optional variant type for filename
+        """
+
+        # Generate cover page (include variant in subtitle if specified)
+        cover_html = self._generate_cover_page(processed_sections, company_name, pdf_variant=pdf_variant)
 
         # Convert content to HTML
         content_html = self._markdown_to_html(combined_markdown)
@@ -295,8 +351,9 @@ class ProfileGenerator:
             # Fallback if timestamp format is unexpected
             compact_timestamp = datetime.now().strftime('%y%m%d_%H%M')
         
-        # Save HTML file to ReportFiles with new naming format
-        html_filename = f"{clean_company_name}_{compact_timestamp}.html"
+        # Save HTML file to ReportFiles with new naming format (include variant if specified)
+        variant_suffix = f"_{pdf_variant}" if pdf_variant else ""
+        html_filename = f"{clean_company_name}{variant_suffix}_{compact_timestamp}.html"
         html_path = report_dir / html_filename
         
         with open(html_path, 'w', encoding='utf-8') as f:
@@ -311,20 +368,33 @@ class ProfileGenerator:
 
         return str(html_path)
     
-    def _generate_cover_page(self, processed_sections, company_name):
-        """Generate cover page with table of contents"""
-        
+    def _generate_cover_page(self, processed_sections, company_name, pdf_variant: str = None):
+        """Generate cover page with table of contents
+
+        Args:
+            processed_sections: List of (section_num, section_title) tuples
+            company_name: Company name
+            pdf_variant: Optional variant type for subtitle
+        """
+
         # Get current date
         generation_date = datetime.now().strftime('%B %d, %Y')
-        
+
         # Human-readable model label for cover note
         model_label_map = {
-            'gemini-2.5-flash': 'Gemini 2.5 Flash',
-            'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite',
-            'gemini-2.0-flash': 'Gemini 2.0 Flash',
+            'gemini-3-flash-preview': 'Gemini 3 Flash Preview',
+            'gemini-3-pro-preview': 'Gemini 3 Pro Preview',
         }
         model_label = model_label_map.get(self.model_name, self.model_name)
-        
+
+        # Variant label for subtitle
+        variant_labels = {
+            'vanilla': ' (Vanilla)',
+            'insights': ' (Insights Only)',
+            'integrated': ' (Integrated)'
+        }
+        variant_label = variant_labels.get(pdf_variant, '')
+
         # Group sections by category (like the real system does)
         groups = {
             "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 13],
@@ -334,11 +404,11 @@ class ProfileGenerator:
             "Financial Pattern Analysis": [s for s in processed_sections if s[0] == 33],
             "Data Book": [s for s in processed_sections if s[0] == 34]
         }
-        
+
         cover_html = f'''
         <div class="cover-page">
             <h1 class="company-name">{company_name}</h1>
-            <h2 class="product-name">ProfileDash {__version__}</h2>
+            <h2 class="product-name">ProfileDash {__version__}{variant_label}</h2>
             <div class="generation-info">
                 Profile generated via {model_label} on {generation_date}<br>
                 Under MIT License

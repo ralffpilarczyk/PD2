@@ -9,7 +9,7 @@ from .utils import retry_with_backoff, thread_safe_print
 class InsightMemory:
     """Clean, flexible insight memory system for section-based analytical instructions"""
     
-    def __init__(self, run_timestamp: str, model_name: str = 'gemini-2.5-flash', memory_prefix: str = 'learning'):
+    def __init__(self, run_timestamp: str, model_name: str = 'gemini-3-flash-preview', memory_prefix: str = 'learning'):
         """Initialize with dynamic section support
 
         Args:

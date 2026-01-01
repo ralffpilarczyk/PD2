@@ -21,14 +21,14 @@ class CoreAnalyzer:
     MEDIUM_TEMP = 0.6        # Balanced refinement (polish, initial draft)
     HIGH_TEMP = 0.9          # Creative breakthrough thinking (insights) - reduced to avoid safety blocks
 
-    def __init__(self, run_timestamp: str = None, model_name: str = 'gemini-2.5-flash',
+    def __init__(self, run_timestamp: str = None, model_name: str = 'gemini-3-flash-preview',
                  cached_model_low=None, cached_model_medium=None, cached_model_high=None,
                  pdf_parts=None):
         """Initialize core analyzer with cached models for document context
 
         Args:
             run_timestamp: Optional run timestamp for organizing outputs
-            model_name: The Gemini model to use (e.g., 'gemini-2.5-flash')
+            model_name: The Gemini model to use (e.g., 'gemini-3-flash-preview')
             cached_model_low: Cached model with temp 0.2 (optional)
             cached_model_medium: Cached model with temp 0.6 (optional)
             cached_model_high: Cached model with temp 0.9 (optional)
@@ -459,6 +459,204 @@ CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any ex
             else:
                 result = result[:truncate_point] + "\n\n[Content truncated due to excessive length]"
 
+        return result
+
+    # =========================================================================
+    # Steps 5-9: Ground Truth Insight Pipeline (Sections 1-32 when enabled)
+    # =========================================================================
+
+    def ground_truth_discovery(self, section: dict, company_name: str, file_manager) -> str:
+        """Step 5: Discover ground truth observations using the section's ground_truth_pointer.
+
+        Temperature: MEDIUM (0.6)
+        Documents: YES (cached model or pdf_parts)
+        Output: 2-3 observations with GROUND TRUTH / vs. NARRATIVE / COMPETITIVE IMPLICATION
+        """
+        ground_truth_pointer = section.get('ground_truth_pointer', '')
+        if not ground_truth_pointer:
+            return "No ground truth pointer defined for this section."
+
+        prompt = f"""Search the source documents about {company_name}'s {section['title']}.
+
+GROUND TRUTH FOCUS: {ground_truth_pointer}
+
+Find 2-3 specific observations that reveal this ground truth. Look beyond the corporate narrative for:
+- What the actual structure/data reveals about competitive reality
+- How things actually work (mechanisms), even if not explicitly stated
+- Where what the company DOES diverges from what it SAYS
+
+For each observation:
+
+OBSERVATION [N]:
+GROUND TRUTH: [What the data/structure actually reveals - be specific, cite source]
+vs. NARRATIVE: [What management says or implies, if different]
+COMPETITIVE IMPLICATION: [What this means for how the company wins or loses]
+
+If no meaningful ground truth observations exist for this section, state "No significant observations identified" and explain why.
+"""
+
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_medium_temp:
+            result = retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text,
+                context=f"Section {section['number']} Step 5"
+            )
+        else:
+            result = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context=f"Section {section['number']} Step 5"
+            )
+
+        file_manager.save_step_output(section['number'], 'step_5_ground_truth.md', result)
+        return result
+
+    def hypothesis_generation(self, step5_output: str, section: dict, company_name: str, file_manager) -> str:
+        """Step 6: Generate hypotheses from ground truth observations WITHOUT document anchoring.
+
+        Temperature: MEDIUM (0.6)
+        Documents: NO (critical - prevents anchoring to existing framing)
+        Output: For each observation: IMPLICATION / ASSUMPTION / RISK / PREDICTION
+        """
+        prompt = f"""You identified these ground truth observations about {company_name}'s {section['title']}:
+
+{step5_output}
+
+Without re-reading the source documents, generate hypotheses for each observation:
+
+OBSERVATION [N]:
+IMPLICATION: What does this reveal about how the company actually operates?
+ASSUMPTION: What would have to be true for this to make sense?
+RISK: What's the downside if this isn't sustainable or isn't what it appears?
+PREDICTION: What else should we see in the documents if this interpretation is correct?
+"""
+
+        # CRITICAL: Use model WITHOUT documents - prevents anchoring to existing framing
+        result = retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content([prompt]).text,
+            context=f"Section {section['number']} Step 6"
+        )
+
+        file_manager.save_step_output(section['number'], 'step_6_hypotheses.md', result)
+        return result
+
+    def hypothesis_testing(self, step6_output: str, section: dict, company_name: str, file_manager) -> str:
+        """Step 7: Test hypotheses against document evidence.
+
+        Temperature: LOW (0.2) - precision for evidence gathering
+        Documents: YES (cached model or pdf_parts)
+        Output: For each prediction: SUPPORTING EVIDENCE / DISCONFIRMING EVIDENCE / VERDICT
+        """
+        prompt = f"""Test these hypotheses about {company_name}'s {section['title']}:
+
+{step6_output}
+
+For each prediction, search the source documents:
+
+OBSERVATION [N]:
+PREDICTION: [from Step 6]
+SUPPORTING EVIDENCE: [Quote specific passages with page/section references, or "None found"]
+DISCONFIRMING EVIDENCE: [What would refute this? Did you find it? Quote if yes.]
+VERDICT: Supported / Refuted / Unclear
+"""
+
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_low_temp:
+            result = retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text,
+                context=f"Section {section['number']} Step 7"
+            )
+        else:
+            result = retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context=f"Section {section['number']} Step 7"
+            )
+
+        file_manager.save_step_output(section['number'], 'step_7_test_results.md', result)
+        return result
+
+    def insight_synthesis(self, step5_output: str, step7_output: str, section: dict, company_name: str, file_manager) -> str:
+        """Step 8: Synthesize insights from ground truth analysis.
+
+        Temperature: MEDIUM (0.6)
+        Documents: YES
+        Output: 150-word insight synthesis paragraph
+        """
+        prompt = f"""Based on ground truth analysis of {company_name}'s {section['title']}:
+
+OBSERVATIONS:
+{step5_output}
+
+TEST RESULTS:
+{step7_output}
+
+Write an insight synthesis (150 words maximum):
+
+What does the ground truth reveal about how this company actually competes in this area?
+
+Rules:
+- Take a position - don't hedge
+- Focus on what an investor needs to understand
+- Reference specific evidence that supports your position
+- Note any critical uncertainties that remain
+"""
+
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_medium_temp:
+            result = retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text,
+                context=f"Section {section['number']} Step 8"
+            )
+        else:
+            result = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context=f"Section {section['number']} Step 8"
+            )
+
+        file_manager.save_step_output(section['number'], 'step_8_synthesis.md', result)
+        return result
+
+    def insight_integration(self, step4_output: str, step8_output: str, section: dict, company_name: str, file_manager) -> str:
+        """Step 9: Integrate insights into the polished description.
+
+        Temperature: MEDIUM (0.6)
+        Documents: YES
+        Output: ~500 words with insights woven in (not bolted on)
+        """
+        prompt = f"""You have two inputs for {company_name}'s {section['title']}:
+
+POLISHED DESCRIPTION:
+{step4_output}
+
+GROUND TRUTH INSIGHTS:
+{step8_output}
+
+Rewrite the section so the ground truth insights are woven into the description.
+
+Rules:
+- The insights should strengthen the description, not appear as a separate addendum
+- Where ground truth contradicts or deepens the narrative, the ground truth wins
+- Preserve important data points and tables from the description
+- Keep to ~500 words maximum
+- Every sentence should help an investor understand how this company actually competes
+- Do not add a separate "Analytical Notes" section - integrate fully
+"""
+
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_medium_temp:
+            result = retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text,
+                context=f"Section {section['number']} Step 9"
+            )
+        else:
+            result = retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context=f"Section {section['number']} Step 9"
+            )
+
+        # Validate and fix tables
+        result = validate_and_fix_tables(result)
+
+        file_manager.save_step_output(section['number'], 'step_9_integrated.md', result)
         return result
 
     # =========================================================================

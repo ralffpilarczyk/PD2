@@ -573,7 +573,7 @@ def run(self) -> Optional[Path]:
 ```python
 if __name__ == "__main__":
     # 1. System checks (API key, directories)
-    # 2. Select LLM model (gemini-2.5-flash or gemini-2.5-pro)
+    # 2. Select LLM model (gemini-3-flash-preview or gemini-3-pro-preview)
     # 3. Select worker count (1-4, default 2)
     # 4. Select PDF files (file dialog)
     # 5. Initialize OnePageProfile with workers

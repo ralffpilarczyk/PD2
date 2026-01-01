@@ -713,6 +713,33 @@ sections = [
     },
 
     {
+        "number": 33,
+        "title": "Financial Pattern Analysis",
+        "specs": """
+This section uses a custom 4-layer hypothesis-driven analysis pipeline to identify and investigate
+material financial patterns. The pipeline executes 16 API calls in a structured sequence:
+
+Layer 1 (1 call): Identify 3 material financial patterns where metrics that should move together
+are diverging disproportionately.
+
+Layer 2 (3 calls): For each pattern, generate 3 candidate explanations spanning benign to concerning.
+
+Layer 3 (9 calls): Test each explanation against document evidence with specific predictions.
+
+Layer 4 (3 calls): Synthesize analytical summaries for each pattern.
+
+Output format: 3 pattern subsections, each 200-300 words, containing:
+- THESIS: What is actually happening and why
+- KEY EVIDENCE: 3-5 specific figures with units and time periods
+- SUSTAINABILITY: Is this trajectory sustainable?
+- VALUATION IMPLICATION: Adjustment to normalized earnings/cash flow
+- DILIGENCE PRIORITIES: 2 questions to ask management
+
+Focus on patterns MATERIAL to company prospects. Use most recent data available.
+        """
+    },
+
+    {
         "number": 34,
         "title": "Appendix: Data Book",
         "specs": """
@@ -740,33 +767,6 @@ Your task is to act as an expert data organizer and format this information into
 6.  **Use Source Information:** The input markdown will contain page numbers and table titles from the original documents. Use these to inform your headings and to help you group related tables.
 
 Your output must be a single, well-formed block of HTML representing the entire appendix content, starting with `<div class="section" id="section-32">` and ending with `</div>`.
-        """
-    },
-
-    {
-        "number": 33,
-        "title": "Financial Pattern Analysis",
-        "specs": """
-This section uses a custom 4-layer hypothesis-driven analysis pipeline to identify and investigate
-material financial patterns. The pipeline executes 16 API calls in a structured sequence:
-
-Layer 1 (1 call): Identify 3 material financial patterns where metrics that should move together
-are diverging disproportionately.
-
-Layer 2 (3 calls): For each pattern, generate 3 candidate explanations spanning benign to concerning.
-
-Layer 3 (9 calls): Test each explanation against document evidence with specific predictions.
-
-Layer 4 (3 calls): Synthesize analytical summaries for each pattern.
-
-Output format: 3 pattern subsections, each 200-300 words, containing:
-- THESIS: What is actually happening and why
-- KEY EVIDENCE: 3-5 specific figures with units and time periods
-- SUSTAINABILITY: Is this trajectory sustainable?
-- VALUATION IMPLICATION: Adjustment to normalized earnings/cash flow
-- DILIGENCE PRIORITIES: 2 questions to ask management
-
-Focus on patterns MATERIAL to company prospects. Use most recent data available.
         """
     }
 

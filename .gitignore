@@ -67,6 +67,9 @@ ReportFiles/*
 ProfileFiles/*
 !ProfileFiles/.gitkeep
 
+Workplans/*
+!Workplans/.gitkeep
+
 # Documentation
 PLAN.md
 HANDOVER_SCRIPT.md

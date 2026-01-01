@@ -31,7 +31,7 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Import modular components
-from src import CoreAnalyzer, InsightMemory, QualityTracker, FileManager, ProfileGenerator, sections, __version__
+from src import CoreAnalyzer, FileManager, ProfileGenerator, sections, __version__
 
 # Import thread_safe_print and retry_with_backoff from utils
 from src.utils import thread_safe_print, retry_with_backoff
@@ -168,16 +168,6 @@ class IntelligentAnalyst:
             cached_model_medium=self.cached_model_medium_temp,
             cached_model_high=self.cached_model_high_temp,
             pdf_parts=self.pdf_parts
-        )
-
-        # Initialize other components
-        self.insight_memory = InsightMemory(self.run_timestamp, model_name=model_name, memory_prefix="pd2")
-        self.quality_tracker = QualityTracker()
-
-        # Save pre-run memory state
-        self.file_manager.save_memory_state(
-            self.insight_memory.get_memory_data(),
-            "pre_run_memory.json"
         )
 
     def upload_pdfs_to_files_api(self, pdf_files: List[str]) -> List:
@@ -322,9 +312,6 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
         section = next(s for s in sections if s['number'] == section_num)
 
         try:
-            # Get relevant memory for this section
-            relevant_memory = self.insight_memory.get_relevant_memory(section_num)
-
             # Special handling for Section 33: Financial Pattern Analysis
             # Uses a custom 4-layer hypothesis-driven pipeline (16 API calls)
             if section_num == 33:
@@ -339,8 +326,6 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                     worker_display=worker_display
                 )
 
-                # Calculate quality metrics for the section
-                self.quality_tracker.calculate_section_metrics(section_num, final_output)
                 return f"Section {section_num} completed."
 
             # Step 1: Initial Draft
@@ -348,7 +333,7 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                 self.worker_display.update(section_num, "Draft")
             else:
                 thread_safe_print(f"Section {section_num} → Drafting...")
-            initial_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
+            initial_draft = self.core_analyzer.create_initial_draft(section)
             self.file_manager.save_step_output(section_num, "step_1_initial_draft.md", initial_draft)
 
             # Failsafe: Retry Step 1 once if empty or too short
@@ -357,7 +342,7 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
 
             if _is_empty(initial_draft):
                 thread_safe_print(f"Section {section_num} ⚠ Retrying draft...")
-                retry_draft = self.core_analyzer.create_initial_draft(section, relevant_memory)
+                retry_draft = self.core_analyzer.create_initial_draft(section)
                 if not _is_empty(retry_draft):
                     initial_draft = retry_draft
                 # Save retry attempt separately for diagnostics
@@ -465,8 +450,6 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
             #     learning_str = json.dumps(learning, indent=4)
             #     self.file_manager.save_step_output(section_num, "step_6_learning.json", learning_str)
 
-            # Calculate quality metrics for the section
-            self.quality_tracker.calculate_section_metrics(section_num, final_output)
             return f"Section {section_num} completed."
 
         except Exception as e:
@@ -551,10 +534,6 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
             phase1 = _run_parallel(regular_sections)
             results.update(phase1)
 
-            # Save quality metrics and run summary for Phase 1
-            quality_scores = self.quality_tracker.get_quality_scores()
-            run_number = self.insight_memory.learning_memory["meta"]["total_runs"] + 1
-            self.file_manager.save_quality_metrics(quality_scores, run_number)
             self._generate_run_summary(results)
 
             # Generate profile with Phase 1 results
@@ -633,121 +612,7 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
             thread_safe_print(f"{'='*60}")
             self.cleanup_cache()
             self.cleanup_uploaded_files()
-    
-    def _conduct_memory_review(self):
-        """Review and update learning memory"""
-        thread_safe_print(f"{ARROW} Extracting insights...")
-        
-        # Collect all learning extractions
-        learning_files = []
-        for section in sections:
-            learning_file = f"runs/run_{self.run_timestamp}/section_{section['number']}/step_6_learning.json"
-            if os.path.exists(learning_file):
-                with open(learning_file, 'r', encoding='utf-8') as f:
-                    learning_files.append(f.read())
-        
-        if not learning_files:
-            thread_safe_print("No learning extractions found")
-            return
-        
-        combined_learning = "\n\n".join(learning_files)
-        
-        # Synthesize analytical principles from learning extractions
-        prompt = f"""Synthesize analytical principles from these section learnings that help sharpen and deepen company analysis.
 
-INDIVIDUAL SECTION LEARNINGS:
-{combined_learning}
-
-CURRENT MEMORY STATS:
-{json.dumps(self.insight_memory.get_memory_stats(), indent=2)}
-
-Your task: Extract analytical PRINCIPLES that apply to ANY company - NOT vague wisdom, NOT just red flags, NOT calculation procedures.
-
-WHAT TO EXTRACT:
-
-Analytical principles that guide HOW to analyze more deeply:
-- **Comparative techniques** - what to compare against what to reveal hidden truths
-- **Decomposition approaches** - how to break down aggregates to expose real drivers
-- **Verification methods** - how to test claims using different data sources
-- **Relationship patterns** - what metrics or trends to correlate for deeper insight
-
-GOOD EXAMPLES (analytical principles):
-- "Compare stated strategy against actual capital allocation to reveal true management priorities"
-- "Decompose aggregate growth into organic versus inorganic components to assess core business health"
-- "Calculate implied operational metrics from management claims to test their plausibility"
-- "Trace revenue recognition through to cash collection to verify business quality"
-- "Compare segment economics to corporate average to identify where value is actually created"
-- "Map capital deployment to subsequent margin changes to evaluate management effectiveness"
-
-BAD EXAMPLES (too vague or too specific):
-- "To see the future, analyze the growth segments" (too vague)
-- "Revenue concentration above 30% means customer controls pricing" (specific red flag, not analytical principle)
-- "Actions speak louder than words" (corporate poetry)
-
-For each principle, provide:
-- instruction: "[analytical principle in 12-20 words]"
-- section_number: [the section number this principle applies to]
-- quality_score: [6-10, be realistic about distribution]
-
-QUALITY DISTRIBUTION GUIDANCE:
-- 9-10/10: Analytical approaches that consistently reveal material insights across companies
-- 7-8/10: Solid principles that meaningfully deepen analysis
-- 6/10: Standard but useful analytical techniques
-
-OUTPUT FORMAT:
-NEW_INSIGHTS:
-- instruction: "[analytical principle in 12-20 words]"
-  section_number: [section number]
-  quality_score: [6-10, realistic distribution]
-
-- instruction: "[another analytical principle in 12-20 words]"
-  section_number: [section number]
-  quality_score: [6-10, realistic distribution]
-
-Generate comprehensive principle candidates - subsequent harsh filtering will select only the best (9-10/10 only).
-Focus on analytical approaches that sharpen and deepen analysis.
-"""
-        
-        model = genai.GenerativeModel(self.core_analyzer.model_name)
-        new_insights_text = retry_with_backoff(
-            lambda: model.generate_content(prompt).text
-        )
-        
-        self.file_manager.save_memory_state({"new_insights": new_insights_text}, "new_insights.txt")
-        
-        # Apply memory updates
-        try:
-            # Archive current memory
-            archive_path = self.file_manager.archive_memory(
-                self.insight_memory.get_memory_data(),
-                memory_prefix="pd2"
-            )
-            # Silent archival - no output
-
-            # Process and add new insights
-            self.insight_memory.process_new_insights(new_insights_text)
-
-            # Clean up and diversify memory
-            self.insight_memory.cleanup_and_diversify()
-
-            # Update metadata
-            self.insight_memory.update_metadata()
-
-            # Save updated memory
-            self.insight_memory.save_memory()
-
-            # Save post-run memory state
-            self.file_manager.save_memory_state(
-                self.insight_memory.get_memory_data(),
-                "post_run_memory.json"
-            )
-
-            # Show memory stats after cleanup
-            memory_stats = self.insight_memory.get_memory_stats()
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Memory updated: {BOLD}{memory_stats['total_insights']}{RESET}/{memory_stats['max_possible']} insights ({memory_stats['utilization_percent']}%)")
-        except Exception as e:
-            thread_safe_print(f"{WARNING} Memory update failed: {e}")
-    
     def _generate_run_summary(self, results: Dict):
         """Generates a final summary markdown file only (HTML handled by ProfileGenerator)."""
         thread_safe_print("\n" + "="*20 + " Generating Final Run Summary " + "="*20)

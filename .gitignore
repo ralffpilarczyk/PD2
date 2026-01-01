@@ -52,12 +52,6 @@ old/
 runs/*
 !runs/.gitkeep
 
-quality_metrics/*
-!quality_metrics/.gitkeep
-
-memory/*
-!memory/.gitkeep
-
 SourceFiles/*
 !SourceFiles/.gitkeep
 

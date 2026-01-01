@@ -42,16 +42,6 @@ ProfileDash 2.2 (PD2) is a sophisticated financial document analysis system that
 │•Caching      │      │•LLM calls    │   │•Styling      │
 │•Table cleanup│      │•Learning     │   │•Footers      │
 └──────────────┘      └──────┬───────┘   └──────────────┘
-                             │
-                    ┌────────┴────────┐
-                    ▼                 ▼
-            ┌──────────────┐  ┌──────────────┐
-            │InsightMemory │  │QualityTracker│
-            │              │  │              │
-            │•Pattern      │  │•Metrics      │
-            │ storage      │  │•Scoring      │
-            │•Retrieval    │  │•Analytics    │
-            └──────────────┘  └──────────────┘
 ```
 
 ## Core Principles & Design Philosophy
@@ -88,12 +78,10 @@ PD2/
 ├── src/
 │   ├── __init__.py            # Package initialization
 │   ├── core_analyzer.py       # Analysis pipeline (438 lines)
-│   ├── file_manager.py        # File I/O operations (124 lines)
-│   ├── insight_memory.py      # Learning system (350 lines)
+│   ├── file_manager.py        # File I/O operations (60 lines)
 │   ├── profile_generator.py   # HTML/PDF generation (602 lines)
 │   ├── pdf_generator.py       # WeasyPrint wrapper (54 lines)
 │   ├── profile_sections.py    # Section definitions (711 lines)
-│   ├── quality_tracker.py     # Quality metrics (54 lines)
 │   └── utils.py               # Utility functions (265 lines)
 ├── requirements.txt           # Python dependencies
 ├── .env                       # API keys (not in repo)
@@ -142,8 +130,6 @@ class IntelligentAnalyst:
         # Initialize all components:
         # - FileManager for I/O
         # - CoreAnalyzer for section processing
-        # - InsightMemory for learning
-        # - QualityTracker for metrics
         # - Convert PDFs to markdown in parallel
 ```
 
@@ -381,68 +367,7 @@ Uses utilities from `utils.py`:
 - Fixes column alignment
 - Ensures proper spacing
 
-### 4. src/insight_memory.py - Learning System
-
-**Purpose**: Captures and reuses analytical patterns across runs for continuous improvement.
-
-#### InsightMemory Class
-
-```python
-class InsightMemory:
-    def __init__(self, file_manager):
-        self.memory = {}  # {section_num: [insights]}
-        self.file_manager = file_manager
-        self.memory_file = "memory/learning_memory.json"
-        self.load_memory()
-```
-
-**Data Structure**:
-```python
-{
-  "section_number": [
-    {
-      "instruction": "Specific analytical instruction",
-      "quality_score": 9.5,
-      "source_run": "run_2025_10_15_14_30_00"
-    },
-    ...  # Max 6 insights per section
-  ]
-}
-```
-
-**Key Methods**:
-
-1. **`add_learning(section_num, learning_data)`**
-   - Validates quality score (must be 9-10)
-   - Enforces max 30 words per insight
-   - Deduplicates similar insights (fuzzy matching)
-   - Limits to 6 insights per section (keeps highest quality)
-   - Returns: True if added, False if rejected
-
-2. **`get_relevant_memory(section_num) -> List[str]`**
-   - Retrieves learning insights for specific section
-   - Formats as numbered instruction list
-   - Used as context in Step 1 (Initial Draft)
-
-3. **`save_memory()`**
-   - Atomic write with temporary file
-   - Creates timestamped snapshot
-   - Preserves history in `memory/snapshots/`
-
-4. **`calculate_statistics() -> dict`**
-   - Total insights per section
-   - Average quality scores
-   - Coverage metrics (sections with learning)
-   - Used for system monitoring
-
-**Quality Filtering Strategy**:
-1. LLM assigns quality score 1-10 during learning extraction
-2. Only scores 9-10 pass first filter
-3. Deduplication removes similar insights
-4. Top 6 insights retained per section (by score)
-5. Result: High signal-to-noise ratio
-
-### 5. src/profile_generator.py - HTML/PDF Generation
+### 4. src/profile_generator.py - HTML/PDF Generation
 
 **Purpose**: Converts markdown sections to professional PDF reports via HTML intermediate format.
 
@@ -533,7 +458,7 @@ Markdown sections → Combine → Add cover page → CSS styling → HTML → We
    - Table styling with alternating row colors
    - Print-friendly media queries
 
-### 6. src/pdf_generator.py - PDF Output
+### 5. src/pdf_generator.py - PDF Output
 
 **Purpose**: Wrapper for WeasyPrint HTML-to-PDF conversion.
 
@@ -551,7 +476,7 @@ def generate_pdf_from_html(html_path: str) -> Optional[str]:
 - counter(page) and counter(pages) for page numbering
 - WeasyPrint v66+ required for proper margin box support
 
-### 7. src/profile_sections.py - Section Definitions
+### 6. src/profile_sections.py - Section Definitions
 
 **Purpose**: Declarative specification of all 34 analysis sections.
 
@@ -627,26 +552,7 @@ sections = [
    - All tables and numbers
    - Pure extraction mode
 
-### 8. src/quality_tracker.py - Metrics Tracking
-
-**Purpose**: Tracks quality metrics and statistics for analysis runs.
-
-```python
-class QualityTracker:
-    def calculate_section_metrics(self, section_content) -> dict:
-        # Metrics:
-        # - Word count
-        # - Numeric density (numbers per 100 words)
-        # - Table count and total rows
-        # - Insight depth ratio
-
-    def get_quality_scores(self) -> dict:
-        # Returns aggregate quality metrics
-```
-
-**Usage**: Monitoring and debugging analysis quality over time.
-
-### 9. src/utils.py - Utility Functions
+### 7. src/utils.py - Utility Functions
 
 **Purpose**: Shared utilities for thread safety, error handling, and data cleaning.
 

@@ -62,7 +62,7 @@ class CoreAnalyzer:
             generation_config=genai.types.GenerationConfig(temperature=self.HIGH_TEMP)
         )
     
-    def create_initial_draft(self, section: Dict, relevant_memory: str) -> str:
+    def create_initial_draft(self, section: Dict) -> str:
         """Step 1: Create a disciplined initial draft."""
 
         if section['number'] == self.SECTION_32_EXEMPT:
@@ -97,23 +97,20 @@ CRITICAL RESTRICTIONS:
 This is a data-only section. Any narrative text will be removed.
 """
         else:
-            memory_instructions = f"\n\nANALYTICAL METHODOLOGY (apply these proven techniques):\n{relevant_memory}" if relevant_memory.strip() else ""
-
             prompt = f"""You are an expert business analyst creating a DISCIPLINED initial draft.
 
 SECTION {section['number']}: {section['title']}
 
 REQUIREMENTS:
-{section['specs']}{memory_instructions}
+{section['specs']}
 
 DRAFTING INSTRUCTIONS:
 1.  **Word Count:** Target a DRAFT of approximately **{self.INITIAL_WORDS} words**. This is a draft, but it must be focused.
 2.  **Scope Adherence:** Adhere STRICTLY to the section requirements. Do NOT include information that belongs in other sections.
-3.  **Analytical Methods:** If analytical methodology is provided above, apply those proven techniques to this analysis.
-4.  **Data First:** Extract all relevant data points first, with precise citations.
-5.  **Insightful Analysis:** Provide brief but insightful analysis connecting the data points. Look for non-obvious patterns and implications. Avoid long, speculative paragraphs.
-6.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use Markdown footnotes [^1], [^2], [^3], [^4], [^5] with definitions at the end of the section. No letters in footnotes.
-7.  **Tables:** Include at least one small, well-formatted Markdown table with the most critical data.
+3.  **Data First:** Extract all relevant data points first, with precise citations.
+4.  **Insightful Analysis:** Provide brief but insightful analysis connecting the data points. Look for non-obvious patterns and implications. Avoid long, speculative paragraphs.
+5.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use Markdown footnotes [^1], [^2], [^3], [^4], [^5] with definitions at the end of the section. No letters in footnotes.
+6.  **Tables:** Include at least one small, well-formatted Markdown table with the most critical data.
 
 CRITICAL TABLE FORMATTING RULES:
 - NEVER create table cells with more than 200 characters

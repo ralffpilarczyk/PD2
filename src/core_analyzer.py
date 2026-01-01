@@ -484,7 +484,6 @@ Find 2-3 specific observations that reveal this ground truth. Look beyond the co
 - What the actual structure/data reveals about competitive reality
 - How things actually work (mechanisms), even if not explicitly stated
 - Where what the company DOES diverges from what it SAYS
-- Is this observation material as to the prospects of the company?
 
 For each observation:
 
@@ -492,6 +491,8 @@ OBSERVATION [N]:
 GROUND TRUTH: [What the data/structure actually reveals - be specific, cite source]
 vs. NARRATIVE: [What management says or implies, if different]
 COMPETITIVE IMPLICATION: [What this means for how the company wins or loses]
+
+REQUIREMENT: Each observation must be material to the company's prospects. If it wouldn't change an investor's view, don't include it.
 
 If no meaningful ground truth observations exist for this section, state "No significant observations identified" and explain why.
 """

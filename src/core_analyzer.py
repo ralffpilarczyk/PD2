@@ -575,29 +575,26 @@ VERDICT: Supported / Refuted / Unclear
         return result
 
     def insight_synthesis(self, step5_output: str, step7_output: str, section: dict, company_name: str, file_manager) -> str:
-        """Step 8: Synthesize insights from ground truth analysis.
+        """Step 8: Synthesize CONFIRMED findings from hypothesis testing.
 
         Temperature: MEDIUM (0.6)
         Documents: YES
-        Output: 150-word insight synthesis paragraph
+        Output: 150-word factual summary of confirmed hypotheses only
         """
-        prompt = f"""Based on ground truth analysis of {company_name}'s {section['title']}:
-
-OBSERVATIONS:
-{step5_output}
+        prompt = f"""Summarize the CONFIRMED findings from this hypothesis testing on {company_name}'s {section['title']}.
 
 TEST RESULTS:
 {step7_output}
 
-Write an insight synthesis (150 words maximum):
+INSTRUCTIONS:
+1. Include ONLY hypotheses with verdict "Supported" or "Strongly Supported"
+2. Exclude anything marked "Refuted", "Unclear", or "Indeterminate"
+3. For each confirmed finding, state:
+   - What was confirmed (the prediction that held up)
+   - The specific evidence that confirmed it (quote or cite)
+4. If NO hypotheses were confirmed, state "No hypotheses were confirmed by document evidence."
 
-What does the ground truth reveal about how this company actually competes in this area?
-
-Rules:
-- Take a position - don't hedge
-- Focus on what an investor needs to understand
-- Reference specific evidence that supports your position
-- Note any critical uncertainties that remain
+Write a factual summary (150 words maximum). No speculation. No interpretation beyond what was explicitly confirmed.
 """
 
         # Use cached model if available, else fallback to pdf_parts

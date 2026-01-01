@@ -484,6 +484,7 @@ Find 2-3 specific observations that reveal this ground truth. Look beyond the co
 - What the actual structure/data reveals about competitive reality
 - How things actually work (mechanisms), even if not explicitly stated
 - Where what the company DOES diverges from what it SAYS
+- Is this observation material as to the prospects of the company?
 
 For each observation:
 

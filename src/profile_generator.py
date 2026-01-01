@@ -333,8 +333,8 @@ class ProfileGenerator:
 </body>
 </html>"""
         
-        # Create ReportFiles directory if it doesn't exist
-        report_dir = Path("ReportFiles")
+        # Create ReportsPD2 directory if it doesn't exist
+        report_dir = Path("ReportsPD2")
         report_dir.mkdir(parents=True, exist_ok=True)
         
         # Convert run timestamp format from YYYY_MM_DD_HH_MM_SS to YYMMDD_HHMM
@@ -351,7 +351,7 @@ class ProfileGenerator:
             # Fallback if timestamp format is unexpected
             compact_timestamp = datetime.now().strftime('%y%m%d_%H%M')
         
-        # Save HTML file to ReportFiles with new naming format (include variant if specified)
+        # Save HTML file to ReportsPD2 with new naming format (include variant if specified)
         variant_suffix = f"_{pdf_variant}" if pdf_variant else ""
         html_filename = f"{clean_company_name}{variant_suffix}_{compact_timestamp}.html"
         html_path = report_dir / html_filename

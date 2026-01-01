@@ -179,7 +179,7 @@ PD2/
 │   ├── Profile_Page.md             # User-facing specification
 │   └── Refinement.md               # Pipeline documentation
 ├── requirements.txt                # Dependencies (includes python-pptx)
-├── ProfileFiles/                   # PowerPoint output directory
+├── ReportsOPP/                   # PowerPoint output directory
 │   ├── [Company]_TIMESTAMP.pptx    # Default profiles
 │   └── Custom_[Company]_TIMESTAMP.pptx  # Custom profiles
 └── runs/                           # Processing work products
@@ -731,7 +731,7 @@ If unclear, return "Company Profile"."""
 #   3. Add title area
 #   4. Add 2×2 grid of section boxes
 #   5. Add footnote
-#   6. Save to ProfileFiles/
+#   6. Save to ReportsOPP/
 # Returns: Path to .pptx file
 ```
 
@@ -885,7 +885,7 @@ PowerPoint Generation
      │  • Input: final_profile.md
      │  • Parse: Extract title, subtitle, sections, bullets
      │  • Format: A4 landscape, 2×2 grid, native bullets
-     │  • Output: ProfileFiles/[Company]_[timestamp].pptx
+     │  • Output: ReportsOPP/[Company]_[timestamp].pptx
 ```
 
 **Key Features**:
@@ -931,7 +931,7 @@ PowerPoint Generation
    │   ├─> Bottom-left: Financial KPIs
    │   └─> Bottom-right: Strategic Considerations
    ├─> Add footnote with version and date
-   └─> Save to ProfileFiles/[Company]_[timestamp].pptx
+   └─> Save to ReportsOPP/[Company]_[timestamp].pptx
 
 5. Run Log
    └─> Save processing summary to runs/opp_TIMESTAMP/run_log.txt
@@ -1062,7 +1062,7 @@ tkinter                 # File selection dialog
 
 ### Final Deliverables
 ```
-ProfileFiles/
+ReportsOPP/
 └── [Company]_YYMMDD_HHMMSS.pptx
     • A4 landscape (11.69" × 8.27")
     • Single slide with 2×2 grid

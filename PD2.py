@@ -1049,5 +1049,5 @@ if __name__ == "__main__":
     thread_safe_print(f"\n{'='*60}")
     thread_safe_print("Analysis Complete")
     thread_safe_print(f"{'='*60}")
-    thread_safe_print(f"Reports: ReportFiles/")
+    thread_safe_print(f"Reports: ReportsPD2/")
     thread_safe_print(f"Details: runs/run_{analyst.run_timestamp}/") 

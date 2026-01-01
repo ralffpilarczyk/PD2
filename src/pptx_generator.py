@@ -123,8 +123,8 @@ def create_profile_pptx(md_path: str, company_name: str, timestamp: str, version
     # Add footnote at bottom
     # _add_footnote(slide)  # Removed per user request
 
-    # Save to ProfileFiles
-    output_dir = Path("ProfileFiles")
+    # Save to ReportsOPP
+    output_dir = Path("ReportsOPP")
     output_dir.mkdir(exist_ok=True)
 
     # Clean company name for filename

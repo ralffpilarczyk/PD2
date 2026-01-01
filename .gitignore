@@ -61,11 +61,11 @@ memory/*
 SourceFiles/*
 !SourceFiles/.gitkeep
 
-ReportFiles/*
-!ReportFiles/.gitkeep
+ReportsPD2/*
+!ReportsPD2/.gitkeep
 
-ProfileFiles/*
-!ProfileFiles/.gitkeep
+ReportsOPP/*
+!ReportsOPP/.gitkeep
 
 Workplans/*
 !Workplans/.gitkeep

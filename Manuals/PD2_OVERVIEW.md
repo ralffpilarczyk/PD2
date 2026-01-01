@@ -495,7 +495,7 @@ Markdown sections → Combine → Add cover page → CSS styling → HTML → We
    - Converts markdown to HTML (python-markdown library)
    - Applies CSS styling with footer date
    - Creates complete HTML document
-   - Saves to `ReportFiles/[Company]_YYMMDD_HHMM.html`
+   - Saves to `ReportsPD2/[Company]_YYMMDD_HHMM.html`
    - Calls PDF generator
    - Returns: HTML file path
 
@@ -769,13 +769,13 @@ For each section (ThreadPoolExecutor, 1-8 workers):
    ├─> Create cover page with TOC
    ├─> Convert markdown to HTML (python-markdown)
    ├─> Apply CSS styling
-   └─> Save to ReportFiles/[Company]_YYMMDD_HHMM.html
+   └─> Save to ReportsPD2/[Company]_YYMMDD_HHMM.html
 
 3. Generate PDF
    ├─> WeasyPrint HTML→PDF conversion
    ├─> Apply @page rules (A4, margins)
    ├─> Render footers with page numbers
-   └─> Save to ReportFiles/[Company]_YYMMDD_HHMM.pdf
+   └─> Save to ReportsPD2/[Company]_YYMMDD_HHMM.pdf
 ```
 
 ## Concurrency Model & Resource Management
@@ -882,7 +882,7 @@ pdfminer.six            # PDF parsing utilities
 
 **Standard Mode (insights disabled):**
 ```
-ReportFiles/
+ReportsPD2/
 └── [Company]_YYMMDD_HHMM.pdf
     • Professional PDF with A4 sizing
     • Georgia serif font, 12px base
@@ -894,7 +894,7 @@ ReportFiles/
 
 **Insights Mode (insights enabled):**
 ```
-ReportFiles/
+ReportsPD2/
 ├── [Company]_vanilla_YYMMDD_HHMM.pdf      # Step 4 content only
 ├── [Company]_insights_YYMMDD_HHMM.pdf     # Step 8 synthesis paragraphs
 └── [Company]_integrated_YYMMDD_HHMM.pdf   # Step 9 woven content

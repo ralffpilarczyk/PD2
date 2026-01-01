@@ -46,7 +46,7 @@ Comprehensive 34-section company analysis for deep M&A and investment evaluation
 
 **Output:**
 
-Professional PDF report saved to `ReportFiles/`:
+Professional PDF report saved to `ReportsPD2/`:
 - `[Company]_YYMMDD_HHMM.pdf` - Final report with footers and page numbers
 
 Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
@@ -91,7 +91,7 @@ Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 
 **Output:**
 - Markdown: `runs/opp_TIMESTAMP/final_profile.md` (or `runs/opp_custom_TIMESTAMP/` for custom profiles)
-- PowerPoint: `ProfileFiles/[Company]_TIMESTAMP.pptx` (or `Custom_[Company]_TIMESTAMP.pptx` for custom profiles)
+- PowerPoint: `ReportsOPP/[Company]_TIMESTAMP.pptx` (or `Custom_[Company]_TIMESTAMP.pptx` for custom profiles)
 - Multiple iterations create versioned outputs: `_v1.pptx`, `_v2.pptx`, `_v3.pptx`
 
 **Format:**

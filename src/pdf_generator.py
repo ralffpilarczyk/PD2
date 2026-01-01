@@ -10,15 +10,15 @@ def generate_pdf_from_html(html_path: str) -> Optional[str]:
     with the same filename but .pdf extension.
 
     Args:
-        html_path: Path to the HTML file to convert (e.g., "ReportFiles/Company.html")
+        html_path: Path to the HTML file to convert (e.g., "ReportsPD2/Company.html")
 
     Returns:
         Path to the generated PDF file if successful, None if conversion failed
 
     Example:
-        >>> pdf_path = generate_pdf_from_html("ReportFiles/Company_250101_1234.html")
+        >>> pdf_path = generate_pdf_from_html("ReportsPD2/Company_250101_1234.html")
         >>> print(pdf_path)
-        ReportFiles/Company_250101_1234.pdf
+        ReportsPD2/Company_250101_1234.pdf
     """
     try:
         from weasyprint import HTML

@@ -7,9 +7,11 @@ ProfileDash 2.2 (PD2) is a sophisticated financial document analysis system that
 **Key Metrics**:
 - 34 analytical sections organized into 6 groups
 - 4-step progressive refinement pipeline per section (sections 1-32)
+- Optional 9-step pipeline with ground truth insights (Steps 5-9) for sections 1-32
 - Custom 4-layer hypothesis-driven pipeline for Section 33 (Financial Pattern Analysis)
 - Configurable 1-8 parallel workers
 - Professional PDF output with page footers and numbering
+- 3 PDF variants when insights enabled: vanilla, insights, integrated
 
 ## Architecture Overview
 
@@ -23,7 +25,7 @@ ProfileDash 2.2 (PD2) is a sophisticated financial document analysis system that
 ┌─────────────────────────────────────────────────────┐
 │                   PD2.py                            │
 │         (Main Orchestrator & CLI Interface)          │
-│   • Model selection (Gemini 2.5/2.0)                │
+│   • Model selection (Gemini 3 Flash/Pro)            │
 │   • File selection & PDF conversion                  │
 │   • Section group selection                          │
 │   • Worker pool management                           │
@@ -58,6 +60,7 @@ ProfileDash 2.2 (PD2) is a sophisticated financial document analysis system that
 Analysis proceeds through multiple stages, each with specific goals:
 - **Expansion phase** (Steps 1-3): Capture all relevant data, identify gaps
 - **Condensation phase** (Step 4): Distill to essential insights with investor relevance filter
+- **Ground Truth phase** (Steps 5-9, optional): Hypothesis-driven insight discovery and integration
 
 ### 2. Parallel Processing Architecture
 - **Process pools** for PDF conversion (CPU-intensive, PyTorch isolation required)
@@ -205,7 +208,7 @@ if __name__ == "__main__":
 
 ### 2. src/core_analyzer.py - Analysis Pipeline
 
-**Purpose**: Implements the 4-step progressive refinement pipeline for each section.
+**Purpose**: Implements the 4-step (or 9-step with insights) progressive refinement pipeline for each section.
 
 #### CoreAnalyzer Class
 
@@ -257,6 +260,57 @@ def deep_analysis_and_polish(self, section, enhanced_draft):
     # Filter: "Would this change an investor's view?"
     # Must include: At least one data table
     # Quality focus: Remove corporate fluff, maximize insight density
+```
+
+#### Optional Ground Truth Insight Pipeline (Steps 5-9)
+
+When enabled via UI toggle, sections 1-32 continue with additional hypothesis-driven analysis:
+
+**Step 5: Ground Truth Discovery**
+```python
+def ground_truth_discovery(self, section, company_name, file_manager):
+    # Temperature: 0.6
+    # Documents: YES (cached model)
+    # Uses section's ground_truth_pointer field
+    # Output: 2-3 observations with GROUND TRUTH / vs. NARRATIVE / COMPETITIVE IMPLICATION
+    # Saves to: step_5_ground_truth.md
+```
+
+**Step 6: Hypothesis Generation**
+```python
+def hypothesis_generation(self, step5_output, section, company_name, file_manager):
+    # Temperature: 0.6
+    # Documents: NO (critical - prevents anchoring to existing framing)
+    # Input: Step 5 output only
+    # Output: For each observation: IMPLICATION / ASSUMPTION / RISK / PREDICTION
+    # Saves to: step_6_hypotheses.md
+```
+
+**Step 7: Hypothesis Testing**
+```python
+def hypothesis_testing(self, step6_output, section, company_name, file_manager):
+    # Temperature: 0.2 (precision for evidence gathering)
+    # Documents: YES (cached model)
+    # Output: For each prediction: SUPPORTING EVIDENCE / DISCONFIRMING EVIDENCE / VERDICT
+    # Saves to: step_7_test_results.md
+```
+
+**Step 8: Insight Synthesis**
+```python
+def insight_synthesis(self, step5_output, step7_output, section, company_name, file_manager):
+    # Temperature: 0.6
+    # Documents: YES
+    # Output: 150-word insight synthesis paragraph
+    # Saves to: step_8_synthesis.md
+```
+
+**Step 9: Insight Integration**
+```python
+def insight_integration(self, step4_output, step8_output, section, company_name, file_manager):
+    # Temperature: 0.6
+    # Documents: YES
+    # Output: ~500 words with insights woven into description
+    # Saves to: step_9_integrated.md
 ```
 
 #### Special Handling
@@ -408,16 +462,20 @@ Markdown sections → Combine → Add cover page → CSS styling → HTML → We
 
 **Key Methods**:
 
-1. **`generate_html_profile(results, section_numbers, full_context)`**
-   - Extracts company name via LLM
+1. **`generate_html_profile(results, section_numbers, company_name, sections_param, pdf_variant=None)`**
    - Collects section markdown from run directory
    - Generates combined HTML with cover page
    - Triggers PDF generation
+   - **pdf_variant**: None (default), "vanilla", "insights", or "integrated"
    - Returns: HTML file path
 
-2. **`_collect_section_markdown() -> (str, List[tuple])`**
+2. **`_collect_section_markdown(pdf_variant=None) -> (str, List[tuple])`**
    - Scans run directory for section files
-   - Prioritizes final over draft
+   - File selection based on variant:
+     - **vanilla**: Uses step_4_final_section.md
+     - **insights**: Uses step_8_synthesis.md
+     - **integrated**: Uses step_9_integrated.md
+     - **default**: Uses step_4_final_section.md
    - Applies markdown cleaning pipeline
    - Returns: (combined_markdown, processed_sections list)
 
@@ -495,7 +553,7 @@ def generate_pdf_from_html(html_path: str) -> Optional[str]:
 
 ### 7. src/profile_sections.py - Section Definitions
 
-**Purpose**: Declarative specification of all 33 analysis sections.
+**Purpose**: Declarative specification of all 34 analysis sections.
 
 **Data Structure**:
 ```python
@@ -503,11 +561,17 @@ sections = [
     {
         "number": int,
         "title": str,
+        "ground_truth_pointer": str,  # Question for Steps 5-9 insight discovery (sections 1-32)
         "specs": str  # Detailed analysis instructions
     },
     ...
 ]
 ```
+
+**Ground Truth Pointers**: Each section 1-32 has a `ground_truth_pointer` field containing a probing question that guides the hypothesis-driven insight discovery in Steps 5-9. Examples:
+- Section 1: "How do the company's physical assets and human capabilities enable or constrain how the company competes?"
+- Section 7: "What do the numbers reveal about earnings quality and cash generation?"
+- Section 31: "Where does cash generation diverge from reported profits, and why?"
 
 #### Section Groups
 
@@ -665,6 +729,28 @@ For each section (ThreadPoolExecutor, 1-8 workers):
          │  • Display: "Sec. N → Polish"
          │  • Apply investor relevance filter
          ↓
+    [If insights enabled and section 1-32:]
+         │
+    Step 5: Ground Truth Discovery
+         │  • Display: "Sec. N → Ground"
+         │  • Use ground_truth_pointer question
+         ↓
+    Step 6: Hypothesis Generation
+         │  • Display: "Sec. N → Hypo"
+         │  • NO documents (prevents anchoring)
+         ↓
+    Step 7: Hypothesis Testing
+         │  • Display: "Sec. N → Test"
+         │  • Test predictions against evidence
+         ↓
+    Step 8: Insight Synthesis
+         │  • Display: "Sec. N → Synth"
+         │  • 150-word synthesis paragraph
+         ↓
+    Step 9: Insight Integration
+         │  • Display: "Sec. N → Integrate"
+         │  • Weave insights into description
+         ↓
     Save to: runs/run_*/section_N/
          │
          ↓
@@ -793,6 +879,8 @@ pdfminer.six            # PDF parsing utilities
 ## Output Artifacts
 
 ### Final Deliverable
+
+**Standard Mode (insights disabled):**
 ```
 ReportFiles/
 └── [Company]_YYMMDD_HHMM.pdf
@@ -800,8 +888,16 @@ ReportFiles/
     • Georgia serif font, 12px base
     • Page footers: generation date (left), page numbers (right)
     • Cover page with clickable table of contents
-    • 33 analytical sections (or selected subset)
+    • 34 analytical sections (or selected subset)
     • Tables, charts (as available from source)
+```
+
+**Insights Mode (insights enabled):**
+```
+ReportFiles/
+├── [Company]_vanilla_YYMMDD_HHMM.pdf      # Step 4 content only
+├── [Company]_insights_YYMMDD_HHMM.pdf     # Step 8 synthesis paragraphs
+└── [Company]_integrated_YYMMDD_HHMM.pdf   # Step 9 woven content
 ```
 
 ### Work Products
@@ -810,12 +906,20 @@ runs/run_YYYY_MM_DD_HH_MM_SS/
 ├── section_1/
 │   ├── step_1_initial_draft.md
 │   ├── step_2_completeness_check.txt
-│   ├── step_3_enhanced_draft.md
-│   └── step_4_final_section.md
+│   ├── step_3_improved_draft.md
+│   ├── step_4_final_section.md
+│   ├── step_5_ground_truth.md      # (if insights enabled)
+│   ├── step_6_hypotheses.md        # (if insights enabled)
+│   ├── step_7_test_results.md      # (if insights enabled)
+│   ├── step_8_synthesis.md         # (if insights enabled)
+│   └── step_9_integrated.md        # (if insights enabled)
 ├── section_2/
 │   └── ...
 ├── [Company]_profile.md
-└── run_summary.txt
+├── [Company]_vanilla_profile.md    # (if insights enabled)
+├── [Company]_insights_profile.md   # (if insights enabled)
+├── [Company]_integrated_profile.md # (if insights enabled)
+└── run_summary.md
 ```
 
 ## Key Algorithms & Techniques

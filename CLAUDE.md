@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## Onboarding
+
+When starting substantial work on this codebase, read:
+1. README.md - project overview and usage
+2. Manuals/*.md - detailed technical documentation
+
+Trigger with: "familiarize yourself with the codebase" or similar.
+
 ## Working Style
 
 1. **Brutally critical, constructive**: Point out flaws directly. Don't soften feedback or be diplomatic about problems. Every critique must come with a solution or path forward.

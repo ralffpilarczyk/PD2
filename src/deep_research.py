@@ -6,37 +6,38 @@ Uses Google's Gemini Deep Research Agent for web-based company research.
 import os
 import time
 import threading
+import warnings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
+
+# Suppress experimental API warning
+warnings.filterwarnings('ignore', message='Interactions usage is experimental')
+
 from google import genai
 
 load_dotenv()
 
 
 class ResearchDisplay:
-    """Real-time display for research progress."""
+    """Simple display for research progress - no in-place updates to avoid terminal glitches."""
 
     def __init__(self, num_workers: int):
         self.num_workers = num_workers
-        self.status = {}
         self.lock = threading.Lock()
+        self.last_update = {}
 
     def update(self, section_num: int, title: str, status: str):
         with self.lock:
-            self.status[section_num] = f"Topic {section_num}/12: {title} -> {status}"
-            self._redraw()
+            # Only print significant status changes (not every poll)
+            key = f"{section_num}:{status}"
+            if status == "Researching" and self.last_update.get(section_num) != "Researching":
+                print(f"  Starting: {section_num}/12 {title}")
+                self.last_update[section_num] = "Researching"
 
     def complete(self, section_num: int, completed: int, total: int):
         with self.lock:
-            if section_num in self.status:
-                del self.status[section_num]
-            print(f"\n  Topic {section_num}/12 complete ({completed}/{total})")
-
-    def _redraw(self):
-        active = list(self.status.values())[:self.num_workers]
-        if active:
-            print("\r  " + " | ".join(active), end="", flush=True)
+            print(f"  Complete: {section_num}/12 ({completed}/{total} done)")
 
 
 class DeepResearcher:

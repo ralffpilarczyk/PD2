@@ -3,11 +3,15 @@ Deep Research module for OPP 1.5
 Uses Google's Gemini Deep Research Agent for web-based company research.
 """
 
+import os
 import time
 import threading
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dotenv import load_dotenv
 from google import genai
+
+load_dotenv()
 
 
 class ResearchDisplay:
@@ -49,7 +53,8 @@ class DeepResearcher:
         self.company_name = company_name
         self.workers = workers
         self.run_dir = run_dir
-        self.client = genai.Client()
+        api_key = os.environ.get('GEMINI_API_KEY')
+        self.client = genai.Client(api_key=api_key)
 
     def research_section(self, section: dict, display: 'ResearchDisplay' = None) -> dict:
         """Run single research query for a section."""

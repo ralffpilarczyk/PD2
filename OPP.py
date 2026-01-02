@@ -574,12 +574,13 @@ class OnePageProfile:
             return content
         return deduplicated
 
-    def _cleanup_sections(self, sections_content: dict, worker_display) -> dict:
+    def _cleanup_sections(self, sections_content: dict, worker_display, version_suffix: str = "") -> dict:
         """Step 4: Redistribute content based on relevance to section specs
 
         Args:
             sections_content: Dict mapping section_num -> dict with 'number', 'title', 'content', 'success'
             worker_display: WorkerDisplay instance for progress tracking
+            version_suffix: Version suffix for file naming (e.g., "_v2")
 
         Returns:
             Dict mapping section_num -> dict with cleaned content
@@ -599,6 +600,7 @@ class OnePageProfile:
 
             # Get the section definition
             section = next(s for s in self.sections if s['number'] == section_num)
+            section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
 
             # Build section data for prompt (all 4 sections)
             all_sections = [
@@ -631,6 +633,12 @@ class OnePageProfile:
             # Fallback to original if cleanup fails
             if not cleaned or len(cleaned) < 20:
                 cleaned = result['content']
+
+            # Save cleaned content
+            (section_dir / f"step4_cleaned{version_suffix}.md").write_text(
+                f"## {result['title']}\n{cleaned}",
+                encoding='utf-8'
+            )
 
             # Remove from display
             worker_display._remove_silent(section_num)
@@ -832,7 +840,7 @@ class OnePageProfile:
                 enhanced_dict = {r['number']: r for r in enhanced_results}
 
                 # Clean up sections in parallel - redistributes content based on relevance
-                cleaned_results = self._cleanup_sections(enhanced_dict, worker_display)
+                cleaned_results = self._cleanup_sections(enhanced_dict, worker_display, version_suffix)
 
                 # Step 5: Polish to 100 words
                 thread_safe_print(f"\n{CYAN}Step 5: Polishing to 100 words (parallel)...{RESET}\n")

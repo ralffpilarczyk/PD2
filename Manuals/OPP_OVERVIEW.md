@@ -1076,24 +1076,28 @@ runs/opp_YYMMDD_HHMMSS/
 │   ├── step1_draft.md            # Initial draft (with learned memory)
 │   ├── step2_add_list.txt        # Completeness check ADD list
 │   ├── step3_enhanced.md         # Enhanced with additions
+│   ├── step4_cleaned.md          # Cleaned/redistributed content
 │   ├── step5_polished.md         # Polished to 100 words
 │   └── step5_learning.json       # Universal methodologies extracted
 ├── section_2/                    # Competitive Positioning
 │   ├── step1_draft.md
 │   ├── step2_add_list.txt
 │   ├── step3_enhanced.md
+│   ├── step4_cleaned.md
 │   ├── step5_polished.md
 │   └── step5_learning.json
 ├── section_3/                    # Financial KPIs
 │   ├── step1_draft.md
 │   ├── step2_add_list.txt
 │   ├── step3_enhanced.md
+│   ├── step4_cleaned.md
 │   ├── step5_polished.md
 │   └── step5_learning.json
 ├── section_4/                    # Strategic Considerations
 │   ├── step1_draft.md
 │   ├── step2_add_list.txt
 │   ├── step3_enhanced.md
+│   ├── step4_cleaned.md
 │   ├── step5_polished.md
 │   └── step5_learning.json
 ├── final_profile.md              # Assembled final output

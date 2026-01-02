@@ -40,7 +40,7 @@ Gemini API context caching dramatically reduces input token costs:
 
 ### 3. Enhanced Batch Processing
 
-batch_opp.py automatically benefits from Files API and caching:
+OPP_batch.py automatically benefits from Files API and caching:
 
 - **Per-document isolation**: Each PDF gets its own cache, created and deleted independently
 - **Resource cleanup**: Files and cache cleaned up between documents

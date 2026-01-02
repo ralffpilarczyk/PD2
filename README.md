@@ -81,7 +81,7 @@ python OPP.py
 
 For processing multiple PDFs sequentially:
 ```bash
-python batch_opp.py
+python OPP_batch.py
 ```
 
 Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:

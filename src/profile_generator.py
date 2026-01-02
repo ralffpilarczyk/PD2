@@ -387,14 +387,6 @@ class ProfileGenerator:
         }
         model_label = model_label_map.get(self.model_name, self.model_name)
 
-        # Variant label for subtitle
-        variant_labels = {
-            'vanilla': ' (Vanilla)',
-            'insights': ' (Insights Only)',
-            'integrated': ' (Integrated)'
-        }
-        variant_label = variant_labels.get(pdf_variant, '')
-
         # Group sections by category (like the real system does)
         groups = {
             "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 13],
@@ -408,7 +400,7 @@ class ProfileGenerator:
         cover_html = f'''
         <div class="cover-page">
             <h1 class="company-name">{company_name}</h1>
-            <h2 class="product-name">ProfileDash {__version__}{variant_label}</h2>
+            <h2 class="product-name">ProfileDash {__version__}</h2>
             <div class="generation-info">
                 Profile generated via {model_label} on {generation_date}<br>
                 Under MIT License

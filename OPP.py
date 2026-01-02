@@ -743,18 +743,19 @@ class OnePageProfile:
 
         return results
 
-    def _polish_integrated(self, section: dict, content: str, word_limit: int) -> str:
-        """Step 12: Final polish for integrated content
+    def _polish_integrated(self, section: dict, content: str, step9_insights: str, word_limit: int) -> str:
+        """Step 12: Final polish for integrated content via semantic fusion
 
         Args:
             section: Section dict
             content: Integrated content from Step 11
-            word_limit: Target word limit (typically 100)
+            step9_insights: Output from Step 9 (insight meanings that must survive)
+            word_limit: Target word limit (typically 100-110)
 
         Returns:
-            Final polished integrated content
+            Final polished integrated content with insight meanings preserved
         """
-        prompt = get_opp_polish2_prompt(section, content, word_limit)
+        prompt = get_opp_polish2_prompt(section, content, step9_insights, word_limit)
 
         polished = retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text.strip(),
@@ -1235,7 +1236,7 @@ class OnePageProfile:
         thread_safe_print(f"\n{CYAN}Step 12: Final polish (parallel)...{RESET}\n")
 
         def polish_integrated_task(section_num):
-            """Polish integrated content"""
+            """Polish integrated content with semantic fusion"""
             cleaned_result = cleaned_integrated[section_num]
 
             if not cleaned_result.get('success', False):
@@ -1244,9 +1245,15 @@ class OnePageProfile:
             section = next(s for s in self.sections if s['number'] == section_num)
             section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
 
+            # Read Step 9 insights to guide semantic fusion
+            step9_path = section_dir / "step9_synthesis.md"
+            step9_insights = ""
+            if step9_path.exists():
+                step9_insights = step9_path.read_text(encoding='utf-8')
+
             worker_display.update(section_num, "Polish2")
 
-            polished = self._polish_integrated(section, cleaned_result['content'], word_limit=110)
+            polished = self._polish_integrated(section, cleaned_result['content'], step9_insights, word_limit=110)
 
             (section_dir / "step12_polished.md").write_text(
                 f"## {cleaned_result['title']}\n{polished}",

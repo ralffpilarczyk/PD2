@@ -932,69 +932,92 @@ CRITICAL RULES:
 Output the cleaned section content."""
 
 
-def get_opp_polish2_prompt(section: dict, section_content: str, word_limit: int) -> str:
+def get_opp_polish2_prompt(section: dict, section_content: str, step9_insights: str, word_limit: int) -> str:
     """Generate the polish prompt for Step 12 - Polish 2
 
-    Similar to Step 5 but preserves insight integration while condensing.
-    Produces final content for the Integrated PPTX.
+    Compresses integrated content through semantic fusion, ensuring insight
+    MEANINGS survive even as word count is reduced.
 
     Args:
         section: Section dictionary from opp_sections.py
         section_content: Current integrated section content from Step 11
-        word_limit: Maximum words for polished section (typically 100)
+        step9_insights: Output from Step 9 (insight meanings that must survive)
+        word_limit: Maximum words for polished section (typically 100-110)
 
     Returns:
         Prompt string for final polish
     """
     word_count = len(section_content.split())
 
-    return f"""You are an M&A Managing Director condensing integrated content for chairman review.
+    return f"""You are compressing integrated content through semantic fusion, not cutting.
 
 SECTION: {section['title']}
 
-ORIGINAL REQUIREMENTS:
-{section['specs']}
-
-CURRENT INTEGRATED CONTENT:
+INTEGRATED CONTENT (from Steps 10-11):
 ---
 {section_content}
 ---
 
+INSIGHT MEANINGS THAT MUST SURVIVE (from Step 9):
+---
+{step9_insights}
+---
+
 CURRENT WORD COUNT: {word_count} words
-FINAL TARGET: **Aim for {word_limit} words** (up to 20 words over is acceptable for deeply insightful coverage)
+TARGET: ~{word_limit} words
+
+YOUR TASK:
+Compress this content so the MEANINGS from the Step 9 insights survive in the final output.
+The exact words don't matter. The implications do.
+
+SEMANTIC FUSION (what we want):
+Two inputs:
+- Fact: "The firm targets RM 100 million for its AI-powered mandate"
+- Insight: "This is a marketing pilot rather than a proprietary moat"
+
+Good fusion (18 words, preserves both meanings):
+"The RM 100 million AI mandate (0.31% of AUM) is a marketing pilot, not a proprietary moat"
+
+Bad cutting (15 words, loses the insight):
+"The firm targets RM 100 million for AI-powered mandates using third-party technology"
+
+The second version keeps the fact but genericizes the insight into nothing.
+
+COMPRESSION PRINCIPLES:
+1. **Insight implications are the payload** - facts are just context for insights
+2. **Fuse, don't cut** - combine two sentences into one that captures both meanings
+3. **Specificity over generality** - "marketing pilot not a moat" beats "uses third-party technology"
+4. **Cut descriptive padding first** - "the firm operates as" can become just the subject
+5. **Preserve causal language** - keep "because", "suggesting", "indicating", "despite"
+
+WHAT TO PRESERVE (in priority order):
+1. Insight implications from Step 9 (highest priority)
+2. Specific numbers that support those insights
+3. Causal connections and "so what" language
+4. Comparative context (vs competitors, vs prior periods)
+
+WHAT TO CUT FIRST:
+1. Definitional phrases ("—the total market value of investments—")
+2. Redundant context already implied by the insight
+3. Generic descriptive padding without analytical value
+4. Duplicate facts stated in different bullets
+
+VALIDATION BEFORE OUTPUT:
+Check each insight meaning from Step 9. Can you find its essence in your output?
+If an insight meaning is missing, you're cutting the wrong things. Fuse it back in.
 
 {OPP_CRITICAL_RULES}
-
-POLISH INSTRUCTIONS:
-
-1. **PRESERVE INTEGRATION** - Keep insights woven into descriptions. Do not separate them.
-   - Good: "Revenue grew 15% to USD81m, though 35% headcount growth suggests margin pressure"
-   - Bad: "Revenue grew 15%." [then separate] "This suggests margin pressure."
-
-2. **PRIORITIZE INSIGHT-RICH BULLETS** - When cutting for length, prefer bullets that
-   combine description AND insight over pure description bullets.
-
-3. **MAINTAIN COHERENCE** - The section should read as one unified narrative where
-   facts and their implications flow naturally together.
-
-4. **DATA DENSITY** - Preserve all quantified insights. Cut generic text, not numbers.
-
-{CONDENSING_PRIORITY_RULES}
 
 {SECTION_FORMATTING_RULES}
 
 CONSTRAINTS:
-- Maximum {word_limit} words total
+- Target ~{word_limit} words (up to 15 words over is acceptable for insight-rich content)
 - Maintain bullet format with **bold** syntax
-- Preserve the woven description+insight structure
-- Every sentence must add investment decision value
-- No separated "insights" sub-section
+- Every bullet should carry both fact AND implication where possible
 
 CRITICAL OUTPUT RULES:
 - Do NOT include any preamble or explanatory text
-- RETAIN MATERIALITY: Don't delete important facts to hit word count
-- PRESERVE INTEGRATION: Keep insights woven into descriptions
 - Start directly with the first bullet point (*)
-- No commentary - just output the polished bullets
+- No commentary - just output the semantically compressed bullets
 
-Generate the final polished integrated section."""
+Generate the semantically fused section now."""

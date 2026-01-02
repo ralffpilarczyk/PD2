@@ -284,15 +284,11 @@ class OnePageProfile:
     """Generates one-page company profiles from PDF documents with parallel section processing"""
 
     def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2,
-                 insights_enabled: bool = False, research_context: str = None,
-                 company_name: str = None, run_dir: Path = None):
+                 insights_enabled: bool = False):
         self.pdf_files = pdf_files
         self.model_name = model_name
         self.workers = workers
         self.insights_enabled = insights_enabled
-        self.research_context = research_context
-        self.provided_company_name = company_name
-        self.provided_run_dir = run_dir
 
         # Create models with different temperatures
         self.model_low_temp = genai.GenerativeModel(
@@ -320,12 +316,7 @@ class OnePageProfile:
         self.cached_model_medium_temp = None  # Cached model with temp 0.6
 
         # Initialize file manager
-        if self.provided_run_dir:
-            # Use provided run directory (from Deep Research)
-            self.file_manager = FileManager(self.timestamp, "opp")
-            self.file_manager.run_dir = str(self.provided_run_dir)
-        else:
-            self.file_manager = FileManager(self.timestamp, "opp")
+        self.file_manager = FileManager(self.timestamp, "opp")
 
         # Setup directories
         self.file_manager.setup_directories(self.sections)
@@ -387,22 +378,13 @@ class OnePageProfile:
         thread_safe_print(f"{CYAN}{CHECK}{RESET} Cleanup complete")
 
     def create_cache(self) -> bool:
-        """Create cache with uploaded PDFs and research context, return True if successful
+        """Create cache with uploaded PDFs, return True if successful
 
         Returns:
             bool: True if cache created successfully, False otherwise
         """
-        # Build cache contents
+        # Build cache contents from PDF parts
         cache_contents = []
-
-        # Add research context first (if available)
-        if self.research_context:
-            cache_contents.append({
-                'role': 'user',
-                'parts': [f"=== WEB RESEARCH CONTEXT ===\n\n{self.research_context}\n\n=== END WEB RESEARCH CONTEXT ==="]
-            })
-
-        # Add PDF parts (if available)
         if self.pdf_parts:
             cache_contents.extend(self.pdf_parts)
 
@@ -463,12 +445,7 @@ class OnePageProfile:
             self.cached_model_medium_temp = None
 
     def extract_company_name(self, pdf_parts: List) -> str:
-        """Extract company name from PDF documents or use provided name"""
-        # If company name was provided (e.g., from Deep Research), use it
-        if self.provided_company_name:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Company: {self.provided_company_name}")
-            return self.provided_company_name
-
+        """Extract company name from PDF documents"""
         thread_safe_print(f"{CYAN}{ARROW}{RESET} Extracting company name...")
 
         try:
@@ -1378,14 +1355,8 @@ class OnePageProfile:
   - See section_N/ subdirectories for intermediate outputs"""
 
         # Build source files section
-        source_files_section = ""
-        if self.research_context:
-            source_files_section += "Deep Research: Enabled (see deep_research/ folder)\n"
-        if self.pdf_files:
-            source_files_section += "PDF Files:\n"
-            source_files_section += chr(10).join(f"  - {Path(pdf).name}" for pdf in self.pdf_files)
-        else:
-            source_files_section += "PDF Files: None (research-only mode)"
+        source_files_section = "PDF Files:\n"
+        source_files_section += chr(10).join(f"  - {Path(pdf).name}" for pdf in self.pdf_files)
 
         log_content = f"""OnePageProfile Run Log
 {'='*60}
@@ -1418,23 +1389,15 @@ Status: {status}
             Path to generated PPTX, or None if failed
         """
         try:
-            # Prepare PDFs (may be empty in research-only mode)
+            # Prepare PDFs
             self.pdf_parts = self.prepare_pdf_parts()
 
-            # Validate we have at least one input source
-            if not self.pdf_parts and not self.research_context:
-                thread_safe_print(f"{RED}{CROSS}{RESET} Error: No PDFs or research context provided")
+            # Validate we have PDF input
+            if not self.pdf_parts:
+                thread_safe_print(f"{RED}{CROSS}{RESET} Error: No PDFs provided")
                 return None
 
-            # Log context sources
-            if self.research_context and self.pdf_parts:
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Context: Web research + PDF documents")
-            elif self.research_context:
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Context: Web research only")
-            else:
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Context: PDF documents only")
-
-            # Create cache with uploaded PDFs and/or research context
+            # Create cache with uploaded PDFs
             self.create_cache()
 
             # Extract company name (uses provided name if available)
@@ -1510,86 +1473,16 @@ if __name__ == "__main__":
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Output directory ready")
     thread_safe_print("="*60 + "\n")
 
-    # Deep Research toggle
-    thread_safe_print(f"{BOLD}Enable Deep Research (web search)?{RESET}")
-    thread_safe_print(f"  Researches 12 topics via web: footprint, products, customers,")
-    thread_safe_print(f"  suppliers, competitors, KPIs, financials, shareholders, M&A, management")
-    deep_research_enabled = prompt_yes_no("Enable Deep Research? (y/n, default n): ", default=False)
-
-    research_context = None
-    company_name = None
-    run_dir = None
-
-    if deep_research_enabled:
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} Deep Research enabled\n")
-
-        # Company name is required for web search
-        company_name = input("Company name for research: ").strip()
-        if not company_name:
-            thread_safe_print(f"{RED}ERROR:{RESET} Company name is required for Deep Research")
-            sys.exit(1)
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} Company: {company_name}\n")
-
-        # Research workers
-        thread_safe_print("Research workers (parallel queries):")
-        thread_safe_print("  1-4 workers (default 4)")
-        research_workers_choice = prompt_single_digit("Choose workers [1-4] (default 4): ", valid_digits="1234", default_digit="4")
-        research_workers = int(research_workers_choice)
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} Research workers: {research_workers}\n")
-
-        # Create run directory early for research output
-        from src.deep_research import DeepResearcher, ResearchDisplay
-        from src.research_sections import get_research_sections
-
-        run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        run_dir = Path(f"runs/opp_{run_timestamp}")
-        run_dir.mkdir(parents=True, exist_ok=True)
-
-        # Run Deep Research
-        thread_safe_print(f"{CYAN}Starting Deep Research for {company_name}...{RESET}")
-        thread_safe_print("="*60 + "\n")
-
-        researcher = DeepResearcher(company_name, research_workers, run_dir)
-        research_sections = get_research_sections()
-
-        display = ResearchDisplay(len(research_sections))
-        results = researcher.run_all_sections(research_sections, display)
-
-        # Get summary
-        summary = researcher.get_research_summary(results)
-        thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Deep Research complete: {summary['completed']}/{summary['total']} topics")
-
-        if summary['failed'] > 0:
-            thread_safe_print(f"{YELLOW}{WARNING}{RESET} {summary['failed']} topics failed")
-
-        # Combine research results
-        research_context = researcher.combine_research(results)
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} Research saved to {run_dir}/deep_research/\n")
+    # File source selection
+    thread_safe_print(f"{BOLD}Select file source:{RESET}")
+    thread_safe_print(f"  {CYAN}1{RESET} - Select files interactively (default)")
+    thread_safe_print(f"  {CYAN}2{RESET} - Process batch directory (SourceFiles/SourceBatch/)")
+    file_source_choice = prompt_single_digit("Choose [1/2] (default 1): ", valid_digits="12", default_digit="1")
+    batch_mode = (file_source_choice == "2")
+    if batch_mode:
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Batch mode selected\n")
     else:
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} Deep Research disabled\n")
-
-    # File source selection (only if Deep Research is disabled, or as additional input)
-    if deep_research_enabled:
-        thread_safe_print(f"{BOLD}Also upload PDF documents?{RESET}")
-        thread_safe_print(f"  PDFs will be analyzed alongside web research")
-        upload_pdfs = prompt_yes_no("Upload PDFs? (y/n, default n): ", default=False)
-        batch_mode = False  # Batch mode not available with Deep Research
-
-        if upload_pdfs:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Will upload PDFs\n")
-        else:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Research-only mode (no PDFs)\n")
-    else:
-        upload_pdfs = True  # Must upload PDFs if no research
-        thread_safe_print(f"{BOLD}Select file source:{RESET}")
-        thread_safe_print(f"  {CYAN}1{RESET} - Select files interactively (default)")
-        thread_safe_print(f"  {CYAN}2{RESET} - Process batch directory (SourceFiles/SourceBatch/)")
-        file_source_choice = prompt_single_digit("Choose [1/2] (default 1): ", valid_digits="12", default_digit="1")
-        batch_mode = (file_source_choice == "2")
-        if batch_mode:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Batch mode selected\n")
-        else:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} Interactive mode selected\n")
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Interactive mode selected\n")
 
     # Model selection
     thread_safe_print("Select LLM model:")
@@ -1680,28 +1573,19 @@ if __name__ == "__main__":
 
     else:
         # Interactive mode
-        pdf_files = []
-
-        if upload_pdfs:
-            pdf_files = select_pdf_files()
-            if not pdf_files and not research_context:
-                thread_safe_print(f"{RED}{CROSS}{RESET} No files selected and no research context. Exiting.")
-                sys.exit(1)
-            elif not pdf_files:
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} No PDFs selected, using research-only mode")
+        pdf_files = select_pdf_files()
+        if not pdf_files:
+            thread_safe_print(f"{RED}{CROSS}{RESET} No files selected. Exiting.")
+            sys.exit(1)
 
         thread_safe_print(f"\n{CYAN}Starting profile generation...{RESET}")
         thread_safe_print("="*60 + "\n")
 
-        # Generate profile with research context if available
         maker = OnePageProfile(
             pdf_files=pdf_files,
             model_name=selected_model,
             workers=num_workers,
-            insights_enabled=insights_enabled,
-            research_context=research_context,
-            company_name=company_name,
-            run_dir=run_dir
+            insights_enabled=insights_enabled
         )
         profile_path = maker.run()
 

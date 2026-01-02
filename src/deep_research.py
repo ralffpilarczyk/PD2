@@ -192,13 +192,10 @@ Output format:
 
     def _save_section_output(self, section: dict, result: dict):
         """Save research output to run directory."""
-        research_dir = self.run_dir / 'deep_research'
-        research_dir.mkdir(parents=True, exist_ok=True)
-
         safe_title = section['title'].lower().replace(' ', '_').replace('&', 'and')
         safe_title = ''.join(c for c in safe_title if c.isalnum() or c == '_')
         filename = f"section_{section['number']:02d}_{safe_title}.md"
-        filepath = research_dir / filename
+        filepath = self.run_dir / filename
 
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(f"# {section['title']}\n\n")
@@ -221,9 +218,7 @@ Output format:
             combined += "\n\n---\n\n"
 
         if self.run_dir:
-            research_dir = self.run_dir / 'deep_research'
-            research_dir.mkdir(parents=True, exist_ok=True)
-            combined_path = research_dir / 'combined_research.md'
+            combined_path = self.run_dir / 'combined_research.md'
             with open(combined_path, 'w', encoding='utf-8') as f:
                 f.write(combined)
 

@@ -106,10 +106,6 @@ def main():
     print(f"{BOLD}Output files:{RESET}")
     for f in sorted(run_dir.glob("*.md")):
         print(f"  {f.name}")
-    research_dir = run_dir / "deep_research"
-    if research_dir.exists():
-        for f in sorted(research_dir.glob("*.md")):
-            print(f"  deep_research/{f.name}")
 
 
 if __name__ == "__main__":

@@ -133,7 +133,7 @@ class IntelligentAnalyst:
         # Initialize file manager first
         self.file_manager = FileManager(self.run_timestamp)
 
-        # Setup directories and ensure memory file exists (before file processing)
+        # Setup directories for run outputs
         self.file_manager.setup_directories(sections)
 
         # Initialize caching variables
@@ -805,9 +805,7 @@ if __name__ == "__main__":
         # Don't exit - HTML reports will still be generated
 
     # Check 3: Create base directories
-    base_dirs = ["runs", "memory", "quality_metrics"]
-    for dir_path in base_dirs:
-        os.makedirs(dir_path, exist_ok=True)
+    os.makedirs("runs", exist_ok=True)
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Directories verified")
     thread_safe_print("="*60 + "\n")
     

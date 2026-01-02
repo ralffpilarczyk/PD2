@@ -93,14 +93,19 @@ def _read_single_key() -> str:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
 
-def prompt_yes_no(prompt_text: str) -> bool:
-    """Display a (y/n) prompt that accepts a single key without Enter."""
+def prompt_yes_no(prompt_text: str, default: bool = False) -> bool:
+    """Display a (y/n) prompt that accepts a single key. Enter selects default."""
     while True:
         thread_safe_print(f"{prompt_text}", end='', flush=True)
         ch = _read_single_key()
-        thread_safe_print(ch)
         if not ch:
             continue
+        # Enter key returns default
+        if ch in ('\r', '\n'):
+            default_char = 'y' if default else 'n'
+            thread_safe_print(default_char)
+            return default
+        thread_safe_print(ch)
         ch = ch.strip().lower()
         if ch in ('y', 'n'):
             return ch == 'y'
@@ -133,7 +138,7 @@ def select_pdf_files() -> Optional[List[str]]:
 
         if not pdf_files:
             thread_safe_print("No files selected.")
-            retry_yes = prompt_yes_no("Would you like to try selecting files again? (y/n): ")
+            retry_yes = prompt_yes_no("Would you like to try selecting files again? (y/n, default y): ", default=True)
             if not retry_yes:
                 return None
             continue
@@ -1509,7 +1514,7 @@ if __name__ == "__main__":
     thread_safe_print(f"{BOLD}Enable Deep Research (web search)?{RESET}")
     thread_safe_print(f"  Researches 12 topics via web: footprint, products, customers,")
     thread_safe_print(f"  suppliers, competitors, KPIs, financials, shareholders, M&A, management")
-    deep_research_enabled = prompt_yes_no("Enable Deep Research? (y/N): ")
+    deep_research_enabled = prompt_yes_no("Enable Deep Research? (y/n, default n): ", default=False)
 
     research_context = None
     company_name = None
@@ -1527,8 +1532,8 @@ if __name__ == "__main__":
 
         # Research workers
         thread_safe_print("Research workers (parallel queries):")
-        thread_safe_print("  1-4 workers (default 2)")
-        research_workers_choice = prompt_single_digit("Choose workers [1-4] (default 2): ", valid_digits="1234", default_digit="2")
+        thread_safe_print("  1-4 workers (default 4)")
+        research_workers_choice = prompt_single_digit("Choose workers [1-4] (default 4): ", valid_digits="1234", default_digit="4")
         research_workers = int(research_workers_choice)
         thread_safe_print(f"{CYAN}{CHECK}{RESET} Research workers: {research_workers}\n")
 
@@ -1567,7 +1572,7 @@ if __name__ == "__main__":
     if deep_research_enabled:
         thread_safe_print(f"{BOLD}Also upload PDF documents?{RESET}")
         thread_safe_print(f"  PDFs will be analyzed alongside web research")
-        upload_pdfs = prompt_yes_no("Upload PDFs? (y/N): ")
+        upload_pdfs = prompt_yes_no("Upload PDFs? (y/n, default n): ", default=False)
         batch_mode = False  # Batch mode not available with Deep Research
 
         if upload_pdfs:
@@ -1608,7 +1613,7 @@ if __name__ == "__main__":
     thread_safe_print(f"{BOLD}Enable insights pipeline?{RESET}")
     thread_safe_print(f"  Adds ground truth discovery and hypothesis testing")
     thread_safe_print(f"  Produces 3 PPTX variants: vanilla, insights, integrated")
-    insights_enabled = prompt_yes_no("Enable insights? (y/N): ")
+    insights_enabled = prompt_yes_no("Enable insights? (y/n, default n): ", default=False)
     if insights_enabled:
         thread_safe_print(f"{CYAN}{CHECK}{RESET} Insights pipeline enabled\n")
     else:
@@ -1628,7 +1633,7 @@ if __name__ == "__main__":
         thread_safe_print(f"  Workers: {num_workers}")
         thread_safe_print(f"  Insights: {'Enabled' if insights_enabled else 'Disabled'}")
 
-        proceed = prompt_yes_no(f"\nProceed with batch processing? (y/n): ")
+        proceed = prompt_yes_no(f"\nProceed with batch processing? (y/n, default y): ", default=True)
         if not proceed:
             thread_safe_print("Batch processing cancelled.")
             sys.exit(0)

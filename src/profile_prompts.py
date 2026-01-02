@@ -2,11 +2,7 @@
 Prompt templates for OnePageProfile (OPP.py)
 """
 
-# Dynamic import: try custom sections first, fall back to default
-try:
-    from src.opp_sections_custom import get_section_boundaries
-except ImportError:
-    from src.opp_sections import get_section_boundaries
+from src.opp_sections import get_section_boundaries
 
 # Common critical rules for all OPP sections
 OPP_CRITICAL_RULES = """
@@ -581,3 +577,424 @@ CRITICAL OUTPUT RULES:
 - No statements about missing data or need to analyse further, but factual observations
 
 Generate the condensed version of this section only."""
+
+
+def get_opp_ground_truth_prompt(section: dict, company_name: str) -> str:
+    """Generate prompt for Step 6 - Ground Truth Discovery
+
+    This step identifies verifiable facts in source documents that could
+    reveal insights beyond the company's narrative. Uses the section's
+    ground_truth_pointer to guide discovery.
+
+    Args:
+        section: Section dictionary from opp_sections.py (includes ground_truth_pointer)
+        company_name: Company name for context
+
+    Returns:
+        Prompt string for ground truth discovery
+    """
+    return f"""You are an investigative analyst examining source documents for {company_name}.
+
+SECTION CONTEXT: {section['title']}
+
+GROUND TRUTH QUESTION:
+{section.get('ground_truth_pointer', 'What verifiable facts reveal insights beyond the stated narrative?')}
+
+YOUR TASK:
+Search the source documents for 2-3 VERIFIABLE observations that address the ground truth question above.
+
+WHAT MAKES A GOOD OBSERVATION:
+1. **Verifiable**: Based on specific numbers, dates, or documented facts in the source
+2. **Non-obvious**: Goes beyond what management explicitly states
+3. **Measurable**: Can be tested or validated against other data
+4. **Investment-relevant**: Would matter to a potential buyer or investor
+
+EXAMPLES OF GOOD OBSERVATIONS:
+- "Revenue grew 15% but headcount grew 35%, suggesting margin pressure ahead"
+- "Three board members resigned within 6 months of the acquisition"
+- "Largest customer represents 40% of revenue despite claims of diversification"
+- "Capex has declined 60% over 3 years while maintenance costs rose 25%"
+
+EXAMPLES OF BAD OBSERVATIONS:
+- "The company has strong market position" (unverifiable claim)
+- "Management seems committed to growth" (opinion, not fact)
+- "The industry is competitive" (generic, obvious)
+
+SEARCH STRATEGY:
+- Look for disconnects between stated strategy and actual resource allocation
+- Compare narrative claims against actual numbers
+- Identify patterns in timing, concentration, or trends
+- Note what is NOT mentioned that should be
+
+OUTPUT FORMAT:
+List exactly 2-3 observations, each as:
+[OBSERVATION N]: One sentence stating the verifiable fact
+[SOURCE DATA]: The specific numbers/dates from documents supporting this
+[SIGNIFICANCE]: One sentence on why this matters for investment evaluation
+
+Be precise and factual. Do not speculate beyond what documents show."""
+
+
+def get_opp_hypothesis_prompt(step6_output: str, section: dict, company_name: str) -> str:
+    """Generate prompt for Step 7 - Hypothesis Generation
+
+    CRITICAL: This step deliberately has NO document attachment.
+    The LLM must reason independently from the Step 6 observations
+    to generate hypotheses without anchoring to source framing.
+
+    Args:
+        step6_output: Output from Step 6 (ground truth observations)
+        section: Section dictionary from opp_sections.py
+        company_name: Company name for context
+
+    Returns:
+        Prompt string for hypothesis generation
+    """
+    return f"""You are a strategic analyst generating hypotheses for {company_name}.
+
+SECTION CONTEXT: {section['title']}
+
+OBSERVATIONS FROM DOCUMENT ANALYSIS:
+{step6_output}
+
+YOUR TASK:
+Based ONLY on the observations above (you have no access to source documents),
+generate 2-3 testable hypotheses about what these observations might mean.
+
+WHAT MAKES A GOOD HYPOTHESIS:
+1. **Testable**: Can be confirmed or refuted with additional data
+2. **Specific**: Makes a clear prediction, not a vague possibility
+3. **Investment-relevant**: If true, would affect valuation or deal thesis
+4. **Non-obvious**: Goes beyond restating the observation
+
+HYPOTHESIS STRUCTURE:
+For each observation, ask:
+- "If this pattern continues, what happens next?"
+- "What underlying cause could explain this?"
+- "What would a skeptical buyer want to verify?"
+
+EXAMPLES OF GOOD HYPOTHESES:
+- "The revenue/headcount disconnect suggests the company is building capacity for a product launch within 12 months"
+- "Board departures after acquisition indicate integration failure or strategic disagreement"
+- "Declining capex with rising maintenance suggests deferred investment that will require catch-up spend"
+
+EXAMPLES OF BAD HYPOTHESES:
+- "Things could get better or worse" (not specific)
+- "Management might be concerned" (not testable)
+- "The company faces challenges" (too vague)
+
+OUTPUT FORMAT:
+For each hypothesis:
+[HYPOTHESIS N]: One clear, testable statement
+[IMPLICATION]: What this means for investment decision if true
+[TEST]: What evidence would confirm or refute this
+
+Generate 2-3 hypotheses. Be specific and actionable."""
+
+
+def get_opp_test_prompt(step7_output: str, section: dict, company_name: str) -> str:
+    """Generate prompt for Step 8 - Hypothesis Testing
+
+    This step has document access restored to test hypotheses from Step 7.
+    Uses low temperature for precision in evidence evaluation.
+
+    Args:
+        step7_output: Output from Step 7 (hypotheses)
+        section: Section dictionary from opp_sections.py
+        company_name: Company name for context
+
+    Returns:
+        Prompt string for hypothesis testing
+    """
+    return f"""You are an evidence evaluator testing hypotheses for {company_name}.
+
+SECTION CONTEXT: {section['title']}
+
+HYPOTHESES TO TEST:
+{step7_output}
+
+SOURCE DOCUMENTS:
+{{source_documents}}
+
+YOUR TASK:
+For each hypothesis above, search the source documents for evidence that
+either CONFIRMS or REFUTES the hypothesis. Be rigorous and objective.
+
+EVALUATION STANDARDS:
+1. **CONFIRMED**: Multiple data points support the hypothesis
+2. **PARTIALLY CONFIRMED**: Some evidence supports, but gaps remain
+3. **INCONCLUSIVE**: Insufficient evidence either way
+4. **REFUTED**: Evidence contradicts the hypothesis
+
+EVIDENCE RULES:
+- Cite specific numbers, dates, and facts from documents
+- Distinguish between strong evidence (quantified, explicit) and weak evidence (implied, qualitative)
+- Note when evidence is absent (document silent on topic)
+- Do not infer beyond what documents explicitly state
+
+OUTPUT FORMAT:
+For each hypothesis:
+[HYPOTHESIS N]: Restate the hypothesis briefly
+[EVIDENCE FOR]: Specific supporting data from documents (with numbers)
+[EVIDENCE AGAINST]: Specific contradicting data from documents (with numbers)
+[VERDICT]: CONFIRMED / PARTIALLY CONFIRMED / INCONCLUSIVE / REFUTED
+[CONFIDENCE]: HIGH / MEDIUM / LOW (based on evidence quality)
+
+Be objective. If evidence is weak or absent, say so. Do not force conclusions."""
+
+
+def get_opp_synthesis_prompt(step8_output: str, section: dict, company_name: str) -> str:
+    """Generate prompt for Step 9 - Insight Synthesis
+
+    This step synthesizes tested hypotheses into actionable insights.
+    Produces the "Insights-only" content for the second PPTX variant.
+
+    Args:
+        step8_output: Output from Step 8 (test results with verdicts)
+        section: Section dictionary from opp_sections.py
+        company_name: Company name for context
+
+    Returns:
+        Prompt string for insight synthesis
+    """
+    return f"""You are a senior M&A advisor synthesizing insights for {company_name}.
+
+SECTION CONTEXT: {section['title']}
+
+HYPOTHESIS TEST RESULTS:
+{step8_output}
+
+SOURCE DOCUMENTS:
+{{source_documents}}
+
+YOUR TASK:
+Synthesize the confirmed and partially confirmed hypotheses into 2-4 actionable
+insights for investment evaluation. Focus on what the evidence REVEALS, not just
+what it DESCRIBES.
+
+SYNTHESIS PRINCIPLES:
+1. **Only confirmed insights**: Use only CONFIRMED or PARTIALLY CONFIRMED hypotheses
+2. **Investment impact**: Each insight must affect valuation, risk, or deal thesis
+3. **Evidence-backed**: Ground each insight in specific data from the tests
+4. **Forward-looking**: What does this mean for future performance or integration?
+
+INSIGHT QUALITY STANDARDS:
+- Each insight must be something a buyer would want to know BEFORE making an offer
+- Avoid restating obvious facts - synthesize to reveal implications
+- Connect dots between multiple observations where relevant
+- Quantify impact where possible ("This represents ~15% margin risk")
+
+IF NO HYPOTHESES WERE CONFIRMED:
+State: "No hypotheses were confirmed with sufficient evidence."
+Then provide 1-2 observations about what the evidence gaps themselves reveal.
+
+OUTPUT FORMAT:
+## {section['title']} - Insights
+
+* **[Insight keyword]**: [One sentence insight with supporting data]
+* **[Insight keyword]**: [One sentence insight with supporting data]
+[Maximum 4 bullets]
+
+CRITICAL RULES:
+- Each bullet is one complete sentence
+- Bold the first 1-2 words as the insight keyword
+- Include at least one number per bullet where possible
+- No generic statements - every insight must be specific to this company
+- Keep total output under 100 words"""
+
+
+def get_opp_integration_prompt(step5_output: str, step9_output: str, section: dict, company_name: str) -> str:
+    """Generate prompt for Step 10 - Integration
+
+    This step weaves insights into the vanilla description, producing
+    content where insight enriches description rather than being bolted on.
+
+    Args:
+        step5_output: Output from Step 5 (vanilla polished content)
+        step9_output: Output from Step 9 (synthesized insights)
+        section: Section dictionary from opp_sections.py
+        company_name: Company name for context
+
+    Returns:
+        Prompt string for integration
+    """
+    return f"""You are integrating insights into a company profile for {company_name}.
+
+SECTION: {section['title']}
+
+VANILLA CONTENT (Step 5 - descriptive, factual):
+{step5_output}
+
+INSIGHTS (Step 9 - analytical, forward-looking):
+{step9_output}
+
+SOURCE DOCUMENTS:
+{{source_documents}}
+
+YOUR TASK:
+Create an INTEGRATED section where insights are woven INTO the description,
+not appended as a separate block. The reader should receive description
+and insight together, naturally.
+
+INTEGRATION PRINCIPLES:
+1. **Weave, don't append**: Insights should enrich bullets, not form a separate section
+2. **Preserve facts**: All quantified facts from vanilla content must remain
+3. **Add perspective**: Insights provide "so what" context to the facts
+4. **Maintain flow**: The section should read as one coherent narrative
+
+INTEGRATION TECHNIQUES:
+- Extend a descriptive bullet with its insight implication
+  Before: "Revenue grew 15% YoY to USD 81m"
+  After: "Revenue grew 15% YoY to USD 81m, though headcount growth of 35% suggests margin pressure ahead"
+
+- Combine related description and insight into single bullet
+  Before: [Description about customer concentration] + [Insight about revenue risk]
+  After: "Top 3 customers represent 65% of revenue (vs 45% three years ago), creating material concentration risk for acquirers"
+
+- Lead with insight when it reframes the description
+  "Despite 12% EBITDA growth, declining capex (-40% over 3 years) signals deferred investment that may require USD 50m catch-up"
+
+WHAT NOT TO DO:
+- Don't add a "Key Insights" or "Strategic Observations" sub-section
+- Don't use phrases like "Notably," "Importantly," or "It's worth noting"
+- Don't repeat the same fact with different framing
+- Don't add insight language if there's no real insight to add
+
+OUTPUT FORMAT:
+## {section['title']}
+
+* **[Keyword]**: [Integrated bullet with description + insight woven together]
+* **[Keyword]**: [Next integrated bullet]
+[Continue for all bullets]
+
+TARGET: ~150 words (allows for richer integrated content before cleanup)
+
+{OPP_CRITICAL_RULES}
+
+Generate the integrated section now."""
+
+
+def get_opp_cleanup2_prompt(target_section: dict, all_sections: list) -> str:
+    """Generate cleanup prompt for Step 11 - Cleanup 2
+
+    Similar to Step 4 but for integrated content. Redistributes content
+    based on section relevance after insights have been woven in.
+
+    Args:
+        target_section: Dict with 'number', 'title', 'specs', 'content' for target section
+        all_sections: List of dicts with 'number', 'title', 'specs', 'content' for ALL 4 sections
+
+    Returns:
+        Prompt string for cleanup
+    """
+    # Get section boundaries for target section
+    section_boundaries = get_section_boundaries(target_section['number'])
+
+    # Build context showing other sections' content
+    other_sections_content = "\n\n".join([
+        f"## Section {s['number']}: {s['title']}\n{s['content']}"
+        for s in all_sections if s['number'] != target_section['number']
+    ])
+
+    return f"""Review this integrated section for {target_section['title']}.
+
+CURRENT CONTENT:
+{target_section['content']}
+
+OTHER SECTIONS (for context - do not duplicate their content):
+{other_sections_content}
+
+SECTION BOUNDARIES - content that belongs in OTHER sections:
+{section_boundaries}
+
+{OPP_CRITICAL_RULES}
+
+TASK:
+Review and clean up this section:
+1. Remove any content that clearly belongs in another section (per boundaries above)
+2. Keep content that is most relevant to THIS section's specs
+3. Preserve all integrated insights and data points
+4. Do not add new content - only redistribute or remove
+
+INTEGRATION-AWARE RULES:
+- Insight-enriched bullets should stay with their descriptive base topic
+- If a bullet combines facts from different section domains, assign to the PRIMARY topic
+- Preserve the insight integration - do not split woven content
+
+{SECTION_FORMATTING_RULES}
+
+CRITICAL RULES:
+- Include the section header: ## {target_section['title']}
+- Return ONLY bullets that belong to this section
+- If no bullets belong to this section, return just the header
+- No preamble, no explanation, no commentary
+
+Output the cleaned section content."""
+
+
+def get_opp_polish2_prompt(section: dict, section_content: str, word_limit: int) -> str:
+    """Generate the polish prompt for Step 12 - Polish 2
+
+    Similar to Step 5 but preserves insight integration while condensing.
+    Produces final content for the Integrated PPTX.
+
+    Args:
+        section: Section dictionary from opp_sections.py
+        section_content: Current integrated section content from Step 11
+        word_limit: Maximum words for polished section (typically 100)
+
+    Returns:
+        Prompt string for final polish
+    """
+    word_count = len(section_content.split())
+
+    return f"""You are an M&A Managing Director condensing integrated content for chairman review.
+
+SECTION: {section['title']}
+
+ORIGINAL REQUIREMENTS:
+{section['specs']}
+
+CURRENT INTEGRATED CONTENT:
+---
+{section_content}
+---
+
+CURRENT WORD COUNT: {word_count} words
+FINAL TARGET: **Aim for {word_limit} words** (up to 20 words over is acceptable for deeply insightful coverage)
+
+{OPP_CRITICAL_RULES}
+
+POLISH INSTRUCTIONS:
+
+1. **PRESERVE INTEGRATION** - Keep insights woven into descriptions. Do not separate them.
+   - Good: "Revenue grew 15% to USD81m, though 35% headcount growth suggests margin pressure"
+   - Bad: "Revenue grew 15%." [then separate] "This suggests margin pressure."
+
+2. **PRIORITIZE INSIGHT-RICH BULLETS** - When cutting for length, prefer bullets that
+   combine description AND insight over pure description bullets.
+
+3. **MAINTAIN COHERENCE** - The section should read as one unified narrative where
+   facts and their implications flow naturally together.
+
+4. **DATA DENSITY** - Preserve all quantified insights. Cut generic text, not numbers.
+
+{CONDENSING_PRIORITY_RULES}
+
+{SECTION_FORMATTING_RULES}
+
+CONSTRAINTS:
+- Maximum {word_limit} words total
+- Maintain bullet format with **bold** syntax
+- Preserve the woven description+insight structure
+- Every sentence must add investment decision value
+- No separated "insights" sub-section
+
+CRITICAL OUTPUT RULES:
+- Do NOT include any preamble or explanatory text
+- RETAIN MATERIALITY: Don't delete important facts to hit word count
+- PRESERVE INTEGRATION: Keep insights woven into descriptions
+- Start directly with the first bullet point (*)
+- No commentary - just output the polished bullets
+
+Generate the final polished integrated section."""

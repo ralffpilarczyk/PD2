@@ -1,104 +1,86 @@
-# OPP Code Overview - Complete Technical Documentation (v1.3)
+# OPP Code Overview - Complete Technical Documentation (v1.4)
 
 ## Executive Summary
 
-OnePageProfile (OPP) v1.3 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 5-step pipeline with parallel processing and optional density iterations. New in v1.3: Files API and context caching for 85-90% cost reduction. Introduced in v1.2: custom section definitions and improved data recency handling.
+OnePageProfile (OPP) v1.4 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 5-step vanilla pipeline with parallel processing, plus an optional 12-step insight pipeline for hypothesis-driven analysis. New in v1.4: Ground truth discovery, hypothesis testing, batch processing integration, and three PPTX output variants.
 
 **Key Metrics**:
-- 4 analytical sections (default or custom-defined)
-- 5-step pipeline: Steps 1-3 (Draft/Check/Enhance) → Step 4 (Clean-up) → Step 5 (Polish)
+- 4 analytical sections with ground truth pointers
+- 5-step vanilla pipeline: Steps 1-3 (Draft/Check/Enhance) → Step 4 (Clean-up) → Step 5 (Polish)
+- Optional 12-step insight pipeline: Steps 6-9 (Ground Truth) → Steps 10-12 (Integration)
 - 100-word limit per section
 - Parallel processing with 1-4 configurable workers
-- Optional 1-3 density iterations for enhanced output quality
-- Dual output: Markdown + PowerPoint
-- Processing time: ~3-5 minutes per profile (with 4 workers, 1 iteration)
-- No learning system (removed in v1.1 for simplicity)
-- Custom sections support (introduced in v1.2)
-- Files API and context caching (new in v1.3)
+- Batch processing for multiple PDFs (integrated into main OPP.py)
+- Output: Markdown + PowerPoint (1 or 3 variants depending on insights mode)
+- Processing time: ~3-5 minutes (vanilla) or ~8-12 minutes (with insights)
+- Files API and context caching (2h vanilla / 3h insights TTL)
 
-## What's New in v1.3
+## What's New in v1.4
 
-### 1. Files API Integration
+### 1. Ground Truth Insight Pipeline (Steps 6-12)
 
-PDFs are now uploaded to Google's Files API instead of inline base64 encoding:
+Optional hypothesis-driven analysis that discovers insights beyond management narrative:
 
-- **Upload once**: PDFs uploaded at start of run, reused across all API calls
-- **Automatic cleanup**: Files deleted from Google's servers at run completion
-- **Better performance**: Reduces bandwidth usage for multi-iteration runs
-- **Foundation for caching**: Enables context caching (see below)
+- **Step 6 (Ground Truth)**: Discovers 2-3 verifiable observations using section-specific ground truth pointers
+- **Step 7 (Hypothesis)**: Generates testable hypotheses WITHOUT document access (prevents anchoring)
+- **Step 8 (Test)**: Tests hypotheses against source documents with evidence and verdicts
+- **Step 9 (Synthesis)**: Synthesizes confirmed hypotheses into actionable insights
+- **Step 10 (Integration)**: Weaves insights into vanilla description (~150 words)
+- **Step 11 (Clean-up 2)**: Redistributes integrated content across sections
+- **Step 12 (Polish 2)**: Final polish to ~100 words
 
-### 2. Context Caching for Cost Reduction
+**Critical Design**: Step 7 deliberately has NO document attachment to prevent LLM anchoring to source framing.
 
-Gemini API context caching dramatically reduces input token costs:
+### 2. Three PPTX Output Variants (when insights enabled)
 
-- **Cache creation**: PDFs cached after upload with configurable TTL (2 hours + 1 hour per additional iteration)
-- **Cached models**: Two temperature variants (0.2 for completeness checks, 0.6 for Steps 1-3)
-- **API optimization**: Steps 1-3 use cached content - prompts sent without PDFs
-- **Cost savings**: 85-90% reduction in input token costs (cached tokens cost 10% of regular tokens)
-- **Graceful degradation**: If cache creation fails, automatically falls back to Files API without caching
-- **Automatic cleanup**: Cache deleted at run completion
+| Variant | Source | Filename |
+|---------|--------|----------|
+| Vanilla | Step 5 | `[Company]_vanilla_YYMMDD_HHMMSS.pptx` |
+| Insights | Step 9 | `[Company]_insights_YYMMDD_HHMMSS.pptx` |
+| Integrated | Step 12 | `[Company]_integrated_YYMMDD_HHMMSS.pptx` |
 
-### 3. Enhanced Batch Processing
+When insights disabled: Single output `[Company]_YYMMDD_HHMMSS.pptx` (no variant suffix).
 
-OPP_batch.py automatically benefits from Files API and caching:
+### 3. Batch Processing Integration
 
-- **Per-document isolation**: Each PDF gets its own cache, created and deleted independently
-- **Resource cleanup**: Files and cache cleaned up between documents
-- **Cost efficiency**: Maximum savings for batch workflows
+OPP_batch.py has been merged into OPP.py with unified UI:
 
-## What's New in v1.2
+- **File source selection**: Choose between interactive file picker or batch directory
+- **Batch directory**: `SourceFiles/SourceBatch/` scanned for PDFs
+- **Per-document isolation**: Each PDF processed independently with its own cache
+- **Batch summary**: Success/failure counts with timing at completion
+- **Insights toggle**: Works in both interactive and batch modes
 
-### 1. Custom Section Definitions
+### 4. Ground Truth Pointers
 
-Users can now define custom section specifications for specialized use cases:
+New field in section definitions guides insight discovery:
 
-- **Template file**: `src/opp_sections_template.py` provides a working example
-- **Custom file**: Copy template to `src/opp_sections_custom.py` and modify
-- **Structure**: Must maintain exactly 4 sections for 2×2 PowerPoint layout
-- **Validation**: Automatic validation on load prevents malformed sections
-- **Output naming**: Custom profiles use distinct naming (`Custom_*.pptx`, `runs/opp_custom_*/`)
-- **Dynamic loading**: Profile type selection in UI determines which sections to load
+| Section | Ground Truth Pointer |
+|---------|---------------------|
+| Company Overview | What does the actual operational structure reveal about how this company creates and captures value? |
+| Competitive Positioning | Are claimed market positions and competitive advantages supported by measurable outcomes? |
+| Financial KPIs | What do the numbers reveal about earnings quality, cash generation, and sustainable performance? |
+| Strategic Considerations | What do ownership, transaction history, and management incentives reveal about likely agendas? |
 
-### 2. Density Iterations
+### 5. Dynamic Cache TTL
 
-Optional multi-iteration processing for enhanced content quality:
+- **Without insights**: 2-hour cache TTL
+- **With insights**: 3-hour cache TTL (longer pipeline requires more time)
 
-- **Iteration count**: 1-3 iterations (default: 1)
-- **Per iteration**:
-  - Subtitle refinement based on evolved content
-  - Completeness check flags missing/outdated content
-  - Density enhancement when no gaps found
-  - Full 5-step processing with clean-up and polish
-- **Versioned outputs**: `_v1.pptx`, `_v2.pptx`, `_v3.pptx` for comparison
-- **Processing time**: ~3-5 minutes per iteration
+### 6. Removed Features
 
-### 3. Temporal Bias for Data Recency
+The following features from v1.2/v1.3 have been removed for simplicity:
 
-Enhanced prompts prioritize recent data over historical data:
-
-- **Principle**: "ALWAYS use the most recent data available in source documents"
-- **Completeness check**: Part C identifies outdated metrics for replacement
-- **Enhancement step**: Can replace old data with newer data (not just additive)
-- **Polish step**: Prefers most recent fiscal period when multiple metrics exist
-- **Problem solved**: Prevents LLM from selecting 2019 prospectus data when 2025 financials exist
-
-### 4. M&A Clarity Principles
-
-Universal quality improvements for banker-friendly outputs:
-
-- **Metrics with context**: Every metric must include units AND time/period
-- **Redundancy elimination**: Never repeat facts across bullets
-- **Subsector precision**: Exact subsector specification (e.g., "pharmaceutical distribution" not "healthcare")
-- **Financial clarity**: Explicit units for all metrics (%, currency, etc.)
-- **Deal implications**: Strategic observations must explain WHY they matter for valuation/synergies/risk
-- **Subtitle format**: Up to 8 words as prose statement (not cryptic keywords)
+- **Density iterations** (1-3 iterations): Replaced by insight pipeline
+- **Custom sections** (`opp_sections_custom.py`): Removed - use standard 4 sections only
+- **OPP_batch.py**: Merged into main OPP.py
 
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                    User Input                        │
-│                  (PDF Documents)                     │
+│    (PDF Documents - Interactive or Batch mode)       │
 └────────────────────┬───────────────────────────────┘
                      │
                      ▼
@@ -106,10 +88,11 @@ Universal quality improvements for banker-friendly outputs:
 │                   OPP.py                            │
 │         (Main Orchestrator & CLI Interface)          │
 │   • Gemini API configuration                         │
-│   • PDF selection and encoding                       │
+│   • File source selection (interactive/batch)        │
 │   • ThreadPoolExecutor (1-4 workers)                 │
-│   • Parallel section processing                      │
-│   • PowerPoint generation                            │
+│   • 5-step vanilla pipeline (always)                 │
+│   • 12-step insight pipeline (optional)              │
+│   • PowerPoint generation (1 or 3 variants)          │
 └────────────────────┬───────────────────────────────┘
                      │
         ┌────────────┼────────────┐
@@ -118,12 +101,11 @@ Universal quality improvements for banker-friendly outputs:
 │opp_sections  │ │profile_    │ │pptx_generator    │
 │.py           │ │prompts.py  │ │                  │
 │              │ │            │ │                  │
-│•4 section    │ │•Prompt     │ │•Markdown parsing │
-│ definitions  │ │ templates  │ │•Native bullets   │
-│•Specs for    │ │•Single-    │ │•A4 landscape     │
-│ each section │ │ section    │ │•Formatting       │
-└──────────────┘ │ processing │ └──────────────────┘
-                 └────────────┘
+│•4 section    │ │•Steps 1-5  │ │•Markdown parsing │
+│ definitions  │ │ prompts    │ │•Native bullets   │
+│•Ground truth │ │•Steps 6-12 │ │•A4 landscape     │
+│ pointers     │ │ prompts    │ │•Variant naming   │
+└──────────────┘ └────────────┘ └──────────────────┘
 ```
 
 ## Core Principles & Design Philosophy
@@ -163,82 +145,90 @@ Universal quality improvements for banker-friendly outputs:
 
 ```
 PD2/
-├── OPP.py                           # Main entry point (~930 lines)
+├── OPP.py                           # Main entry point (~1500 lines)
 ├── src/
-│   ├── opp_sections.py             # Default section definitions (~97 lines)
-│   ├── opp_sections_template.py    # Template for custom sections (~170 lines) - NEW v1.2
-│   ├── opp_sections_custom.py      # User-created custom sections (gitignored) - NEW v1.2
-│   ├── profile_prompts.py          # Prompt templates (~420 lines, enhanced v1.2)
-│   ├── pptx_generator.py           # PowerPoint generation (~140 lines)
+│   ├── opp_sections.py             # Section definitions with ground_truth_pointer (~100 lines)
+│   ├── profile_prompts.py          # Prompt templates for Steps 1-12 (~600 lines)
+│   ├── pptx_generator.py           # PowerPoint generation with variant support (~150 lines)
 │   ├── file_manager.py             # File I/O and directory management
 │   └── utils.py                    # Thread-safe utilities (shared with PD2)
 ├── Manuals/
 │   ├── OPP_OVERVIEW.md             # This technical documentation
 │   ├── Profile_Page.md             # User-facing specification
 │   └── Refinement.md               # Pipeline documentation
+├── SourceFiles/
+│   └── SourceBatch/                # Batch processing directory
 ├── requirements.txt                # Dependencies (includes python-pptx)
-├── ReportsOPP/                   # PowerPoint output directory
-│   ├── [Company]_TIMESTAMP.pptx    # Default profiles
-│   └── Custom_[Company]_TIMESTAMP.pptx  # Custom profiles
+├── ReportsOPP/                     # PowerPoint output directory
+│   ├── [Company]_TIMESTAMP.pptx              # Vanilla-only output (insights disabled)
+│   ├── [Company]_vanilla_TIMESTAMP.pptx      # Vanilla output (insights enabled)
+│   ├── [Company]_insights_TIMESTAMP.pptx     # Insights-only output (insights enabled)
+│   └── [Company]_integrated_TIMESTAMP.pptx   # Integrated output (insights enabled)
 └── runs/                           # Processing work products
-    ├── opp_YYMMDD_HHMMSS/          # Default profile runs
-    │   ├── section_1/              # Company Overview steps
-    │   ├── section_2/              # Competitive Positioning steps
-    │   ├── section_3/              # Financial KPIs steps
-    │   ├── section_4/              # Strategic Considerations steps
-    │   ├── final_profile.md        # Iteration 1 output
-    │   ├── final_profile_v2.md     # Iteration 2 output (if enabled)
-    │   └── final_profile_v3.md     # Iteration 3 output (if enabled)
-    └── opp_custom_YYMMDD_HHMMSS/   # Custom profile runs - NEW v1.2
+    └── opp_YYMMDD_HHMMSS/
+        ├── section_1/              # Company Overview
+        │   ├── step1_draft.md
+        │   ├── step2_add_list.txt
+        │   ├── step3_enhanced.md
+        │   ├── step4_cleaned.md
+        │   ├── step5_polished.md           # Vanilla content
+        │   ├── step6_ground_truth.md       # (if insights enabled)
+        │   ├── step7_hypotheses.md         # (if insights enabled)
+        │   ├── step8_test_results.md       # (if insights enabled)
+        │   ├── step9_synthesis.md          # (if insights enabled)
+        │   ├── step10_integrated.md        # (if insights enabled)
+        │   ├── step11_cleaned.md           # (if insights enabled)
+        │   └── step12_polished.md          # (if insights enabled)
+        ├── section_2/              # Competitive Positioning (same structure)
+        ├── section_3/              # Financial KPIs (same structure)
+        ├── section_4/              # Strategic Considerations (same structure)
+        ├── subtitle.md             # Refined subtitle
+        ├── final_profile.md        # Vanilla markdown
+        ├── insights_profile.md     # Insights-only markdown (if insights enabled)
+        ├── integrated_profile.md   # Integrated markdown (if insights enabled)
+        └── run_log.txt             # Processing log
 ```
 
 ## Detailed Module Documentation
 
 ### 1. OPP.py - Main Orchestrator
 
-**Purpose**: Entry point and orchestration layer for parallel one-page profile generation.
+**Purpose**: Entry point and orchestration layer for parallel one-page profile generation with optional insights pipeline.
 
 #### OnePageProfile Class
 
 ```python
 class OnePageProfile:
     def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2,
-                 iterations: int = 1, profile_type: str = "default"):
+                 insights_enabled: bool = False):
         self.pdf_files = pdf_files
         self.model_name = model_name
         self.workers = workers              # Parallel worker count (1-4)
-        self.iterations = iterations        # Density iterations (1-3) - NEW v1.2
-        self.profile_type = profile_type    # "default" or "custom" - NEW v1.2
-        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.insights_enabled = insights_enabled  # Enable Steps 6-12
 
-        # Dynamic section loading based on profile type - NEW v1.2
-        if profile_type == "custom":
-            from src.opp_sections_custom import sections, get_section_boundaries
-            self.run_dir_prefix = "opp_custom"
-        else:
-            from src.opp_sections import sections, get_section_boundaries
-            self.run_dir_prefix = "opp"
-
+        # Section definitions with ground_truth_pointer
+        from src.opp_sections import sections, get_section_boundaries
         self.sections = sections
-        self.get_section_boundaries = get_section_boundaries
-        self._validate_sections()  # Validate structure - NEW v1.2
 
-        # Two models with different temperatures
+        # Four model variants for different steps
+        # Steps with docs attached use cached models, steps without use non-cached
         self.model_low_temp = genai.GenerativeModel(model_name, temperature=0.2)
         self.model_medium_temp = genai.GenerativeModel(model_name, temperature=0.6)
+        self.cached_model_low_temp = None   # Created after cache setup
+        self.cached_model_medium_temp = None
 
-        # PDF parts prepared once and reused by all workers
-        self.pdf_parts = None
+        # Cache TTL: 2 hours vanilla, 3 hours with insights
+        self.cache_ttl = timedelta(hours=3 if insights_enabled else 2)
 ```
 
 **Key Design Decisions**:
-- Configurable parallel workers (1-4, default 4) - changed default in v1.2
-- Configurable density iterations (1-3, default 1) - NEW v1.2
-- Dynamic section loading (default or custom) - NEW v1.2
-- Separate models for different tasks (temperature optimization)
-- PDF parts prepared once, shared across all workers (memory efficient)
-- Run directory: `runs/opp_TIMESTAMP/` or `runs/opp_custom_TIMESTAMP/` with section_N subdirectories
-- Version tracking: `__opp_version__ = "1.2"` (distinct from PD2's `__version__`)
+- Configurable parallel workers (1-4, default 4)
+- Optional insights pipeline (Steps 6-12)
+- Four model variants: cached/non-cached × low/medium temperature
+- PDF parts prepared once, shared across all workers
+- Dynamic cache TTL based on insights mode
+- Run directory: `runs/opp_TIMESTAMP/` with section_N subdirectories
+- Version tracking: `__opp_version__ = "1.4"`
 
 #### WorkerDisplay Class
 
@@ -251,23 +241,43 @@ class WorkerDisplay:
 
     def update(self, section_num: int, action: str):
         # Show real-time progress: "Sec. 1 → Draft | Sec. 2 → Polish"
+        # Steps 1-5: "Draft", "Check", "Enhance", "Clean-up", "Polish"
+        # Steps 6-12: "Ground", "Hypo", "Test", "Synth", "Integ", "Clean2", "Polish2"
 
     def complete(self, section_num: int, completed: int, total: int):
-        # Mark section complete: "✓ Section 1 complete (1/4)"
+        # Mark section complete (silent)
 ```
 
 **Key Features**:
 - Thread-safe status updates with lock
 - Real-time display of active workers
-- Completion tracking with progress counter
+- Step labels for both vanilla (1-5) and insights (6-12) pipelines
 
-#### The 5-Step Pipeline (v1.2)
+#### The 12-Step Pipeline (v1.4)
 
-**Steps 1-3 (Draft/Check/Enhance)**: All 4 sections process in parallel.
+**Vanilla Pipeline (Steps 1-5)** - Always runs:
 
-**Step 4 (Clean-up)**: Redistribute content based on section relevance (parallel).
+| Step | Name | Docs | Temp | Model | Purpose |
+|------|------|------|------|-------|---------|
+| 1 | Draft | YES | 0.6 | cached | Initial section content |
+| 2 | Check | YES | 0.2 | cached | Completeness validation |
+| 3 | Enhance | YES | 0.6 | cached | Add missing items |
+| 4 | Clean-up | NO | 0.2 | non-cached | Redistribute across sections |
+| 5 | Polish | NO | 0.6 | non-cached | Condense to ~100 words |
 
-**Step 5 (Polish)**: All 4 sections polish to 100 words simultaneously.
+**Insight Pipeline (Steps 6-12)** - Only if insights_enabled:
+
+| Step | Name | Docs | Temp | Model | Purpose |
+|------|------|------|------|-------|---------|
+| 6 | Ground Truth | YES | 0.6 | cached | Discover verifiable observations |
+| 7 | Hypothesis | **NO** | 0.6 | non-cached | Generate testable predictions (NO anchoring) |
+| 8 | Test | YES | 0.2 | cached | Validate against documents |
+| 9 | Synthesis | YES | 0.6 | cached | Create insight paragraph |
+| 10 | Integration | YES | 0.6 | cached | Weave into vanilla content |
+| 11 | Clean-up 2 | NO | 0.2 | non-cached | Redistribute integrated content |
+| 12 | Polish 2 | NO | 0.6 | non-cached | Final ~100 word polish |
+
+**Critical**: Step 7 has NO document attachment to prevent LLM anchoring to source framing.
 
 ---
 
@@ -571,12 +581,45 @@ def run(self) -> Optional[Path]:
 ```python
 if __name__ == "__main__":
     # 1. System checks (API key, directories)
-    # 2. Select LLM model (gemini-3-flash-preview or gemini-3-pro-preview)
-    # 3. Select worker count (1-4, default 2)
-    # 4. Select PDF files (file dialog)
-    # 5. Initialize OnePageProfile with workers
-    # 6. Generate profile with parallel processing
-    # 7. Output paths to markdown and PowerPoint
+    # 2. File source selection (interactive or batch)
+    # 3. Select LLM model (gemini-3-flash-preview or gemini-3-pro-preview)
+    # 4. Select worker count (1-4, default 4)
+    # 5. Enable insights pipeline? (y/N)
+    # 6. If batch: scan SourceFiles/SourceBatch/, confirm, loop
+    #    If interactive: file dialog for PDFs
+    # 7. Initialize OnePageProfile with workers and insights_enabled
+    # 8. Generate profile (vanilla or vanilla + insights + integrated)
+    # 9. Output paths to markdown and PowerPoint(s)
+```
+
+**UI Flow Example**:
+```
+ONEPAGEPROFILE 1.4
+============================================================
+System Check
+============================================================
+✓ API key configured
+✓ Output directory ready
+============================================================
+
+Select file source:
+  1 - Select files interactively (default)
+  2 - Process batch directory (SourceFiles/SourceBatch/)
+Choose [1/2] (default 1): 1
+
+Select LLM model:
+  1) gemini-3-flash-preview
+  2) gemini-3-pro-preview
+Choose model [1/2] (default 1): 1
+
+Select number of parallel workers:
+  1-4 workers (default 4)
+Choose workers [1-4] (default 4): 4
+
+Enable insights pipeline?
+  Adds ground truth discovery and hypothesis testing
+  Produces 3 PPTX variants: vanilla, insights, integrated
+Enable insights? (y/N): y
 ```
 
 ### 2. src/opp_sections.py - Section Definitions
@@ -1219,95 +1262,90 @@ Applied after LLM generation as safety net.
 |--------|-----|-----|
 | **Purpose** | Quick M&A screening | Comprehensive analysis |
 | **Sections** | 4 fixed sections | 33 configurable sections |
-| **Pipeline** | 4 steps per section | 6 steps per section (+ discovery) |
+| **Pipeline** | 5-step vanilla + optional 12-step insights | 6 steps per section (+ discovery) |
 | **Word limit** | 100 per section | ~500 per section (Step 4) |
-| **Output** | Markdown + PowerPoint | Markdown + PDF |
-| **PDF handling** | Inline base64 | Convert to markdown |
-| **Learning** | None | Insight memory across runs |
+| **Output** | Markdown + PowerPoint (1-3 variants) | Markdown + PDF |
+| **PDF handling** | Files API + context caching | Convert to markdown |
+| **Insights** | Ground truth discovery + hypothesis testing | Insight memory across runs |
 | **Parallel** | ThreadPoolExecutor (1-4 workers) | ThreadPoolExecutor (1-8 workers) |
-| **Processing time** | 3-7 minutes (2 workers) | 30-60 minutes |
-| **Complexity** | Simple, focused | Sophisticated, extensible |
-| **API calls** | 18 per profile | 200+ per profile |
+| **Processing time** | 3-5 min (vanilla) / 8-12 min (insights) | 30-60 minutes |
+| **Complexity** | Focused with optional depth | Sophisticated, extensible |
+| **API calls** | ~18 (vanilla) / ~42 (insights) per profile | 200+ per profile |
 
 ## Known Issues & Limitations
 
 ### Design Constraints
-1. **Fixed sections**: Cannot customize the 4 sections
-2. **No learning**: Each run starts fresh (unlike PD2)
-3. **No discovery**: No quantitative pattern finding
-4. **Single slide**: PowerPoint limited to one slide
-5. **Limited worker range**: Max 4 parallel workers (vs PD2's 8)
+1. **Fixed sections**: Cannot customize the 4 section definitions
+2. **No cross-run learning**: Each run starts fresh (unlike PD2)
+3. **Single slide**: PowerPoint limited to one slide per variant
+4. **Limited worker range**: Max 4 parallel workers (vs PD2's 8)
 
 ### Technical Limitations
-1. **PDF memory**: All PDFs loaded into memory as base64
+1. **PDF memory**: All PDFs loaded into memory via Files API
    - Large PDF sets (>100MB total) may cause issues
-   - Mitigation: Process in batches
+   - Mitigation: Batch mode processes one PDF at a time
 
 2. **PowerPoint complexity**: python-pptx library limitations
-   - No paragraph_format in older versions → Use XML directly
-   - Native bullet formatting required XML manipulation
+   - Native bullet formatting requires XML manipulation
+   - Complex formatting may not render identically in all viewers
 
 3. **LLM output variability**:
    - May add preambles despite instructions
    - May duplicate section titles
    - Mitigation: Regex cleanup patterns
 
-4. **No formal testing**: Manual validation only
+4. **Hypothesis anchoring**: If Step 7 accidentally receives document context, hypotheses may anchor to source framing
 
 ## Future Enhancement Opportunities
 
 ### Potential Improvements
 1. **Multi-slide support**: Option for detailed PowerPoint (1 section per slide)
-2. **Custom sections**: User-defined section templates
-3. **Batch mode**: Process multiple companies sequentially
-4. **Learning integration**: Optional connection to PD2's insight memory (architecture ready)
-5. **PDF streaming**: Reduce memory footprint for large files
-6. **Word output**: Generate .docx in addition to .pptx
-7. **Section selection**: Allow user to pick subset of 4 sections
-8. **Template customization**: Configurable color schemes and layouts
-9. **Comparison mode**: Side-by-side profiles for multiple companies
-10. **Adaptive worker count**: Auto-detect optimal workers based on API quota
+2. **PDF streaming**: Reduce memory footprint for large files
+3. **Word output**: Generate .docx in addition to .pptx
+4. **Template customization**: Configurable color schemes and layouts
+5. **Comparison mode**: Side-by-side profiles for multiple companies
+6. **Adaptive worker count**: Auto-detect optimal workers based on API quota
 
 ### Architectural Enhancements
 1. **Plugin system**: Extensible output formats
 2. **Web interface**: Browser-based UI instead of CLI
 3. **API mode**: RESTful service for integration
 4. **Cloud deployment**: Serverless function implementation
-5. **Caching layer**: Store intermediate results for iteration
 
 ## Conclusion
 
-OnePageProfile represents a focused, pragmatic approach to M&A screening:
-- **Fast**: 3-7 minute turnaround with parallel processing (2 workers)
-- **Clear**: 100 words per section, dense with insights
-- **Professional**: PowerPoint output with native formatting
-- **Simple**: 5-step pipeline per section with learning, clean architecture
-- **Scalable**: Configurable workers (1-4) for speed/resource trade-offs
-- **Learning**: Builds universal analytical methodologies over time
+OnePageProfile v1.4 represents a focused, pragmatic approach to M&A screening with optional analytical depth:
 
-The system trades PD2's depth and sophistication for speed and clarity. It's optimized for the specific use case of rapid company evaluation in M&A workflows.
+- **Fast**: 3-5 minutes (vanilla) or 8-12 minutes (with insights)
+- **Clear**: 100 words per section, dense with data
+- **Insightful**: Optional ground truth discovery and hypothesis testing
+- **Professional**: PowerPoint output with native formatting (1-3 variants)
+- **Scalable**: Batch processing for multiple PDFs, configurable workers (1-4)
+- **Cost-effective**: Context caching for 85-90% input token savings
+
+The system offers two modes: vanilla for rapid screening, or insights-enabled for hypothesis-driven analysis that goes beyond management narrative.
 
 **Key Design Decisions**:
-- Direct PDF processing (no conversion overhead)
+- Files API + context caching for cost efficiency
 - Parallel section processing (ThreadPoolExecutor with 1-4 workers)
-- Section definitions in opp_sections.py (single source of truth)
-- Independent section processing through all 4 steps
+- Section definitions with ground_truth_pointer in opp_sections.py
+- Step 7 deliberately has NO document access (prevents anchoring)
+- Three PPTX variants when insights enabled (vanilla, insights, integrated)
 - Native PowerPoint bullets (proper formatting)
-- Defense in depth (prompt + regex) for output quality
-- Architecture ready for future learning integration (like PD2)
+- Batch mode integrated into main CLI
 
 **Recommended Usage**:
-1. Initial screening of acquisition targets
-2. Quick updates on portfolio companies
-3. Preparation for investor meetings
-4. Pitch deck appendix material
-5. CIM comparison summaries
+1. Initial screening of acquisition targets (vanilla mode)
+2. Deep-dive on shortlisted targets (insights mode)
+3. Batch processing of CIM documents
+4. Quick updates on portfolio companies
+5. Preparation for investor meetings
 
 **Recommended Next Steps for New Developers**:
 1. Read `Manuals/Profile_Page.md` for feature specification
-2. Review `src/profile_prompts.py` to understand section requirements
+2. Review `src/profile_prompts.py` to understand Steps 1-12
 3. Trace execution flow starting from `OPP.py` main block
-4. Generate a test profile with sample PDFs
-5. Examine `runs/opp_*/` directory outputs
-6. Open generated PowerPoint to understand formatting
+4. Generate a test profile with sample PDFs (try both vanilla and insights modes)
+5. Examine `runs/opp_*/` directory outputs (compare step files)
+6. Open generated PowerPoint variants to understand formatting
 7. Compare with PD2 in `Manuals/CODE_OVERVIEW.md`

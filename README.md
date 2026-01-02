@@ -1,8 +1,8 @@
-# ProfileDash 2.2 & OnePageProfile 1.3
+# ProfileDash 2.2 & OnePageProfile 1.4
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.2): Comprehensive 34-section company profiles with deep analytical insights
-- **OPP** (OnePageProfile v1.3): Concise one-page profiles for quick M&A evaluation
+- **OPP** (OnePageProfile v1.4): Concise one-page profiles for quick M&A evaluation
 
 ## Quick Start
 
@@ -61,38 +61,40 @@ Analysis work products saved to `runs/run_YYYY_MM_DD_HH_MM_SS/`:
 - Automatic retry with exponential backoff for API limits
 - Thread-safe operations for concurrent processing
 
-## OnePageProfile v1.3 (OPP)
+## OnePageProfile v1.4 (OPP)
 
 Concise one-page company profiles for rapid M&A screening and evaluation.
 
-**Interactive Usage:**
+**Usage:**
 ```bash
 python OPP.py
 ```
 
-1. Select profile type: OnePageProfile (default) or Custom Profile
+1. Select file source: Interactive (default) or Batch directory
 2. Select model: Gemini Flash or Pro
 3. Set parallel workers (1-4, default 4)
-4. Set density iterations (1-3, default 1)
-5. Select PDFs when prompted
-6. Wait for processing (~3-5 minutes)
+4. Enable insights pipeline (optional)
+5. Select PDFs (interactive) or confirm batch processing
+6. Wait for processing (~3-5 minutes vanilla, ~8-10 minutes with insights)
 
 **Batch Processing:**
 
-For processing multiple PDFs sequentially:
-```bash
-python OPP_batch.py
-```
-
-Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
-- Model: Gemini Pro
-- Workers: 4
-- Progress tracking and summary report
+Batch mode processes all PDFs in `SourceFiles/SourceBatch/` sequentially:
+- Select option 2 at file source prompt
+- Confirm batch configuration before processing
+- Progress tracking and summary report at completion
 
 **Output:**
-- Markdown: `runs/opp_TIMESTAMP/final_profile.md` (or `runs/opp_custom_TIMESTAMP/` for custom profiles)
-- PowerPoint: `ReportsOPP/[Company]_TIMESTAMP.pptx` (or `Custom_[Company]_TIMESTAMP.pptx` for custom profiles)
-- Multiple iterations create versioned outputs: `_v1.pptx`, `_v2.pptx`, `_v3.pptx`
+
+Vanilla mode (insights disabled):
+- Markdown: `runs/opp_TIMESTAMP/final_profile.md`
+- PowerPoint: `ReportsOPP/[Company]_YYMMDD_HHMMSS.pptx`
+
+Insights mode (insights enabled):
+- Three PPTX variants for validation:
+  - `[Company]_vanilla_YYMMDD_HHMMSS.pptx` - Descriptive baseline (Step 5)
+  - `[Company]_insights_YYMMDD_HHMMSS.pptx` - Ground truth discoveries (Step 9)
+  - `[Company]_integrated_YYMMDD_HHMMSS.pptx` - Final deliverable (Step 12)
 
 **Format:**
 - Title and subtitle (up to 8 words, prose statement)
@@ -100,30 +102,19 @@ Automatically processes all PDFs in `SourceFiles/SourceBatch/` with:
 - Each section limited to ~100 words with bullet points
 - Temporal bias: prioritizes most recent fiscal data over historical data
 
-**Custom Sections (Introduced in v1.2):**
+**Architecture (v1.4):**
 
-Create custom section definitions for specialized use cases:
+12-step pipeline with optional insights:
 
-```bash
-# 1. Copy template to create custom sections file
-cp src/opp_sections_template.py src/opp_sections_custom.py
+| Steps 1-5 | Descriptive Track | Vanilla output |
+|-----------|-------------------|----------------|
+| Steps 6-9 | Ground Truth Track | Insights output |
+| Steps 10-12 | Integration Track | Integrated output |
 
-# 2. Edit opp_sections_custom.py to define your 4 custom sections
-
-# 3. Run OPP and select "2 - Custom Profile"
-python OPP.py
-```
-
-Custom profiles use distinct output naming for easy identification.
-
-**Architecture (v1.3):**
-- **Phase 1**: Parallel Draft/Check/Enhance for all sections
-- **Phase 2**: Sequential deduplication in reverse priority (Section 4→3→2→1)
-  - Section 4 (Strategic Considerations) keeps richest content
-  - Earlier sections remove overlaps with later ones
-- **Phase 3**: Parallel polish to 100 words
-- **Iterations**: Optional 2-3 iterations for increased density (subtitle refinement + section enhancement)
-- Dynamic section loading: supports default or custom section definitions
+- Steps 1-5: Draft, Check, Enhance, Clean-up, Polish
+- Steps 6-9: Ground Truth, Hypothesize, Test, Synthesize (insights enabled)
+- Steps 10-12: Integrate, Clean-up 2, Polish 2 (insights enabled)
+- Parallel execution across 4 sections with configurable workers
 
 ## Requirements
 
@@ -138,7 +129,7 @@ PD2 learns and improves over time:
 - Extracts universal analytical methodologies (9-10/10 quality only)
 - Applies learned patterns to future runs
 
-OPP v1.3 does not use learning for simplicity and speed.
+OPP v1.4 does not use learning for simplicity and speed.
 
 ## License
 

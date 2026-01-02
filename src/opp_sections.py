@@ -18,7 +18,8 @@ sections = [
                 "• One sentence describing the key customers, including spread or concentration risk, with numbers\\n"
                 "• One sentence describing how the company sells (e.g. direct or indirect) and how it contracts with customers (e.g. long term contracts, purchase orders, etc.) and how it maintains relationships with customers (e.g. loyalty programs, etc.)\\n"
                 "• One sentence describing the company's key suppliers, but only if there is significant concentration risk, with numbers\\n"
-                "• In case the company is listed on a stock exchange, then one sentence on the current market capitalization in local currency. in case the company is not listed on a stock exchange, then skip this sentence.\\n"
+                "• In case the company is listed on a stock exchange, then one sentence on the current market capitalization in local currency. in case the company is not listed on a stock exchange, then skip this sentence.\\n",
+        "ground_truth_pointer": "What does the actual operational structure reveal about how this company creates and captures value?"
     },
     {
         "number": 2,
@@ -33,7 +34,8 @@ sections = [
                 "• One sentence describing market position (e.g. #3 in geography) and market share by geography, with numbers\\n"
                 "• One sentence describing market position (e.g. #2 in customer segment) and market share by customer segment, with numbers\\n"
                 "• One sentence describing the 2 most important accolades and awards the company has received, with numbers\\n"
-                "• In case the data is missing, then use the company's narrative, but try to use the numbers if possible\\n"
+                "• In case the data is missing, then use the company's narrative, but try to use the numbers if possible\\n",
+        "ground_truth_pointer": "Are claimed market positions and competitive advantages supported by measurable outcomes?"
     },
     {
         "number": 3,
@@ -48,7 +50,8 @@ sections = [
                 "• For each segment, one sentence describing the segment financials, with numbers, and the percentage contribution to revenues and profits, if possible\\n"
                 "• One sentence describing the company's capital expenditure in absolute terms in local currency terms and any important trends in percentage terms\\n"
                 "• One sentence describing balance sheet highlights, i.e. what's the single most important thing about the company's balance sheet, sometimes that's about net debt, sometimes about impairments, you need to judge, with numbers\\n"
-                "• One sentence describing unit economics and the 2 most important financial performance drivers, including numbers, with proper labels\\n"
+                "• One sentence describing unit economics and the 2 most important financial performance drivers, including numbers, with proper labels\\n",
+        "ground_truth_pointer": "What do the numbers reveal about earnings quality, cash generation, and sustainable performance?"
     },
     {
         "number": 4,
@@ -62,7 +65,8 @@ sections = [
                 "• One sentence describing the company's history of material commercial or strategic partnerships, including dates, and the size of the transaction in absolute terms, and valuation in absolute terms and in multiples terms\\n"
                 "• One sentence describing the 1-2 most important decision makers at the management level and their strategic agenda for the company, with numbers\\n"
                 "• One sentence describing the 2 most important strategic observations relevant to a buyer or investor - explain WHY each matters for valuation, synergies, or integration risk, not just WHAT you observe, with numbers\\n"
-                "• If you don't have the data then stick with the company's narrative, but try to use the numbers if possible\\n"
+                "• If you don't have the data then stick with the company's narrative, but try to use the numbers if possible\\n",
+        "ground_truth_pointer": "What do ownership, transaction history, and management incentives reveal about likely agendas?"
     }
 ]
 

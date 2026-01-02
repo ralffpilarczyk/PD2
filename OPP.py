@@ -20,11 +20,11 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Version
-__opp_version__ = "1.3"
+__opp_version__ = "1.4"
 
 # Import utilities from PD2
 from src.utils import thread_safe_print, retry_with_backoff
-# Note: sections imported dynamically based on user profile type selection
+from src.opp_sections import sections, get_section_boundaries
 from src.profile_prompts import (
     COMPANY_NAME_EXTRACTION_PROMPT,
     get_title_subtitle_prompt,
@@ -32,10 +32,15 @@ from src.profile_prompts import (
     get_section_generation_prompt,
     get_section_completeness_check_prompt,
     get_section_enhancement_prompt,
-    get_section_density_enhancement_prompt,
-    get_section_deduplication_prompt,
     get_section_cleanup_prompt,
-    get_section_polish_prompt
+    get_section_polish_prompt,
+    get_opp_ground_truth_prompt,
+    get_opp_hypothesis_prompt,
+    get_opp_test_prompt,
+    get_opp_synthesis_prompt,
+    get_opp_integration_prompt,
+    get_opp_cleanup2_prompt,
+    get_opp_polish2_prompt
 )
 from src.pptx_generator import create_profile_pptx
 from src.file_manager import FileManager
@@ -147,6 +152,58 @@ def select_pdf_files() -> Optional[List[str]]:
         return list(pdf_files)
 
 
+def scan_batch_directory() -> Optional[List[str]]:
+    """Scan SourceFiles/SourceBatch/ for PDF files
+
+    Returns:
+        List of PDF file paths, or None if directory not found or empty
+    """
+    batch_dir = Path("SourceFiles/SourceBatch")
+
+    if not batch_dir.exists():
+        thread_safe_print(f"{RED}{CROSS}{RESET} Batch directory not found: {batch_dir}")
+        return None
+
+    pdfs = sorted(batch_dir.glob("*.pdf"))
+
+    if not pdfs:
+        thread_safe_print(f"{RED}{CROSS}{RESET} No PDF files found in {batch_dir}")
+        return None
+
+    thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Found {len(pdfs)} PDF file(s) in batch directory:")
+    for pdf in pdfs:
+        thread_safe_print(f"  - {pdf.name}")
+
+    return [str(pdf) for pdf in pdfs]
+
+
+def print_batch_summary(results: List[dict]):
+    """Print summary of batch processing results
+
+    Args:
+        results: List of dicts with 'file', 'status', 'time', and optionally 'output' or 'error'
+    """
+    thread_safe_print(f"\n\n{'='*60}")
+    thread_safe_print("BATCH PROCESSING COMPLETE")
+    thread_safe_print(f"{'='*60}")
+
+    successes = [r for r in results if r["status"] == "success"]
+    failures = [r for r in results if r["status"] in ("failed", "error")]
+
+    thread_safe_print(f"\nTotal: {len(results)}")
+    thread_safe_print(f"Success: {len(successes)}")
+    thread_safe_print(f"Failed: {len(failures)}")
+
+    if failures:
+        thread_safe_print(f"\n{RED}Failed files:{RESET}")
+        for r in failures:
+            thread_safe_print(f"  - {r['file']}: {r.get('error', 'Unknown')}")
+
+    total_time = sum(r["time"] for r in results)
+    thread_safe_print(f"\nTotal time: {total_time/60:.1f} minutes")
+    thread_safe_print(f"{'='*60}\n")
+
+
 class WorkerDisplay:
     """Thread-safe display manager for parallel worker status"""
 
@@ -156,14 +213,15 @@ class WorkerDisplay:
         self.lock = threading.Lock()
         self.next_worker_id = 1
         self.worker_ids = {}  # {section_num: worker_id}
-        self.version_label = None  # e.g., "v1:", "v2:", "v3:"
 
     def update(self, section_num: int, action: str):
         """Update a worker's status and redraw the line
 
         Args:
             section_num: Section number being processed
-            action: One of "Draft", "Check", "Enhance", "Clean-up", "Polish"
+            action: Step label - one of:
+                Steps 1-5: "Draft", "Check", "Enhance", "Clean-up", "Polish"
+                Steps 6-12 (insights): "Ground", "Hypo", "Test", "Synth", "Integ", "Clean2", "Polish2"
         """
         with self.lock:
             # Assign worker ID if this is a new section
@@ -194,11 +252,6 @@ class WorkerDisplay:
                 if worker_id in self.worker_status:
                     del self.worker_status[worker_id]
 
-    def set_version(self, version_label: str):
-        """Set the version label for display (e.g., 'v1', 'v2', 'v3')"""
-        with self.lock:
-            self.version_label = version_label
-
     def _redraw(self):
         """Redraw the worker status line (only active workers)"""
         if not self.worker_status:
@@ -219,22 +272,17 @@ class WorkerDisplay:
         # Join with separator
         line = f" {DIM}|{RESET} ".join(parts)
 
-        # Prepend version label if set
-        if self.version_label:
-            line = f"{BOLD}{self.version_label}:{RESET} {line}"
-
         thread_safe_print(line)
 
 
 class OnePageProfile:
     """Generates one-page company profiles from PDF documents with parallel section processing"""
 
-    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2, iterations: int = 1, profile_type: str = "default"):
+    def __init__(self, pdf_files: List[str], model_name: str, workers: int = 2, insights_enabled: bool = False):
         self.pdf_files = pdf_files
         self.model_name = model_name
         self.workers = workers
-        self.iterations = iterations
-        self.profile_type = profile_type
+        self.insights_enabled = insights_enabled
 
         # Create models with different temperatures
         self.model_low_temp = genai.GenerativeModel(
@@ -248,19 +296,9 @@ class OnePageProfile:
 
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Dynamic import of sections based on profile type
-        if profile_type == "custom":
-            from src.opp_sections_custom import sections, get_section_boundaries
-            self.run_dir_prefix = "opp_custom"
-        else:
-            from src.opp_sections import sections, get_section_boundaries
-            self.run_dir_prefix = "opp"
-
+        # Use imported sections
         self.sections = sections
         self.get_section_boundaries = get_section_boundaries
-
-        # Validate sections structure (especially important for custom sections)
-        self._validate_sections()
 
         # PDF parts will be prepared once and reused
         self.pdf_parts = None
@@ -272,24 +310,10 @@ class OnePageProfile:
         self.cached_model_medium_temp = None  # Cached model with temp 0.6
 
         # Initialize file manager
-        self.file_manager = FileManager(self.timestamp, self.run_dir_prefix)
+        self.file_manager = FileManager(self.timestamp, "opp")
 
         # Setup directories
         self.file_manager.setup_directories(self.sections)
-
-    def _validate_sections(self):
-        """Validate section structure (especially important for custom sections)"""
-        if len(self.sections) != 4:
-            raise ValueError(f"Must have exactly 4 sections, found {len(self.sections)}")
-
-        required_keys = {"number", "title", "specs"}
-        for i, section in enumerate(self.sections):
-            missing = required_keys - set(section.keys())
-            if missing:
-                raise ValueError(f"Section {i} missing keys: {missing}")
-
-            if section["number"] != i + 1:
-                raise ValueError(f"Section numbers must be 1-4 in order, found {section['number']} at position {i}")
 
     def prepare_pdf_parts(self) -> List:
         """Upload PDF files to Gemini Files API and return file references"""
@@ -349,9 +373,8 @@ class OnePageProfile:
             bool: True if cache created successfully, False otherwise
         """
         try:
-            # Calculate TTL based on iterations
-            # Base: 2 hours, add 1 hour per iteration beyond first
-            ttl_hours = 2 + (self.iterations - 1)
+            # TTL: 2 hours without insights, 3 hours with insights
+            ttl_hours = 3 if self.insights_enabled else 2
             ttl = timedelta(hours=ttl_hours)
 
             thread_safe_print(f"{CYAN}{ARROW}{RESET} Creating cache (TTL: {ttl_hours * 60} minutes)...")
@@ -512,29 +535,6 @@ class OnePageProfile:
             return content
         return enhanced
 
-    def _enhance_section_for_density(self, section: dict, content: str) -> str:
-        """Step 3: Enhance section for density when no gaps are found (iterations 2+)"""
-        prompt = get_section_density_enhancement_prompt(section, content)
-        prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
-
-        if self.cached_model_medium_temp:
-            # Use cached model
-            enhanced = retry_with_backoff(
-                lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
-                context=f"Section {section['number']} Density Enhancement"
-            )
-        else:
-            # Fallback to Files API
-            enhanced = retry_with_backoff(
-                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
-                context=f"Section {section['number']} Density Enhancement"
-            )
-
-        # Fallback to original if enhancement fails
-        if not enhanced or len(enhanced) < 50:
-            return content
-        return enhanced
-
     def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
         """Step 5: Polish section to word limit"""
         prompt = get_section_polish_prompt(section, content, word_limit)
@@ -548,39 +548,229 @@ class OnePageProfile:
             return content
         return polished
 
-    def _deduplicate_section(self, section: dict, content: str, previous_sections: list) -> str:
-        """[UNUSED] Remove content that overlaps with previous sections
+    def _ground_truth_discovery(self, section: dict, company_name: str) -> str:
+        """Step 6: Discover ground truth observations from source documents
 
         Args:
-            section: Current section dict
-            content: Enhanced content to deduplicate
-            previous_sections: List of dicts with 'title' and 'content' from already-processed sections
+            section: Section dict with ground_truth_pointer
+            company_name: Company name for context
 
         Returns:
-            Deduplicated content
+            Ground truth observations (2-3 verifiable facts)
         """
-        if not previous_sections:
-            # First section (Section 4), nothing to deduplicate against
-            return content
+        prompt = get_opp_ground_truth_prompt(section, company_name)
 
-        prompt = get_section_deduplication_prompt(section, content, previous_sections)
-        deduplicated = retry_with_backoff(
+        if self.cached_model_medium_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Ground Truth"
+            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Ground Truth"
+            )
+
+    def _hypothesis_generation(self, step6_output: str, section: dict, company_name: str) -> str:
+        """Step 7: Generate hypotheses from ground truth observations
+
+        CRITICAL: This step deliberately uses NON-CACHED model (no document access)
+        to prevent anchoring to source framing.
+
+        Args:
+            step6_output: Output from Step 6 (ground truth observations)
+            section: Section dict
+            company_name: Company name for context
+
+        Returns:
+            Testable hypotheses (2-3 predictions)
+        """
+        prompt = get_opp_hypothesis_prompt(step6_output, section, company_name)
+
+        # CRITICAL: Use non-cached model - NO document access
+        return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text.strip(),
-            context=f"Section {section['number']} Dedup"
+            context=f"Section {section['number']} Hypothesis"
         )
 
-        # Fallback to original if deduplication fails
-        if not deduplicated or len(deduplicated) < 50:
-            return content
-        return deduplicated
+    def _hypothesis_testing(self, step7_output: str, section: dict, company_name: str) -> str:
+        """Step 8: Test hypotheses against source documents
 
-    def _cleanup_sections(self, sections_content: dict, worker_display, version_suffix: str = "") -> dict:
+        Args:
+            step7_output: Output from Step 7 (hypotheses)
+            section: Section dict
+            company_name: Company name for context
+
+        Returns:
+            Evidence and verdicts for each hypothesis
+        """
+        prompt = get_opp_test_prompt(step7_output, section, company_name)
+        prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
+
+        if self.cached_model_low_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Test"
+            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Test"
+            )
+
+    def _insight_synthesis(self, step8_output: str, section: dict, company_name: str) -> str:
+        """Step 9: Synthesize confirmed hypotheses into insights
+
+        Args:
+            step8_output: Output from Step 8 (test results with verdicts)
+            section: Section dict
+            company_name: Company name for context
+
+        Returns:
+            Synthesized insights (2-4 bullets) for Insights-only PPTX
+        """
+        prompt = get_opp_synthesis_prompt(step8_output, section, company_name)
+        prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
+
+        if self.cached_model_medium_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Synthesis"
+            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Synthesis"
+            )
+
+    def _insight_integration(self, step5_output: str, step9_output: str, section: dict, company_name: str) -> str:
+        """Step 10: Integrate insights into vanilla description
+
+        Args:
+            step5_output: Output from Step 5 (vanilla polished content)
+            step9_output: Output from Step 9 (synthesized insights)
+            section: Section dict
+            company_name: Company name for context
+
+        Returns:
+            Integrated content (~150 words) with insights woven in
+        """
+        prompt = get_opp_integration_prompt(step5_output, step9_output, section, company_name)
+        prompt = prompt.replace("{source_documents}", "[See attached PDF documents]")
+
+        if self.cached_model_medium_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_medium_temp.generate_content([prompt]).text.strip(),
+                context=f"Section {section['number']} Integration"
+            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_medium_temp.generate_content(self.pdf_parts + [prompt]).text.strip(),
+                context=f"Section {section['number']} Integration"
+            )
+
+    def _cleanup_integrated_sections(self, sections_content: dict, worker_display) -> dict:
+        """Step 11: Redistribute integrated content based on relevance
+
+        Args:
+            sections_content: Dict mapping section_num -> dict with integrated content
+            worker_display: WorkerDisplay instance for progress tracking
+
+        Returns:
+            Dict mapping section_num -> dict with cleaned integrated content
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        def cleanup_section(section_num: int):
+            """Clean up a single integrated section"""
+            result = sections_content[section_num]
+
+            if not result.get('success', False):
+                return result
+
+            worker_display.update(section_num, "Clean2")
+
+            section = next(s for s in self.sections if s['number'] == section_num)
+            section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+
+            all_sections = [
+                {
+                    'number': s['number'],
+                    'title': s['title'],
+                    'specs': s['specs'],
+                    'content': sections_content[s['number']]['content']
+                }
+                for s in self.sections
+            ]
+
+            target_section = {
+                'number': section['number'],
+                'title': section['title'],
+                'specs': section['specs'],
+                'content': result['content']
+            }
+
+            prompt = get_opp_cleanup2_prompt(target_section, all_sections)
+
+            cleaned = retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(prompt).text.strip(),
+                context=f"Section {section_num} Clean-up 2"
+            )
+
+            if not cleaned or len(cleaned) < 20:
+                cleaned = result['content']
+
+            (section_dir / "step11_cleaned.md").write_text(
+                f"## {result['title']}\n{cleaned}",
+                encoding='utf-8'
+            )
+
+            worker_display._remove_silent(section_num)
+
+            return {
+                'number': section_num,
+                'title': result['title'],
+                'content': cleaned,
+                'success': True
+            }
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {executor.submit(cleanup_section, i): i for i in range(1, 5)}
+            results = {}
+            for future in futures:
+                section_result = future.result()
+                results[section_result['number']] = section_result
+
+        return results
+
+    def _polish_integrated(self, section: dict, content: str, word_limit: int) -> str:
+        """Step 12: Final polish for integrated content
+
+        Args:
+            section: Section dict
+            content: Integrated content from Step 11
+            word_limit: Target word limit (typically 100)
+
+        Returns:
+            Final polished integrated content
+        """
+        prompt = get_opp_polish2_prompt(section, content, word_limit)
+
+        polished = retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content(prompt).text.strip(),
+            context=f"Section {section['number']} Polish 2"
+        )
+
+        if not polished or len(polished) < 50:
+            return content
+        return polished
+
+    def _cleanup_sections(self, sections_content: dict, worker_display) -> dict:
         """Step 4: Redistribute content based on relevance to section specs
 
         Args:
             sections_content: Dict mapping section_num -> dict with 'number', 'title', 'content', 'success'
             worker_display: WorkerDisplay instance for progress tracking
-            version_suffix: Version suffix for file naming (e.g., "_v2")
 
         Returns:
             Dict mapping section_num -> dict with cleaned content
@@ -635,7 +825,7 @@ class OnePageProfile:
                 cleaned = result['content']
 
             # Save cleaned content
-            (section_dir / f"step4_cleaned{version_suffix}.md").write_text(
+            (section_dir / "step4_cleaned.md").write_text(
                 f"## {result['title']}\n{cleaned}",
                 encoding='utf-8'
             )
@@ -689,14 +879,12 @@ class OnePageProfile:
             thread_safe_print(f"{YELLOW}{WARNING}{RESET} Subtitle refinement error: {e}, keeping original")
             return current_title_subtitle
 
-    def process_section_main(self, section: dict, worker_display: WorkerDisplay, previous_content: str = None, version_num: int = 1) -> dict:
-        """Process a single section through Steps 1-3 (Draft/Check/Enhance) or Steps 2-3 (Check/Enhance for iterations 2+)
+    def process_section_main(self, section: dict, worker_display: WorkerDisplay) -> dict:
+        """Process a single section through Steps 1-3 (Draft/Check/Enhance)
 
         Args:
             section: Section dict from opp_sections.py
             worker_display: WorkerDisplay instance for progress tracking
-            previous_content: If provided, skip Draft and start with Check using this content (for iterations 2+)
-            version_num: Version number (1, 2, or 3) for file naming
         """
         section_num = section['number']
         section_title = section['title']
@@ -704,33 +892,21 @@ class OnePageProfile:
         # Get section directory (already created by FileManager)
         section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
 
-        # Version suffix for file names
-        version_suffix = f"_v{version_num}" if version_num > 1 else ""
-
         try:
-            # Step 1: Initial Draft (only for first iteration)
-            if previous_content is None:
-                worker_display.update(section_num, "Draft")
-                content = self._generate_section(section)
-                (section_dir / "step1_draft.md").write_text(f"## {section_title}\n{content}", encoding='utf-8')
-            else:
-                # For iterations 2+, use previous polished content
-                content = previous_content
+            # Step 1: Initial Draft
+            worker_display.update(section_num, "Draft")
+            content = self._generate_section(section)
+            (section_dir / "step1_draft.md").write_text(f"## {section_title}\n{content}", encoding='utf-8')
 
             # Step 2: Completeness Check
             worker_display.update(section_num, "Check")
             add_list = self._check_section_completeness(section, content)
-            (section_dir / f"step2_add_list{version_suffix}.txt").write_text(add_list, encoding='utf-8')
+            (section_dir / "step2_add_list.txt").write_text(add_list, encoding='utf-8')
 
             # Step 3: Enhancement
             worker_display.update(section_num, "Enhance")
-            if "No critical gaps" in add_list or "No critical gaps identified" in add_list:
-                # No gaps found - use density-focused enhancement
-                enhanced = self._enhance_section_for_density(section, content)
-            else:
-                # Gaps found - use standard enhancement with ADD list
-                enhanced = self._enhance_section(section, content, add_list)
-            (section_dir / f"step3_enhanced{version_suffix}.md").write_text(f"## {section_title}\n{enhanced}", encoding='utf-8')
+            enhanced = self._enhance_section(section, content, add_list)
+            (section_dir / "step3_enhanced.md").write_text(f"## {section_title}\n{enhanced}", encoding='utf-8')
 
             # Remove from display after Step 3 completes
             worker_display._remove_silent(section_num)
@@ -753,8 +929,12 @@ class OnePageProfile:
                 'error': str(e)
             }
 
-    def generate_profile(self, company_name: str, title_subtitle: str, worker_display: WorkerDisplay) -> List[str]:
-        """Generate profile with lockstep iterations through 3-phase processing
+    def generate_profile(self, company_name: str, title_subtitle: str, worker_display: WorkerDisplay) -> Optional[str]:
+        """Generate profile through processing pipeline
+
+        Pipeline:
+        - Steps 1-5: Vanilla profile (always runs)
+        - Steps 6-12: Insight pipeline (only if insights_enabled)
 
         Args:
             company_name: Company name for file naming
@@ -762,186 +942,389 @@ class OnePageProfile:
             worker_display: WorkerDisplay instance
 
         Returns:
-            List of PPT paths generated (one per successful iteration)
+            Path to generated PPTX (or integrated PPTX if insights enabled), or None if failed
         """
-        pptx_paths = []
-        previous_polished_results = None
-        current_title_subtitle = title_subtitle  # Will be refined in each iteration
+        current_title_subtitle = title_subtitle
+        pptx_paths = []  # Track all generated PPTX files
 
-        # Loop through iterations with graceful degradation
-        for iteration_num in range(1, self.iterations + 1):
+        # Steps 1-3: Draft/Check/Enhance
+        thread_safe_print(f"\n{CYAN}Steps 1-3: Draft/Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
+
+        enhanced_results = []
+        completed_count = 0
+
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            future_to_section = {
+                executor.submit(self.process_section_main, section, worker_display): section
+                for section in self.sections
+            }
+
+            for future in as_completed(future_to_section):
+                section = future_to_section[future]
+                result = future.result()
+                enhanced_results.append(result)
+                completed_count += 1
+                worker_display.complete(result['number'], completed_count, len(self.sections))
+
+        # Sort by section number for consistent processing
+        enhanced_results.sort(key=lambda x: x['number'])
+
+        # Step 4: Clean-up - redistribute content based on relevance
+        thread_safe_print(f"\n{CYAN}Step 4: Refining subtitle and cleaning up sections...{RESET}\n")
+
+        thread_safe_print(f"{CYAN}Refining subtitle...{RESET}")
+        current_title_subtitle = self._refine_subtitle(current_title_subtitle, "")
+
+        # Save refined subtitle
+        subtitle_path = Path(self.file_manager.run_dir) / "subtitle.md"
+        subtitle_path.write_text(current_title_subtitle, encoding='utf-8')
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Subtitle refined")
+
+        # Convert enhanced_results list to dict for cleanup
+        enhanced_dict = {r['number']: r for r in enhanced_results}
+
+        # Clean up sections in parallel - redistributes content based on relevance
+        cleaned_results = self._cleanup_sections(enhanced_dict, worker_display)
+
+        # Step 5: Polish to 100 words
+        thread_safe_print(f"\n{CYAN}Step 5: Polishing to 100 words (parallel)...{RESET}\n")
+
+        def polish_section_task(section_num):
+            """Polish a single section"""
+            cleaned_result = cleaned_results[section_num]
+
+            if not cleaned_result['success']:
+                return cleaned_result
+
+            section = next(s for s in self.sections if s['number'] == section_num)
+            section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+
+            # Display polish progress
+            worker_display.update(section_num, "Polish")
+
+            # Polish the cleaned content
+            polished = self._polish_section(section, cleaned_result['content'], word_limit=110)
+
+            # Save polished content
+            (section_dir / "step5_polished.md").write_text(
+                f"## {cleaned_result['title']}\n{polished}",
+                encoding='utf-8'
+            )
+
+            # Remove from display after polish
+            worker_display._remove_silent(section_num)
+
+            return {
+                'number': section_num,
+                'title': cleaned_result['title'],
+                'content': polished,
+                'success': True
+            }
+
+        polished_results = []
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            futures = {executor.submit(polish_section_task, num): num for num in [1, 2, 3, 4]}
+
+            for future in as_completed(futures):
+                result = future.result()
+                polished_results.append(result)
+
+        # Sort by section number for final assembly
+        polished_results.sort(key=lambda x: x['number'])
+
+        # Convert to dict for later use
+        polished_dict = {r['number']: r for r in polished_results}
+
+        # Assemble vanilla markdown
+        parts = []
+        for result in polished_results:
+            if result['success']:
+                parts.append(f"## {result['title']}\n{result['content']}")
+
+        profile_content = '\n\n'.join(parts)
+
+        # Save vanilla markdown
+        vanilla_profile = self._assemble_final_markdown(current_title_subtitle, profile_content)
+        vanilla_path = Path(self.file_manager.run_dir) / "final_profile.md"
+        vanilla_path.write_text(vanilla_profile, encoding='utf-8')
+
+        # Generate PPTX based on insights mode
+        if not self.insights_enabled:
+            # Single output mode - no variant suffix
+            thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Content complete, generating PowerPoint...")
             try:
-                version_label = f"v{iteration_num}"
-                version_suffix = f"_v{iteration_num}" if iteration_num > 1 else ""
-                thread_safe_print(f"\n{CYAN}{'='*60}{RESET}")
-                thread_safe_print(f"{CYAN}{BOLD}{version_label}: Starting iteration {iteration_num}/{self.iterations}{RESET}")
-                thread_safe_print(f"{CYAN}{'='*60}{RESET}")
+                pptx_path = create_profile_pptx(
+                    md_path=str(vanilla_path),
+                    company_name=company_name,
+                    timestamp=self.timestamp
+                )
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} PowerPoint: {pptx_path}")
+                return pptx_path
+            except Exception as pptx_error:
+                thread_safe_print(f"{YELLOW}{WARNING}{RESET} PowerPoint generation failed: {pptx_error}")
+                return None
 
-                # Update worker display to show version
-                worker_display.set_version(version_label)
+        # ========== INSIGHTS PIPELINE (Steps 6-12) ==========
+        thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Vanilla content complete, generating Vanilla PPTX...")
 
-                # Steps 1-3: Draft/Check/Enhance (or Steps 2-3 for iterations 2+)
-                if iteration_num == 1:
-                    thread_safe_print(f"\n{CYAN}Steps 1-3: Draft/Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
-                else:
-                    thread_safe_print(f"\n{CYAN}Steps 2-3: Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
+        # Generate Vanilla PPTX
+        try:
+            vanilla_pptx = create_profile_pptx(
+                md_path=str(vanilla_path),
+                company_name=company_name,
+                timestamp=self.timestamp,
+                variant="vanilla"
+            )
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Vanilla PPTX: {vanilla_pptx}")
+            pptx_paths.append(vanilla_pptx)
+        except Exception as e:
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Vanilla PPTX failed: {e}")
 
-                enhanced_results = []
-                completed_count = 0
+        # Steps 6-9: Ground Truth Discovery Pipeline
+        thread_safe_print(f"\n{CYAN}Steps 6-9: Ground Truth Discovery (parallel)...{RESET}\n")
 
-                with ThreadPoolExecutor(max_workers=self.workers) as executor:
-                    if iteration_num == 1:
-                        # First iteration: full pipeline (steps 1-3)
-                        future_to_section = {
-                            executor.submit(self.process_section_main, section, worker_display, None, iteration_num): section
-                            for section in self.sections
-                        }
-                    else:
-                        # Subsequent iterations: use previous polished content (steps 2-3 only)
-                        future_to_section = {
-                            executor.submit(
-                                self.process_section_main,
-                                section,
-                                worker_display,
-                                previous_polished_results[section['number']]['content'],
-                                iteration_num
-                            ): section
-                            for section in self.sections
-                        }
+        def insight_pipeline_task(section_num):
+            """Run Steps 6-9 for a single section"""
+            section = next(s for s in self.sections if s['number'] == section_num)
+            section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
 
-                    for future in as_completed(future_to_section):
-                        section = future_to_section[future]
-                        result = future.result()
-                        enhanced_results.append(result)
-                        completed_count += 1
-                        worker_display.complete(result['number'], completed_count, len(self.sections))
+            try:
+                # Step 6: Ground Truth Discovery
+                worker_display.update(section_num, "Ground")
+                step6 = self._ground_truth_discovery(section, company_name)
+                (section_dir / "step6_ground_truth.md").write_text(step6, encoding='utf-8')
 
-                # Sort by section number for consistent processing
-                enhanced_results.sort(key=lambda x: x['number'])
+                # Step 7: Hypothesis Generation (no docs!)
+                worker_display.update(section_num, "Hypo")
+                step7 = self._hypothesis_generation(step6, section, company_name)
+                (section_dir / "step7_hypotheses.md").write_text(step7, encoding='utf-8')
 
-                # Step 4: Clean-up - redistribute content based on relevance
-                thread_safe_print(f"\n{CYAN}Step 4: Refining subtitle and cleaning up sections...{RESET}\n")
+                # Step 8: Hypothesis Testing
+                worker_display.update(section_num, "Test")
+                step8 = self._hypothesis_testing(step7, section, company_name)
+                (section_dir / "step8_test_results.md").write_text(step8, encoding='utf-8')
 
-                # Refine subtitle using context from previous iteration's polished sections (if available)
-                sections_context = "\n".join([
-                    f"{r['title']}: {r['content'][:150]}..."
-                    for r in previous_polished_results.values()
-                ])[:500] if previous_polished_results else ""
+                # Step 9: Insight Synthesis
+                worker_display.update(section_num, "Synth")
+                step9 = self._insight_synthesis(step8, section, company_name)
+                (section_dir / "step9_synthesis.md").write_text(step9, encoding='utf-8')
 
-                thread_safe_print(f"{CYAN}Refining subtitle...{RESET}")
-                current_title_subtitle = self._refine_subtitle(current_title_subtitle, sections_context)
+                worker_display._remove_silent(section_num)
 
-                # Save refined subtitle
-                subtitle_path = Path(self.file_manager.run_dir) / f"subtitle{version_suffix}.md"
-                subtitle_path.write_text(current_title_subtitle, encoding='utf-8')
-                thread_safe_print(f"{CYAN}{CHECK}{RESET} Subtitle refined")
-
-                # Convert enhanced_results list to dict for cleanup
-                enhanced_dict = {r['number']: r for r in enhanced_results}
-
-                # Clean up sections in parallel - redistributes content based on relevance
-                cleaned_results = self._cleanup_sections(enhanced_dict, worker_display, version_suffix)
-
-                # Step 5: Polish to 100 words
-                thread_safe_print(f"\n{CYAN}Step 5: Polishing to 100 words (parallel)...{RESET}\n")
-
-                def polish_section_task(section_num):
-                    """Polish a single section"""
-                    cleaned_result = cleaned_results[section_num]
-
-                    if not cleaned_result['success']:
-                        return cleaned_result
-
-                    section = next(s for s in self.sections if s['number'] == section_num)
-                    section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
-
-                    # Display polish progress
-                    worker_display.update(section_num, "Polish")
-
-                    # Polish the cleaned content
-                    polished = self._polish_section(section, cleaned_result['content'], word_limit=110)
-
-                    # Save polished content with version suffix
-                    (section_dir / f"step5_polished{version_suffix}.md").write_text(
-                        f"## {cleaned_result['title']}\n{polished}",
-                        encoding='utf-8'
-                    )
-
-                    # Remove from display after polish
-                    worker_display._remove_silent(section_num)
-
-                    return {
-                        'number': section_num,
-                        'title': cleaned_result['title'],
-                        'content': polished,
-                        'success': True
-                    }
-
-                polished_results = []
-                with ThreadPoolExecutor(max_workers=self.workers) as executor:
-                    futures = {executor.submit(polish_section_task, num): num for num in [1, 2, 3, 4]}
-
-                    for future in as_completed(futures):
-                        result = future.result()
-                        polished_results.append(result)
-
-                # Sort by section number for final assembly
-                polished_results.sort(key=lambda x: x['number'])
-
-                # Convert to dict for next iteration
-                previous_polished_results = {r['number']: r for r in polished_results}
-
-                # Assemble final markdown for this iteration
-                parts = []
-                for result in polished_results:
-                    if result['success']:
-                        parts.append(f"## {result['title']}\n{result['content']}")
-
-                profile_content = '\n\n'.join(parts)
-
-                # Save markdown immediately (with refined subtitle)
-                final_profile = self._assemble_final_markdown(current_title_subtitle, profile_content)
-                final_path = Path(self.file_manager.run_dir) / f"final_profile{version_suffix}.md"
-                final_path.write_text(final_profile, encoding='utf-8')
-
-                thread_safe_print(f"\n{CYAN}{CHECK}{RESET} {version_label} content complete, generating PowerPoint...")
-
-                # Generate PowerPoint immediately
-                try:
-                    pptx_path = create_profile_pptx(
-                        md_path=str(final_path),
-                        company_name=company_name,
-                        timestamp=self.timestamp,
-                        version_suffix=version_suffix,
-                        profile_type=self.profile_type
-                    )
-                    pptx_paths.append(pptx_path)
-                    thread_safe_print(f"{CYAN}{CHECK}{RESET} {version_label} PowerPoint: {pptx_path}")
-                except Exception as pptx_error:
-                    thread_safe_print(f"{YELLOW}{WARNING}{RESET} {version_label} PowerPoint generation failed: {pptx_error}")
+                return {
+                    'number': section_num,
+                    'title': section['title'],
+                    'content': step9,
+                    'success': True,
+                    'has_insights': "No hypotheses were confirmed" not in step9
+                }
 
             except Exception as e:
-                # Graceful degradation: log error and stop iterations, but return what we have
-                thread_safe_print(f"\n{RED}{CROSS}{RESET} {version_label} failed: {e}")
-                thread_safe_print(f"{YELLOW}{WARNING}{RESET} Stopping at {version_label}. Previous iterations are saved.")
-                break  # Exit iteration loop, return partial results
+                thread_safe_print(f"{RED}{CROSS}{RESET} Section {section_num} insight pipeline failed: {e}")
+                worker_display._remove_silent(section_num)
+                return {
+                    'number': section_num,
+                    'title': section['title'],
+                    'content': '',
+                    'success': False,
+                    'has_insights': False
+                }
 
-        return pptx_paths
+        insight_results = []
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            futures = {executor.submit(insight_pipeline_task, num): num for num in [1, 2, 3, 4]}
+            for future in as_completed(futures):
+                result = future.result()
+                insight_results.append(result)
+
+        insight_results.sort(key=lambda x: x['number'])
+        insight_dict = {r['number']: r for r in insight_results}
+
+        # Generate Insights-only PPTX
+        thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Insights synthesized, generating Insights PPTX...")
+
+        insights_parts = []
+        for result in insight_results:
+            if result['success'] and result['content']:
+                insights_parts.append(f"## {result['title']}\n{result['content']}")
+
+        if insights_parts:
+            insights_content = '\n\n'.join(insights_parts)
+            insights_profile = self._assemble_final_markdown(current_title_subtitle, insights_content)
+            insights_path = Path(self.file_manager.run_dir) / "insights_profile.md"
+            insights_path.write_text(insights_profile, encoding='utf-8')
+
+            try:
+                insights_pptx = create_profile_pptx(
+                    md_path=str(insights_path),
+                    company_name=company_name,
+                    timestamp=self.timestamp,
+                    variant="insights"
+                )
+                thread_safe_print(f"{CYAN}{CHECK}{RESET} Insights PPTX: {insights_pptx}")
+                pptx_paths.append(insights_pptx)
+            except Exception as e:
+                thread_safe_print(f"{YELLOW}{WARNING}{RESET} Insights PPTX failed: {e}")
+
+        # Steps 10-12: Integration Pipeline
+        thread_safe_print(f"\n{CYAN}Steps 10-12: Insight Integration (parallel)...{RESET}\n")
+
+        def integration_pipeline_task(section_num):
+            """Run Steps 10-12 for a single section"""
+            section = next(s for s in self.sections if s['number'] == section_num)
+            section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+
+            vanilla_result = polished_dict.get(section_num, {})
+            insight_result = insight_dict.get(section_num, {})
+
+            # If no insights were confirmed, use vanilla content
+            if not insight_result.get('has_insights', False):
+                return {
+                    'number': section_num,
+                    'title': section['title'],
+                    'content': vanilla_result.get('content', ''),
+                    'success': vanilla_result.get('success', False)
+                }
+
+            try:
+                # Step 10: Integration
+                worker_display.update(section_num, "Integ")
+                step10 = self._insight_integration(
+                    vanilla_result.get('content', ''),
+                    insight_result.get('content', ''),
+                    section,
+                    company_name
+                )
+                (section_dir / "step10_integrated.md").write_text(step10, encoding='utf-8')
+
+                worker_display._remove_silent(section_num)
+
+                return {
+                    'number': section_num,
+                    'title': section['title'],
+                    'content': step10,
+                    'success': True
+                }
+
+            except Exception as e:
+                thread_safe_print(f"{RED}{CROSS}{RESET} Section {section_num} integration failed: {e}")
+                worker_display._remove_silent(section_num)
+                # Fallback to vanilla
+                return {
+                    'number': section_num,
+                    'title': section['title'],
+                    'content': vanilla_result.get('content', ''),
+                    'success': vanilla_result.get('success', False)
+                }
+
+        integrated_results = []
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            futures = {executor.submit(integration_pipeline_task, num): num for num in [1, 2, 3, 4]}
+            for future in as_completed(futures):
+                result = future.result()
+                integrated_results.append(result)
+
+        integrated_results.sort(key=lambda x: x['number'])
+        integrated_dict = {r['number']: r for r in integrated_results}
+
+        # Step 11: Clean-up 2 - redistribute integrated content
+        thread_safe_print(f"\n{CYAN}Step 11: Cleaning up integrated sections...{RESET}\n")
+        cleaned_integrated = self._cleanup_integrated_sections(integrated_dict, worker_display)
+
+        # Step 12: Polish 2 - final polish
+        thread_safe_print(f"\n{CYAN}Step 12: Final polish (parallel)...{RESET}\n")
+
+        def polish_integrated_task(section_num):
+            """Polish integrated content"""
+            cleaned_result = cleaned_integrated[section_num]
+
+            if not cleaned_result.get('success', False):
+                return cleaned_result
+
+            section = next(s for s in self.sections if s['number'] == section_num)
+            section_dir = Path(self.file_manager.run_dir) / f"section_{section_num}"
+
+            worker_display.update(section_num, "Polish2")
+
+            polished = self._polish_integrated(section, cleaned_result['content'], word_limit=110)
+
+            (section_dir / "step12_polished.md").write_text(
+                f"## {cleaned_result['title']}\n{polished}",
+                encoding='utf-8'
+            )
+
+            worker_display._remove_silent(section_num)
+
+            return {
+                'number': section_num,
+                'title': cleaned_result['title'],
+                'content': polished,
+                'success': True
+            }
+
+        final_integrated = []
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            futures = {executor.submit(polish_integrated_task, num): num for num in [1, 2, 3, 4]}
+            for future in as_completed(futures):
+                result = future.result()
+                final_integrated.append(result)
+
+        final_integrated.sort(key=lambda x: x['number'])
+
+        # Assemble integrated markdown
+        integrated_parts = []
+        for result in final_integrated:
+            if result['success']:
+                integrated_parts.append(f"## {result['title']}\n{result['content']}")
+
+        integrated_content = '\n\n'.join(integrated_parts)
+        integrated_profile = self._assemble_final_markdown(current_title_subtitle, integrated_content)
+        integrated_path = Path(self.file_manager.run_dir) / "integrated_profile.md"
+        integrated_path.write_text(integrated_profile, encoding='utf-8')
+
+        # Generate Integrated PPTX
+        thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Integration complete, generating Integrated PPTX...")
+
+        try:
+            integrated_pptx = create_profile_pptx(
+                md_path=str(integrated_path),
+                company_name=company_name,
+                timestamp=self.timestamp,
+                variant="integrated"
+            )
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} Integrated PPTX: {integrated_pptx}")
+            pptx_paths.append(integrated_pptx)
+        except Exception as e:
+            thread_safe_print(f"{YELLOW}{WARNING}{RESET} Integrated PPTX failed: {e}")
+
+        # Return integrated PPTX as primary output (last one generated)
+        return pptx_paths[-1] if pptx_paths else None
 
     def _assemble_final_markdown(self, title_subtitle: str, section_content: str) -> str:
         """Combine title/subtitle with section content"""
         return f"{title_subtitle}\n\n{section_content}"
 
-    def save_run_log(self, company_name: str, status: str = "Success", pptx_paths: list = None):
+    def save_run_log(self, company_name: str, status: str = "Success", pptx_path: str = None):
         """Save run log to the run directory"""
         log_path = Path(self.file_manager.run_dir) / "run_log.txt"
 
-        # Format PowerPoint paths
-        pptx_info = ""
-        if pptx_paths:
-            pptx_lines = [f"  - {path}" for path in pptx_paths if path]
-            if pptx_lines:
-                pptx_info = "\n" + "\n".join(pptx_lines)
+        # Build processing steps list based on insights mode
+        if self.insights_enabled:
+            processing_steps = """  - Title/Subtitle generation
+  - Steps 1-3: Draft/Check/Enhance in parallel
+  - Step 4: Clean-up in parallel - redistributes content based on relevance
+  - Step 5: Polish to 100 words in parallel (Vanilla)
+  - Steps 6-9: Ground Truth Discovery in parallel
+  - Steps 10-12: Insight Integration in parallel
+  - PowerPoint generation (3 variants: vanilla, insights, integrated)
+  - See section_N/ subdirectories for intermediate outputs"""
+        else:
+            processing_steps = """  - Title/Subtitle generation
+  - Steps 1-3: Draft/Check/Enhance in parallel
+  - Step 4: Clean-up in parallel - redistributes content based on relevance
+  - Step 5: Polish to 100 words in parallel
+  - PowerPoint generation
+  - See section_N/ subdirectories for intermediate outputs"""
 
         log_content = f"""OnePageProfile Run Log
 {'='*60}
@@ -949,7 +1332,7 @@ class OnePageProfile:
 Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 Model: {self.model_name}
 Workers: {self.workers}
-Iterations: {self.iterations}
+Insights: {'Enabled' if self.insights_enabled else 'Disabled'}
 Company: {company_name}
 Run Directory: {self.file_manager.run_dir}
 
@@ -957,13 +1340,9 @@ Source Files:
 {chr(10).join(f"  - {Path(pdf).name}" for pdf in self.pdf_files)}
 
 Processing:
-  - Title/Subtitle generation
-  - {self.iterations} iteration(s):
-    - Steps 1-3: Draft/Check/Enhance (or Steps 2-3 for iterations 2+) in parallel
-    - Step 4: Clean-up in parallel - redistributes content based on relevance
-    - Step 5: Polish to 100 words in parallel
-  - PowerPoint generation for each iteration
-  - See section_N/ subdirectories for intermediate outputs{pptx_info}
+{processing_steps}
+
+Output: {pptx_path if pptx_path else 'None'}
 
 Status: {status}
 """
@@ -971,8 +1350,12 @@ Status: {status}
         with open(log_path, 'w', encoding='utf-8') as f:
             f.write(log_content)
 
-    def run(self) -> Optional[Path]:
-        """Execute the full profile generation pipeline with parallel section processing"""
+    def run(self) -> Optional[str]:
+        """Execute the full profile generation pipeline with parallel section processing
+
+        Returns:
+            Path to generated PPTX, or None if failed
+        """
         try:
             # Prepare PDFs once (will be reused by all workers)
             self.pdf_parts = self.prepare_pdf_parts()
@@ -989,33 +1372,28 @@ Status: {status}
             # Create worker display
             worker_display = WorkerDisplay(self.workers)
 
-            # Generate all sections and PowerPoints (returns list of PPT paths, one per iteration)
-            pptx_paths = self.generate_profile(company_name, title_subtitle, worker_display)
+            # Generate profile and PowerPoint
+            pptx_path = self.generate_profile(company_name, title_subtitle, worker_display)
 
             thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Profile generation complete")
 
             # Save run log
-            self.save_run_log(company_name, "Success", pptx_paths)
+            self.save_run_log(company_name, "Success", pptx_path)
 
             # Display summary
             thread_safe_print(f"\n{CYAN}{'='*60}{RESET}")
             thread_safe_print(f"{CYAN}{BOLD}Profile generation complete!{RESET}")
             thread_safe_print(f"{CYAN}{'='*60}{RESET}")
             thread_safe_print(f"\nOutput saved to: {self.file_manager.run_dir}/")
-            for iteration_num in range(1, self.iterations + 1):
-                version_suffix = f"_v{iteration_num}" if self.iterations > 1 else ""
-                thread_safe_print(f"  - final_profile{version_suffix}.md")
-                thread_safe_print(f"  - subtitle{version_suffix}.md")
+            thread_safe_print(f"  - final_profile.md")
+            thread_safe_print(f"  - subtitle.md")
             thread_safe_print(f"  - section_1/ through section_4/ (intermediate steps)")
 
-            if any(pptx_paths):
-                thread_safe_print(f"\n{CYAN}Final deliverables:{RESET}")
-                for pptx_path in pptx_paths:
-                    if pptx_path:
-                        thread_safe_print(f"  - {pptx_path}")
+            if pptx_path:
+                thread_safe_print(f"\n{CYAN}Final deliverable:{RESET}")
+                thread_safe_print(f"  - {pptx_path}")
 
-            # Return the first markdown file path (for compatibility)
-            return Path(self.file_manager.run_dir) / "final_profile.md" if self.iterations == 1 else Path(self.file_manager.run_dir) / "final_profile_v1.md"
+            return pptx_path
 
         except Exception as e:
             thread_safe_print(f"{RED}{CROSS}{RESET} Error during profile generation: {e}")
@@ -1058,26 +1436,16 @@ if __name__ == "__main__":
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Output directory ready")
     thread_safe_print("="*60 + "\n")
 
-    # Profile type selection
-    thread_safe_print(f"{BOLD}Select profile type:{RESET}")
-    thread_safe_print(f"  {CYAN}1{RESET} - OnePageProfile (default)")
-    thread_safe_print(f"  {CYAN}2{RESET} - Custom Profile")
-    profile_choice = prompt_single_digit("Choose profile type [1/2] (default 1): ", valid_digits="12", default_digit="1")
-
-    if profile_choice == "2":
-        profile_type = "custom"
-        # Validate custom file exists
-        custom_file = Path("src/opp_sections_custom.py")
-        if not custom_file.exists():
-            thread_safe_print(f"\n{RED}{CROSS}{RESET} Custom sections file not found!")
-            thread_safe_print(f"Please copy the template:")
-            thread_safe_print(f"  cp src/opp_sections_template.py src/opp_sections_custom.py")
-            thread_safe_print(f"Then edit it to define your custom sections.\n")
-            sys.exit(1)
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} Using custom section definitions\n")
+    # File source selection
+    thread_safe_print(f"{BOLD}Select file source:{RESET}")
+    thread_safe_print(f"  {CYAN}1{RESET} - Select files interactively (default)")
+    thread_safe_print(f"  {CYAN}2{RESET} - Process batch directory (SourceFiles/SourceBatch/)")
+    file_source_choice = prompt_single_digit("Choose [1/2] (default 1): ", valid_digits="12", default_digit="1")
+    batch_mode = (file_source_choice == "2")
+    if batch_mode:
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Batch mode selected\n")
     else:
-        profile_type = "default"
-        thread_safe_print(f"{CYAN}{CHECK}{RESET} Using default OnePageProfile sections\n")
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Interactive mode selected\n")
 
     # Model selection
     thread_safe_print("Select LLM model:")
@@ -1097,26 +1465,89 @@ if __name__ == "__main__":
     num_workers = int(workers_choice)
     thread_safe_print(f"{CYAN}{CHECK}{RESET} Workers: {num_workers}\n")
 
-    # Iterations selection
-    thread_safe_print("Select number of density iterations:")
-    thread_safe_print("  1-3 iterations (default 1)")
-    iterations_choice = prompt_single_digit("Choose iterations [1-3] (default 1): ", valid_digits="123", default_digit="1")
-    num_iterations = int(iterations_choice)
-    thread_safe_print(f"{CYAN}{CHECK}{RESET} Iterations: {num_iterations}\n")
+    # Insights pipeline toggle
+    thread_safe_print(f"{BOLD}Enable insights pipeline?{RESET}")
+    thread_safe_print(f"  Adds ground truth discovery and hypothesis testing")
+    thread_safe_print(f"  Produces 3 PPTX variants: vanilla, insights, integrated")
+    insights_enabled = prompt_yes_no("Enable insights? (y/N): ")
+    if insights_enabled:
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Insights pipeline enabled\n")
+    else:
+        thread_safe_print(f"{CYAN}{CHECK}{RESET} Insights pipeline disabled (vanilla only)\n")
 
-    # File selection
-    pdf_files = select_pdf_files()
-    if not pdf_files:
-        thread_safe_print(f"{RED}{CROSS}{RESET} No files selected. Exiting.")
-        sys.exit(1)
+    # Batch mode processing
+    if batch_mode:
+        # Scan batch directory
+        all_pdfs = scan_batch_directory()
+        if not all_pdfs:
+            sys.exit(1)
 
-    thread_safe_print(f"\n{CYAN}Starting profile generation...{RESET}")
-    thread_safe_print("="*60 + "\n")
+        # Show configuration and confirm
+        thread_safe_print(f"\n{BOLD}Batch Configuration:{RESET}")
+        thread_safe_print(f"  Files: {len(all_pdfs)}")
+        thread_safe_print(f"  Model: {selected_model}")
+        thread_safe_print(f"  Workers: {num_workers}")
+        thread_safe_print(f"  Insights: {'Enabled' if insights_enabled else 'Disabled'}")
 
-    # Generate profile
-    maker = OnePageProfile(pdf_files, selected_model, workers=num_workers, iterations=num_iterations, profile_type=profile_type)
-    profile_path = maker.run()
+        proceed = prompt_yes_no(f"\nProceed with batch processing? (y/n): ")
+        if not proceed:
+            thread_safe_print("Batch processing cancelled.")
+            sys.exit(0)
 
-    if not profile_path:
-        thread_safe_print(f"\n{RED}Profile generation failed.{RESET}")
-        sys.exit(1)
+        thread_safe_print(f"\n{CYAN}Starting batch processing...{RESET}")
+        thread_safe_print("="*60)
+
+        # Track results for summary
+        results = []
+
+        # Process each PDF sequentially
+        for i, pdf_path in enumerate(all_pdfs, 1):
+            thread_safe_print(f"\n{'='*60}")
+            thread_safe_print(f"[{i}/{len(all_pdfs)}] Processing: {Path(pdf_path).name}")
+            thread_safe_print(f"{'='*60}")
+
+            start_time = datetime.now()
+
+            try:
+                maker = OnePageProfile(
+                    pdf_files=[pdf_path],
+                    model_name=selected_model,
+                    workers=num_workers,
+                    insights_enabled=insights_enabled
+                )
+                pptx_path = maker.run()
+
+                elapsed = (datetime.now() - start_time).total_seconds()
+
+                if pptx_path:
+                    thread_safe_print(f"\n{CYAN}{CHECK}{RESET} SUCCESS: {Path(pdf_path).name} ({elapsed:.1f}s)")
+                    results.append({"file": Path(pdf_path).name, "status": "success", "time": elapsed, "output": pptx_path})
+                else:
+                    thread_safe_print(f"\n{RED}{CROSS}{RESET} FAILED: {Path(pdf_path).name} ({elapsed:.1f}s)")
+                    results.append({"file": Path(pdf_path).name, "status": "failed", "time": elapsed, "error": "No output"})
+
+            except Exception as e:
+                elapsed = (datetime.now() - start_time).total_seconds()
+                thread_safe_print(f"\n{RED}{CROSS}{RESET} ERROR: {Path(pdf_path).name} - {e}")
+                results.append({"file": Path(pdf_path).name, "status": "error", "time": elapsed, "error": str(e)})
+
+        # Print batch summary
+        print_batch_summary(results)
+
+    else:
+        # Interactive mode - existing behavior
+        pdf_files = select_pdf_files()
+        if not pdf_files:
+            thread_safe_print(f"{RED}{CROSS}{RESET} No files selected. Exiting.")
+            sys.exit(1)
+
+        thread_safe_print(f"\n{CYAN}Starting profile generation...{RESET}")
+        thread_safe_print("="*60 + "\n")
+
+        # Generate profile
+        maker = OnePageProfile(pdf_files, selected_model, workers=num_workers, insights_enabled=insights_enabled)
+        profile_path = maker.run()
+
+        if not profile_path:
+            thread_safe_print(f"\n{RED}Profile generation failed.{RESET}")
+            sys.exit(1)

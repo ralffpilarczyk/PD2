@@ -536,7 +536,7 @@ class OnePageProfile:
         return enhanced
 
     def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
-        """Step 4b: Polish section to word limit"""
+        """Step 5: Polish section to word limit"""
         prompt = get_section_polish_prompt(section, content, word_limit)
         polished = retry_with_backoff(
             lambda: self.model_medium_temp.generate_content(prompt).text.strip(),
@@ -549,7 +549,7 @@ class OnePageProfile:
         return polished
 
     def _deduplicate_section(self, section: dict, content: str, previous_sections: list) -> str:
-        """Step 4a: Remove content that overlaps with previous sections
+        """[UNUSED] Remove content that overlaps with previous sections
 
         Args:
             section: Current section dict
@@ -575,7 +575,7 @@ class OnePageProfile:
         return deduplicated
 
     def _cleanup_sections(self, sections_content: dict, worker_display) -> dict:
-        """Step 4a: Redistribute content based on relevance to section specs
+        """Step 4: Redistribute content based on relevance to section specs
 
         Args:
             sections_content: Dict mapping section_num -> dict with 'number', 'title', 'content', 'success'
@@ -772,11 +772,11 @@ class OnePageProfile:
                 # Update worker display to show version
                 worker_display.set_version(version_label)
 
-                # Phase 1: Parallel Steps 1-3 (Draft/Check/Enhance) or 2-3 (Check/Enhance for iter 2+)
+                # Steps 1-3: Draft/Check/Enhance (or Steps 2-3 for iterations 2+)
                 if iteration_num == 1:
-                    thread_safe_print(f"\n{CYAN}Phase 1: Draft/Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
+                    thread_safe_print(f"\n{CYAN}Steps 1-3: Draft/Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
                 else:
-                    thread_safe_print(f"\n{CYAN}Phase 1: Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
+                    thread_safe_print(f"\n{CYAN}Steps 2-3: Check/Enhance (parallel workers: {self.workers})...{RESET}\n")
 
                 enhanced_results = []
                 completed_count = 0
@@ -811,8 +811,8 @@ class OnePageProfile:
                 # Sort by section number for consistent processing
                 enhanced_results.sort(key=lambda x: x['number'])
 
-                # Phase 2: Parallel clean-up to redistribute content based on relevance
-                thread_safe_print(f"\n{CYAN}Phase 2: Refining subtitle and cleaning up sections...{RESET}\n")
+                # Step 4: Clean-up - redistribute content based on relevance
+                thread_safe_print(f"\n{CYAN}Step 4: Refining subtitle and cleaning up sections...{RESET}\n")
 
                 # Refine subtitle using context from previous iteration's polished sections (if available)
                 sections_context = "\n".join([
@@ -834,8 +834,8 @@ class OnePageProfile:
                 # Clean up sections in parallel - redistributes content based on relevance
                 cleaned_results = self._cleanup_sections(enhanced_dict, worker_display)
 
-                # Phase 3: Parallel Polish to 100 words
-                thread_safe_print(f"\n{CYAN}Phase 3: Polishing to 100 words (parallel)...{RESET}\n")
+                # Step 5: Polish to 100 words
+                thread_safe_print(f"\n{CYAN}Step 5: Polishing to 100 words (parallel)...{RESET}\n")
 
                 def polish_section_task(section_num):
                     """Polish a single section"""
@@ -854,7 +854,7 @@ class OnePageProfile:
                     polished = self._polish_section(section, cleaned_result['content'], word_limit=110)
 
                     # Save polished content with version suffix
-                    (section_dir / f"step4_polished{version_suffix}.md").write_text(
+                    (section_dir / f"step5_polished{version_suffix}.md").write_text(
                         f"## {cleaned_result['title']}\n{polished}",
                         encoding='utf-8'
                     )
@@ -950,10 +950,10 @@ Source Files:
 
 Processing:
   - Title/Subtitle generation
-  - {self.iterations} iteration(s) of 3-phase processing:
-    - Phase 1: Steps 1-3 (Draft/Check/Enhance) or 2-3 (Check/Enhance) in parallel
-    - Phase 2: Step 4a (Clean-up) in parallel - redistributes content based on relevance
-    - Phase 3: Step 4b (Polish to 100 words) in parallel
+  - {self.iterations} iteration(s):
+    - Steps 1-3: Draft/Check/Enhance (or Steps 2-3 for iterations 2+) in parallel
+    - Step 4: Clean-up in parallel - redistributes content based on relevance
+    - Step 5: Polish to 100 words in parallel
   - PowerPoint generation for each iteration
   - See section_N/ subdirectories for intermediate outputs{pptx_info}
 

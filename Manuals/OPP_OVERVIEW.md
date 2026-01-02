@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-OnePageProfile (OPP) v1.3 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 3-phase architecture with parallel processing, sequential deduplication, and optional density iterations. New in v1.3: Files API and context caching for 85-90% cost reduction. Introduced in v1.2: custom section definitions and improved data recency handling.
+OnePageProfile (OPP) v1.3 is a focused document analysis tool that transforms PDF documents into concise one-page company profiles for M&A evaluation using Google's Gemini LLM API. The system employs a 5-step pipeline with parallel processing and optional density iterations. New in v1.3: Files API and context caching for 85-90% cost reduction. Introduced in v1.2: custom section definitions and improved data recency handling.
 
 **Key Metrics**:
 - 4 analytical sections (default or custom-defined)
-- 3-phase architecture: Parallel Draft/Check/Enhance → Sequential Dedup (reverse) → Parallel Polish
+- 5-step pipeline: Steps 1-3 (Draft/Check/Enhance) → Step 4 (Clean-up) → Step 5 (Polish)
 - 100-word limit per section
 - Parallel processing with 1-4 configurable workers
 - Optional 1-3 density iterations for enhanced output quality
@@ -32,8 +32,8 @@ PDFs are now uploaded to Google's Files API instead of inline base64 encoding:
 Gemini API context caching dramatically reduces input token costs:
 
 - **Cache creation**: PDFs cached after upload with configurable TTL (2 hours + 1 hour per additional iteration)
-- **Cached models**: Two temperature variants (0.2 for completeness checks, 0.6 for all other Phase 1 functions)
-- **API optimization**: All Phase 1 functions use cached content - prompts sent without PDFs
+- **Cached models**: Two temperature variants (0.2 for completeness checks, 0.6 for Steps 1-3)
+- **API optimization**: Steps 1-3 use cached content - prompts sent without PDFs
 - **Cost savings**: 85-90% reduction in input token costs (cached tokens cost 10% of regular tokens)
 - **Graceful degradation**: If cache creation fails, automatically falls back to Files API without caching
 - **Automatic cleanup**: Cache deleted at run completion
@@ -68,7 +68,7 @@ Optional multi-iteration processing for enhanced content quality:
   - Subtitle refinement based on evolved content
   - Completeness check flags missing/outdated content
   - Density enhancement when no gaps found
-  - Full 3-phase processing with deduplication and polish
+  - Full 5-step processing with clean-up and polish
 - **Versioned outputs**: `_v1.pptx`, `_v2.pptx`, `_v3.pptx` for comparison
 - **Processing time**: ~3-5 minutes per iteration
 
@@ -130,7 +130,7 @@ Universal quality improvements for banker-friendly outputs:
 
 ### 1. Speed Over Depth
 - Optimized for quick M&A screening, not comprehensive analysis
-- 3-phase architecture: Parallel Steps 1-3 → Sequential Dedup → Parallel Polish
+- 5-step pipeline: Steps 1-3 (parallel) → Step 4 (Clean-up) → Step 5 (Polish)
 - No learning system (removed in v1.1 for simplicity)
 - Parallel processing with configurable workers (1-4)
 - Target: Under 5 minutes per profile (with 4 workers)
@@ -152,13 +152,11 @@ Universal quality improvements for banker-friendly outputs:
 - Consistent color scheme (dark blue #2d5a87, dark grey #4a5568)
 - Auto-generated footnotes with version and date
 
-### 5. Three-Phase Processing with Deduplication (introduced v1.1, enhanced v1.2)
-- **Phase 1**: Parallel Draft/Check/Enhance for all 4 sections
-- **Phase 2**: Sequential deduplication in reverse priority (Section 4→3→2→1)
-  - Section 4 (Strategic Considerations) processes first, keeps richest content
-  - Earlier sections remove overlaps with later ones
-- **Phase 3**: Parallel polish to 100 words
-- ThreadPoolExecutor manages worker pools for parallel phases
+### 5. Five-Step Pipeline (introduced v1.1, enhanced v1.2)
+- **Steps 1-3**: Draft/Check/Enhance for all 4 sections (parallel)
+- **Step 4**: Clean-up - redistribute content based on section relevance (parallel)
+- **Step 5**: Polish to 100 words (parallel)
+- ThreadPoolExecutor manages worker pools
 - WorkerDisplay provides real-time progress tracking
 
 ## File Structure & Module Breakdown
@@ -188,9 +186,9 @@ PD2/
     │   ├── section_2/              # Competitive Positioning steps
     │   ├── section_3/              # Financial KPIs steps
     │   ├── section_4/              # Strategic Considerations steps
-    │   ├── step4_final_v1.md       # Iteration 1 output
-    │   ├── step4_final_v2.md       # Iteration 2 output (if enabled)
-    │   └── step4_final_v3.md       # Iteration 3 output (if enabled)
+    │   ├── final_profile.md        # Iteration 1 output
+    │   ├── final_profile_v2.md     # Iteration 2 output (if enabled)
+    │   └── final_profile_v3.md     # Iteration 3 output (if enabled)
     └── opp_custom_YYMMDD_HHMMSS/   # Custom profile runs - NEW v1.2
 ```
 
@@ -263,21 +261,21 @@ class WorkerDisplay:
 - Real-time display of active workers
 - Completion tracking with progress counter
 
-#### The 3-Phase Architecture (v1.2)
+#### The 5-Step Pipeline (v1.2)
 
-**Phase 1 - Parallel Steps 1-3**: All 4 sections process Draft/Check/Enhance simultaneously.
+**Steps 1-3 (Draft/Check/Enhance)**: All 4 sections process in parallel.
 
-**Phase 2 - Sequential Deduplication**: Sections deduplicate in reverse order (4→3→2→1) to eliminate redundancy.
+**Step 4 (Clean-up)**: Redistribute content based on section relevance (parallel).
 
-**Phase 3 - Parallel Polish**: All 4 sections polish to 100 words simultaneously.
+**Step 5 (Polish)**: All 4 sections polish to 100 words simultaneously.
 
 ---
 
-### Steps 1-3: Draft, Check, Enhance (Parallel Phase 1)
+### Steps 1-3: Draft, Check, Enhance
 
 **process_section_main(section: dict, worker_display: WorkerDisplay) -> dict**
 ```python
-# Orchestrates one section through Steps 1-3 (Phase 1)
+# Orchestrates one section through Steps 1-3
 # Creates: runs/opp_TIMESTAMP/section_N/ directory
 # Returns: {'number': int, 'title': str, 'content': enhanced_content, 'success': bool}
 ```
@@ -386,9 +384,9 @@ def _enhance_section(self, section: dict, content: str, add_list: str) -> str:
 
 ---
 
-### Step 4a: Deduplication (Sequential Phase 2 - introduced v1.1)
+### Step 4: Clean-up (introduced v1.1)
 
-**Architecture**: After Phase 1 completes, sections are deduplicated **sequentially in reverse order (4→3→2→1)** to eliminate overlaps while preserving the richest content.
+**Architecture**: After Steps 1-3 complete, sections are cleaned up to redistribute content based on section relevance.
 
 ```python
 def _deduplicate_section(self, section: dict, content: str, previous_sections: list) -> str:
@@ -426,19 +424,19 @@ def _deduplicate_section(self, section: dict, content: str, previous_sections: l
 
 ---
 
-### Step 4b: Polish (Parallel Phase 3)
+### Step 5: Polish
 ```python
 def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
     # Input: section dict + deduplicated content + word limit (100)
     # Temperature: 0.6 (balanced)
     # Condenses to essential insights only
-    # Output: section_N/step4_polished.md
+    # Output: section_N/step5_polished.md
 ```
 
 **Detailed Input/Output**:
 - **Input**:
   - `section`: Section definition with specs
-  - `content`: Deduplicated content from Step 4a
+  - `content`: Cleaned content from Step 4
   - `word_limit`: 100 words (hard target)
   - Prompt with condensing instructions
 - **Processing**:
@@ -457,46 +455,46 @@ def _polish_section(self, section: dict, content: str, word_limit: int) -> str:
   * **Owned** spectrum licenses in 8 markets, leased tower infrastructure (15,000 sites).
   ...
   ```
-- **Saved to**: `section_1/step4_polished.md`
+- **Saved to**: `section_1/step5_polished.md`
 - **Fallback**: If polish fails, returns deduplicated content unchanged
 
 ---
 
-After all sections complete the 3-phase pipeline, the final polished content from each section is assembled into the complete profile.
+After all sections complete the 5-step pipeline, the final polished content from each section is assembled into the complete profile.
 
 ---
 
 ## Parallel Execution Architecture (v1.2)
 
-**3-Phase Processing**:
+**5-Step Processing**:
 ```python
 def generate_profile(self, company_name: str, worker_display: WorkerDisplay) -> str:
-    # Phase 1: Parallel Steps 1-3 (Draft/Check/Enhance) for all sections
-    # Phase 2: Sequential Dedup in reverse (4→3→2→1)
-    # Phase 3: Parallel Polish to 100 words for all sections
+    # Steps 1-3: Draft/Check/Enhance for all sections (parallel)
+    # Step 4: Clean-up - redistribute content (parallel)
+    # Step 5: Polish to 100 words (parallel)
     # Returns: Assembled markdown with all 4 sections
 ```
 
 **Processing Flow**:
 
-**Phase 1 - Parallel Draft/Check/Enhance**:
+**Steps 1-3 - Parallel Draft/Check/Enhance**:
 1. Create ThreadPoolExecutor with `self.workers` max workers
 2. Submit all 4 sections to process Steps 1-3 in parallel
 3. Collect enhanced results as they complete
 4. Sort by section number for consistent processing
 
-**Phase 2 - Sequential Deduplication (Reverse Order)**:
+**Step 4 - Clean-up**:
 1. Process Section 4 first (keeps all content)
 2. Process Section 3 (removes overlap with 4)
 3. Process Section 2 (removes overlap with 4, 3)
 4. Process Section 1 (removes overlap with 4, 3, 2)
 5. Each deduplication is a single LLM call
 
-**Phase 3 - Parallel Polish**:
+**Step 5 - Parallel Polish**:
 1. Create new ThreadPoolExecutor
 2. Submit all 4 deduplicated sections to polish in parallel
 3. Each polishes to 100 words independently
-4. Collect polished results and save to step4_polished.md files
+4. Collect polished results and save to step5_polished.md files
 
 **Final Assembly**:
 1. Sort polished sections by number (1-4)
@@ -1078,25 +1076,25 @@ runs/opp_YYMMDD_HHMMSS/
 │   ├── step1_draft.md            # Initial draft (with learned memory)
 │   ├── step2_add_list.txt        # Completeness check ADD list
 │   ├── step3_enhanced.md         # Enhanced with additions
-│   ├── step4_polished.md         # Polished to 100 words
+│   ├── step5_polished.md         # Polished to 100 words
 │   └── step5_learning.json       # Universal methodologies extracted
 ├── section_2/                    # Competitive Positioning
 │   ├── step1_draft.md
 │   ├── step2_add_list.txt
 │   ├── step3_enhanced.md
-│   ├── step4_polished.md
+│   ├── step5_polished.md
 │   └── step5_learning.json
 ├── section_3/                    # Financial KPIs
 │   ├── step1_draft.md
 │   ├── step2_add_list.txt
 │   ├── step3_enhanced.md
-│   ├── step4_polished.md
+│   ├── step5_polished.md
 │   └── step5_learning.json
 ├── section_4/                    # Strategic Considerations
 │   ├── step1_draft.md
 │   ├── step2_add_list.txt
 │   ├── step3_enhanced.md
-│   ├── step4_polished.md
+│   ├── step5_polished.md
 │   └── step5_learning.json
 ├── final_profile.md              # Assembled final output
 ├── run_log.txt                   # Processing log with worker info

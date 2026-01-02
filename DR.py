@@ -3,6 +3,7 @@ Deep Research - Standalone web research tool
 Uses Google's Gemini Deep Research Agent for company research.
 """
 
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -101,6 +102,20 @@ def main():
     # Combine results
     researcher.combine_research(results)
     print(f"{CYAN}{CHECK}{RESET} Output saved to: {run_dir}/\n")
+
+    # Save final report to ReportsDR
+    reports_dir = Path("ReportsDR")
+    reports_dir.mkdir(exist_ok=True)
+    safe_company = company_name.replace(" ", "_").replace("/", "_").replace("(", "").replace(")", "")
+    safe_company = ''.join(c for c in safe_company if c.isalnum() or c == '_')
+    report_filename = f"{safe_company}_DR_{run_timestamp}.md"
+    report_path = reports_dir / report_filename
+
+    # Copy combined report to ReportsDR
+    combined_path = run_dir / "combined_research.md"
+    if combined_path.exists():
+        shutil.copy(combined_path, report_path)
+        print(f"{CYAN}{CHECK}{RESET} Report saved to: {report_path}\n")
 
     # List output files
     print(f"{BOLD}Output files:{RESET}")

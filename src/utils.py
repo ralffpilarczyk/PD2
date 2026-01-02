@@ -302,7 +302,7 @@ def retry_with_backoff(func, max_retries=5, base_delay=30.0, context="", timeout
 
         except Exception as e:
             error_str = str(e)
-            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower() or "resource" in error_str.lower():
+            if "429" in error_str or "504" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower() or "resource" in error_str.lower() or "deadline" in error_str.lower():
                 if attempt < max_retries - 1:
                     # Calculate delay with exponential backoff
                     delay = base_delay * (2 ** attempt) + random.uniform(0, 5)

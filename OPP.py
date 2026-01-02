@@ -1552,7 +1552,7 @@ if __name__ == "__main__":
         researcher = DeepResearcher(company_name, research_workers, run_dir)
         research_sections = get_research_sections()
 
-        display = ResearchDisplay(research_workers)
+        display = ResearchDisplay(len(research_sections))
         results = researcher.run_all_sections(research_sections, display)
 
         # Get summary

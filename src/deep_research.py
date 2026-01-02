@@ -20,24 +20,26 @@ load_dotenv()
 
 
 class ResearchDisplay:
-    """Simple display for research progress - no in-place updates to avoid terminal glitches."""
+    """Simple display for research progress."""
 
-    def __init__(self, num_workers: int):
-        self.num_workers = num_workers
+    def __init__(self, total_sections: int):
+        self.total = total_sections
         self.lock = threading.Lock()
-        self.last_update = {}
+        self.started = set()
+        self.completed = set()
 
-    def update(self, section_num: int, title: str, status: str):
+    def start(self, section_num: int, title: str):
         with self.lock:
-            # Only print significant status changes (not every poll)
-            key = f"{section_num}:{status}"
-            if status == "Researching" and self.last_update.get(section_num) != "Researching":
-                print(f"  Starting: {section_num}/12 {title}")
-                self.last_update[section_num] = "Researching"
+            if section_num not in self.started:
+                self.started.add(section_num)
+                print(f"  [{len(self.started)}/{self.total}] Starting: {title}")
 
-    def complete(self, section_num: int, completed: int, total: int):
+    def complete(self, section_num: int, title: str, status: str):
         with self.lock:
-            print(f"  Complete: {section_num}/12 ({completed}/{total} done)")
+            if section_num not in self.completed:
+                self.completed.add(section_num)
+                status_icon = "ok" if status == "completed" else "FAILED"
+                print(f"  [{len(self.completed)}/{self.total}] Done: {title} ({status_icon})")
 
 
 class DeepResearcher:
@@ -63,14 +65,11 @@ class DeepResearcher:
         title = section['title']
 
         if display:
-            display.update(section_num, title, "Starting")
+            display.start(section_num, title)
 
         prompt = self._build_research_prompt(section)
 
         try:
-            if display:
-                display.update(section_num, title, "Researching")
-
             interaction = self.client.interactions.create(
                 input=prompt,
                 agent=self.AGENT,
@@ -78,7 +77,7 @@ class DeepResearcher:
                 store=True
             )
 
-            result = self._poll_for_result(interaction, section_num, title, display)
+            result = self._poll_for_result(interaction)
 
             if self.run_dir:
                 self._save_section_output(section, result)
@@ -114,7 +113,7 @@ class DeepResearcher:
                     result = future.result()
                     results[result['number']] = result
                     if display:
-                        display.complete(result['number'], len(results), len(sections))
+                        display.complete(result['number'], result['title'], result['status'])
                 except Exception as e:
                     results[section['number']] = {
                         'number': section['number'],
@@ -123,7 +122,7 @@ class DeepResearcher:
                         'status': 'failed'
                     }
                     if display:
-                        display.complete(section['number'], len(results), len(sections))
+                        display.complete(section['number'], section['title'], 'failed')
 
         return results
 
@@ -148,15 +147,12 @@ Output format:
 - If specific data is not available, explicitly state this
 """
 
-    def _poll_for_result(self, interaction, section_num: int, title: str,
-                         display: 'ResearchDisplay' = None) -> dict:
+    def _poll_for_result(self, interaction) -> dict:
         """Poll interaction until completed or failed."""
         start_time = time.time()
-        poll_count = 0
 
         while True:
             interaction = self.client.interactions.get(interaction.id)
-            poll_count += 1
 
             if interaction.status == "completed":
                 return {
@@ -176,10 +172,6 @@ Output format:
                     'content': "Research timed out after 60 minutes",
                     'status': 'timeout'
                 }
-
-            if display and poll_count % 6 == 0:  # Update every ~60 seconds
-                mins = int(elapsed // 60)
-                display.update(section_num, title, f"{mins}m")
 
             time.sleep(self.POLL_INTERVAL)
 

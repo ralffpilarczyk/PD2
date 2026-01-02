@@ -6,6 +6,7 @@ Uses Google's Gemini Deep Research Agent for web-based company research.
 import os
 import time
 import threading
+import traceback
 import warnings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -64,12 +65,11 @@ class DeepResearcher:
         section_num = section['number']
         title = section['title']
 
-        if display:
-            display.start(section_num, title)
-
-        prompt = self._build_research_prompt(section)
-
         try:
+            if display:
+                display.start(section_num, title)
+
+            prompt = self._build_research_prompt(section)
             interaction = self.client.interactions.create(
                 input=prompt,
                 agent=self.AGENT,
@@ -90,10 +90,18 @@ class DeepResearcher:
             }
 
         except Exception as e:
+            tb = traceback.format_exc()
+            error_msg = f"Research failed: {str(e)}\n\nTraceback:\n{tb}"
+            # Save error to file for debugging
+            if self.run_dir:
+                try:
+                    self._save_section_output(section, {'content': error_msg, 'status': 'failed'})
+                except Exception:
+                    pass  # Don't let save failure mask original error
             return {
                 'number': section_num,
                 'title': title,
-                'content': f"Research failed: {str(e)}",
+                'content': error_msg,
                 'status': 'failed'
             }
 
@@ -115,12 +123,19 @@ class DeepResearcher:
                     if display:
                         display.complete(result['number'], result['title'], result['status'])
                 except Exception as e:
-                    results[section['number']] = {
+                    tb = traceback.format_exc()
+                    error_result = {
                         'number': section['number'],
                         'title': section['title'],
-                        'content': f"Research failed: {str(e)}",
+                        'content': f"Research failed: {str(e)}\n\nTraceback:\n{tb}",
                         'status': 'failed'
                     }
+                    results[section['number']] = error_result
+                    if self.run_dir:
+                        try:
+                            self._save_section_output(section, {'content': error_result['content'], 'status': 'failed'})
+                        except Exception:
+                            pass  # Don't let save failure mask original error
                     if display:
                         display.complete(section['number'], section['title'], 'failed')
 

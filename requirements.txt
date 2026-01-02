@@ -1,6 +1,7 @@
 marker-pdf
 python-dotenv
 google-generativeai
+google-genai
 markdown
 python-pptx
 requests

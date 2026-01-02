@@ -60,6 +60,26 @@ This is the "{section_title}" section. DO NOT include content that belongs in ot
 {boundaries}
 """
 
+# Data source hierarchy (for combined research + document context)
+DATA_SOURCE_HIERARCHY = """
+SOURCE HIERARCHY (when multiple sources available):
+PRIMARY SOURCES (highest trust):
+• Uploaded company documents (annual reports, filings, investor presentations)
+• Official company financial statements and disclosures
+• These are authoritative for the company's own data - use over any conflicting secondary source
+
+SECONDARY SOURCES (contextual):
+• Web research, press articles, analyst reports
+• Useful for: competitor info, market context, industry trends, recent news
+• NOT authoritative for the company's own financials or operations
+• If secondary source conflicts with primary source, USE PRIMARY and ignore secondary
+
+CONFLICT RESOLUTION:
+• Primary source data always wins for company-specific facts
+• Most recent data wins when comparing same-type sources
+• Note material discrepancies only if they suggest a red flag (e.g., company claims vs market perception)
+"""
+
 # Condensing and prioritization guidance
 CONDENSING_PRIORITY_RULES = """
 WHAT TO PRESERVE:
@@ -159,10 +179,12 @@ def get_section_generation_prompt(section: dict) -> str:
     Returns:
         Prompt string for generating this section
     """
-    return f"""You are creating a company profile section for M&A bankers. Analyze the provided documents and generate content for the "{section['title']}" section.
+    return f"""You are creating a company profile section for M&A bankers. Analyze the provided context and generate content for the "{section['title']}" section.
 
 SECTION REQUIREMENTS:
 {section['specs']}
+
+{DATA_SOURCE_HIERARCHY}
 
 {OPP_CRITICAL_RULES}
 
@@ -180,13 +202,14 @@ OUTPUT FORMAT:
 CRITICAL: Do NOT include page numbers, footnotes, or source citations in your output.
 
 FACT-CHECKING BEFORE YOU WRITE:
-• Verify every number appears in source documents (within reasonable rounding)
+• Verify every number appears in primary source documents (within reasonable rounding)
 • Use the MOST RECENT fiscal period if multiple periods exist
-• Use the CORRECT category if similar metrics exist 
+• Use the CORRECT category if similar metrics exist
 • Use local currency as stated in source
 • Skip any bullet if you cannot find specific data - NEVER estimate
+• If web research conflicts with uploaded documents, USE the uploaded document data
 
-Now generate this section based on the documents provided."""
+Now generate this section based on the context provided."""
 
 
 def get_section_completeness_check_prompt(section: dict, section_content: str) -> str:
@@ -205,6 +228,8 @@ SECTION: {section['title']}
 
 ORIGINAL REQUIREMENTS FOR THIS SECTION:
 {section['specs']}
+
+{DATA_SOURCE_HIERARCHY}
 
 {OPP_CRITICAL_RULES}
 
@@ -291,6 +316,8 @@ ADD THESE ITEMS:
 
 SOURCE DOCUMENTS (for looking up ADD items):
 {{source_documents}}
+
+{DATA_SOURCE_HIERARCHY}
 
 {OPP_CRITICAL_RULES}
 

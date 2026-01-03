@@ -1,8 +1,9 @@
-# ProfileDash 2.2 & OnePageProfile 1.4
+# ProfileDash 2.2, OnePageProfile 1.4 & Deep Research 1.0
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.2): Comprehensive 34-section company profiles with deep analytical insights
 - **OPP** (OnePageProfile v1.4): Concise one-page profiles for quick M&A evaluation
+- **DR** (Deep Research 1.0): Standalone web research using Google's Deep Research Agent
 
 ## Quick Start
 
@@ -23,6 +24,7 @@ Intelligent document analysis tools for M&A and investment analysis:
    ```bash
    python PD2.py      # For comprehensive 34-section profiles
    python OPP.py      # For one-page M&A profiles
+   python DR.py       # For web-based company research
    ```
 
 ## ProfileDash 2.2 (PD2)
@@ -115,6 +117,47 @@ Insights mode (insights enabled):
 - Steps 6-9: Ground Truth, Hypothesize, Test, Synthesize (insights enabled)
 - Steps 10-12: Integrate, Clean-up 2, Polish 2 (insights enabled)
 - Parallel execution across 4 sections with configurable workers
+
+## Deep Research 1.0 (DR)
+
+Standalone web research tool using Google's Gemini Deep Research Agent for gathering publicly available company information.
+
+**Usage:**
+```bash
+python DR.py
+```
+
+1. Enter company name
+2. Select workers (1-2, default 2)
+3. Wait for research (~20-40 minutes for all 12 topics)
+
+**Research Topics:**
+
+DR researches 12 company profile topics from PD2 methodology:
+1. Operating Footprint
+2. Products and Services
+3. Key Customers
+4. Key Suppliers
+5. Key Competitors
+6. Operational KPIs
+7. Summary Financials (Consolidated)
+8. Summary Financials (Segment)
+9. Balance Sheet (Most Recent)
+10. Top 10 Shareholders
+11. M&A Agenda and Material Corporate Activity
+12. Key Decision Makers
+
+**Output:**
+
+- Individual section files: `runs/dr_TIMESTAMP/section_*.md`
+- Combined report: `runs/dr_TIMESTAMP/combined_research.md`
+- Final report: `ReportsDR/[Company]_DR_YYMMDD_HHMMSS.md`
+
+**Architecture:**
+- Uses Google's Deep Research Agent (Interactions API)
+- Parallel execution with 1-2 workers (API rate limited)
+- 10-second polling interval, 60-minute timeout per section
+- Separate SDK (google-genai) from PD2/OPP (google-generativeai)
 
 ## Requirements
 

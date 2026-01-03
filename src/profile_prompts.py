@@ -859,42 +859,48 @@ SOURCE DOCUMENTS:
 {{source_documents}}
 
 YOUR TASK:
-Create an INTEGRATED section where insights are woven INTO the description,
-not appended as a separate block. The reader should receive description
-and insight together, naturally.
+Integrate insights into the vanilla content by EXTENDING existing bullets or adding new insight bullets. The vanilla content is the foundation - preserve it and enrich it.
 
-INTEGRATION PRINCIPLES:
-1. **Weave, don't append**: Insights should enrich bullets, not form a separate section
-2. **Preserve facts**: All quantified facts from vanilla content must remain
-3. **Add perspective**: Insights provide "so what" context to the facts
-4. **Maintain flow**: The section should read as one coherent narrative
+SACRED RULES (non-negotiable):
+1. **Order is sacred**: Existing bullets keep their exact sequence from Step 5
+2. **Headers are sacred**: Each bullet's original **Keyword** stays unchanged
+3. **Facts are sacred**: All numbers, stats, and quantified data from Step 5 must remain
+4. **Extend, don't rewrite**: Append insight to end of a bullet, don't restructure the bullet
 
-INTEGRATION TECHNIQUES:
-- Extend a descriptive bullet with its insight implication
-  Before: "Revenue grew 15% YoY to USD 81m"
-  After: "Revenue grew 15% YoY to USD 81m, though headcount growth of 35% suggests margin pressure ahead"
+INTEGRATION APPROACH:
 
-- Combine related description and insight into single bullet
-  Before: [Description about customer concentration] + [Insight about revenue risk]
-  After: "Top 3 customers represent 65% of revenue (vs 45% three years ago), creating material concentration risk for acquirers"
+OPTION A - Extend an existing bullet (preferred):
+Append insight implication to the end of the bullet, keeping all original content intact.
 
-- Lead with insight when it reframes the description
-  "Despite 12% EBITDA growth, declining capex (-40% over 3 years) signals deferred investment that may require USD 50m catch-up"
+  Step 5:  * **Revenue**: USD 81m, up 15% YoY
+  Step 10: * **Revenue**: USD 81m, up 15% YoY, though 35% headcount growth suggests margin pressure ahead
+
+  Step 5:  * **Customers**: Top 3 represent 65% of revenue
+  Step 10: * **Customers**: Top 3 represent 65% of revenue, up from 45% three years ago, creating concentration risk
+
+OPTION B - Add new insight bullet (when insight doesn't fit existing bullets):
+Insert a new bullet immediately after the topically related bullet.
+
+  Step 5:  * **Customers**: Top 3 represent 65% of revenue
+  Step 10: * **Customers**: Top 3 represent 65% of revenue
+           * **Concentration risk**: Customer share doubled in 3 years, limiting acquirer negotiating power
 
 WHAT NOT TO DO:
-- Don't add a "Key Insights" or "Strategic Observations" sub-section
-- Don't use phrases like "Notably," "Importantly," or "It's worth noting"
-- Don't repeat the same fact with different framing
-- Don't add insight language if there's no real insight to add
+- Don't reorder bullets - sequence from Step 5 is fixed
+- Don't change **Keyword** headers - they must match Step 5 exactly
+- Don't remove numbers or stats to make room for insight text
+- Don't combine two Step 5 bullets into one
+- Don't add a separate "Key Insights" or "Strategic Observations" section
+- Don't use filler phrases like "Notably," "Importantly," or "It's worth noting"
 
 OUTPUT FORMAT:
 ## {section['title']}
 
-* **[Keyword]**: [Integrated bullet with description + insight woven together]
-* **[Keyword]**: [Next integrated bullet]
-[Continue for all bullets]
+* **[Original Keyword from Step 5]**: [Original content, optionally extended with insight]
+* **[Original Keyword from Step 5]**: [Original content, optionally extended with insight]
+[Continue preserving all Step 5 bullets in order, with optional new insight bullets inserted after related topics]
 
-TARGET: ~150 words (allows for richer integrated content before cleanup)
+TARGET: ~150 words (extend bullets rather than cutting facts to fit)
 
 {OPP_CRITICAL_RULES}
 

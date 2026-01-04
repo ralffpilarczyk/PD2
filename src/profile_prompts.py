@@ -940,14 +940,20 @@ OTHER SECTIONS (for context - do not duplicate their content):
 SECTION BOUNDARIES - content that belongs in OTHER sections:
 {section_boundaries}
 
+SACRED RULES (from Step 10 - still apply):
+1. **Order is sacred**: Bullets keep their exact sequence from Step 10
+2. **Headers are sacred**: Each bullet's **Keyword** stays unchanged
+3. **Facts are sacred**: All numbers, stats, and data must remain
+4. **Do not remove bullets** - only move a bullet if it CLEARLY belongs in another section
+
 {OPP_CRITICAL_RULES}
 
 TASK:
-Review and clean up this section:
-1. Remove any content that clearly belongs in another section (per boundaries above)
-2. Keep content that is most relevant to THIS section's specs
+Review this section for misplaced content only:
+1. Keep ALL bullets from Step 10 by default
+2. Only move a bullet to another section if it CLEARLY belongs there (per boundaries above)
 3. Preserve all integrated insights and data points
-4. Do not add new content - only redistribute or remove
+4. Do not rewrite, merge, or delete bullets
 
 INTEGRATION-AWARE RULES:
 - Insight-enriched bullets should stay with their descriptive base topic
@@ -957,9 +963,9 @@ INTEGRATION-AWARE RULES:
 {SECTION_FORMATTING_RULES}
 
 CRITICAL RULES:
-- Include the section header: ## {target_section['title']}
-- Return ONLY bullets that belong to this section
-- If no bullets belong to this section, return just the header
+- Output exactly ONE section header: ## {target_section['title']}
+- Keep all bullets unless they clearly belong in another section
+- Do not change **Keyword** headers
 - No preamble, no explanation, no commentary
 
 Output the cleaned section content."""
@@ -991,7 +997,7 @@ INTEGRATED CONTENT (from Steps 10-11):
 {section_content}
 ---
 
-INSIGHT MEANINGS THAT MUST SURVIVE (from Step 9):
+INSIGHT MEANINGS THAT SHOULD SURVIVE (from Step 9):
 ---
 {step9_insights}
 ---
@@ -999,9 +1005,15 @@ INSIGHT MEANINGS THAT MUST SURVIVE (from Step 9):
 CURRENT WORD COUNT: {word_count} words
 TARGET: ~{word_limit} words
 
+SACRED RULES (from Steps 5 and 10 - still apply):
+1. **Order is sacred**: Bullets keep their exact sequence
+2. **Headers are sacred**: Each bullet's **Keyword** stays unchanged
+3. **Facts are sacred**: All numbers/stats from vanilla content must remain
+4. **Cut insight padding before cutting facts**
+
 YOUR TASK:
-Compress this content so the MEANINGS from the Step 9 insights survive in the final output.
-The exact words don't matter. The implications do.
+Compress this content while preserving ALL facts from the vanilla content (Step 5).
+Insights add perspective to facts - they never displace facts.
 
 SEMANTIC FUSION (what we want):
 Two inputs:
@@ -1017,40 +1029,41 @@ Bad cutting (15 words, loses the insight):
 The second version keeps the fact but genericizes the insight into nothing.
 
 COMPRESSION PRINCIPLES:
-1. **Insight implications are the payload** - facts are just context for insights
-2. **Fuse, don't cut** - combine two sentences into one that captures both meanings
+1. **Facts from vanilla are the foundation** - insights add perspective but never displace facts
+2. **Fuse, don't cut** - combine sentences to capture both fact and insight
 3. **Specificity over generality** - "marketing pilot not a moat" beats "uses third-party technology"
-4. **Cut descriptive padding first** - "the firm operates as" can become just the subject
+4. **Cut insight padding first** - shorten insight extensions before touching vanilla facts
 5. **Preserve causal language** - keep "because", "suggesting", "indicating", "despite"
 
 WHAT TO PRESERVE (in priority order):
-1. Insight implications from Step 9 (highest priority)
-2. Specific numbers that support those insights
+1. All facts, numbers, and stats from vanilla content (highest priority - NEVER cut these)
+2. Insight implications from Step 9
 3. Causal connections and "so what" language
 4. Comparative context (vs competitors, vs prior periods)
 
 WHAT TO CUT FIRST:
-1. Definitional phrases ("—the total market value of investments—")
-2. Redundant context already implied by the insight
-3. Generic descriptive padding without analytical value
-4. Duplicate facts stated in different bullets
+1. Insight extension text that doesn't add analytical value
+2. Definitional phrases ("—the total market value of investments—")
+3. Redundant context already implied by the insight
+4. Generic descriptive padding without analytical value
 
-VALIDATION BEFORE OUTPUT:
-Check each insight meaning from Step 9. Can you find its essence in your output?
-If an insight meaning is missing, you're cutting the wrong things. Fuse it back in.
+NEVER CUT:
+- Numbers, percentages, or stats from vanilla content
+- Original **Keyword** headers
+- Year/period references (FY2024, 9M2025, etc.)
 
 {OPP_CRITICAL_RULES}
 
 {SECTION_FORMATTING_RULES}
 
 CONSTRAINTS:
-- Target ~{word_limit} words (up to 15 words over is acceptable for insight-rich content)
+- Target ~{word_limit} words (up to 15 words over is acceptable for fact-rich content)
 - Maintain bullet format with **bold** syntax
-- Every bullet should carry both fact AND implication where possible
+- Keep original **Keyword** headers from Step 10
 
 CRITICAL OUTPUT RULES:
 - Do NOT include any preamble or explanatory text
-- Start directly with the first bullet point (*)
-- No commentary - just output the semantically compressed bullets
+- Start directly with the section header: ## {section['title']}
+- No commentary - just output the section header and bullets
 
-Generate the semantically fused section now."""
+Generate the polished section now."""

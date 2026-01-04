@@ -123,15 +123,20 @@ def prompt_single_digit(prompt_text: str, valid_digits: str, default_digit: str)
             return ch
 
 def select_pdf_files() -> Optional[List[str]]:
-    """Interactively select PDF files"""
+    """Interactively select PDF or Markdown files"""
     while True:
         root = tk.Tk()
         root.withdraw()
 
-        thread_safe_print("\nSelect PDF file(s) for profile generation...")
+        thread_safe_print("\nSelect source file(s) for profile generation (PDF or Markdown)...")
         pdf_files = filedialog.askopenfilenames(
-            title="Select PDF Files",
-            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+            title="Select Source Files for Analysis",
+            filetypes=[
+                ("Supported files", "*.pdf *.md"),
+                ("PDF files", "*.pdf"),
+                ("Markdown files", "*.md"),
+                ("All files", "*.*")
+            ]
         )
 
         root.destroy()
@@ -143,14 +148,15 @@ def select_pdf_files() -> Optional[List[str]]:
                 return None
             continue
 
-        # Filter only PDF files
-        pdf_files = [f for f in pdf_files if f.lower().endswith('.pdf')]
+        # Filter supported file types
+        supported_extensions = ('.pdf', '.md')
+        pdf_files = [f for f in pdf_files if f.lower().endswith(supported_extensions)]
 
         if not pdf_files:
-            thread_safe_print("No PDF files found. Please select PDF files.")
+            thread_safe_print("No supported files found. Please select PDF or Markdown files.")
             continue
 
-        thread_safe_print(f"Selected {len(pdf_files)} PDF file(s):")
+        thread_safe_print(f"Selected {len(pdf_files)} source file(s):")
         for pdf in pdf_files:
             thread_safe_print(f"  - {Path(pdf).name}")
 
@@ -158,10 +164,10 @@ def select_pdf_files() -> Optional[List[str]]:
 
 
 def scan_batch_directory() -> Optional[List[str]]:
-    """Scan SourceFiles/SourceBatch/ for PDF files
+    """Scan SourceFiles/SourceBatch/ for PDF and Markdown files
 
     Returns:
-        List of PDF file paths, or None if directory not found or empty
+        List of source file paths, or None if directory not found or empty
     """
     batch_dir = Path("SourceFiles/SourceBatch")
 
@@ -169,17 +175,17 @@ def scan_batch_directory() -> Optional[List[str]]:
         thread_safe_print(f"{RED}{CROSS}{RESET} Batch directory not found: {batch_dir}")
         return None
 
-    pdfs = sorted(batch_dir.glob("*.pdf"))
+    source_files = sorted(list(batch_dir.glob("*.pdf")) + list(batch_dir.glob("*.md")))
 
-    if not pdfs:
-        thread_safe_print(f"{RED}{CROSS}{RESET} No PDF files found in {batch_dir}")
+    if not source_files:
+        thread_safe_print(f"{RED}{CROSS}{RESET} No source files found in {batch_dir}")
         return None
 
-    thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Found {len(pdfs)} PDF file(s) in batch directory:")
-    for pdf in pdfs:
-        thread_safe_print(f"  - {pdf.name}")
+    thread_safe_print(f"\n{CYAN}{CHECK}{RESET} Found {len(source_files)} source file(s) in batch directory:")
+    for f in source_files:
+        thread_safe_print(f"  - {f.name}")
 
-    return [str(pdf) for pdf in pdfs]
+    return [str(f) for f in source_files]
 
 
 def print_batch_summary(results: List[dict]):
@@ -322,12 +328,12 @@ class OnePageProfile:
         self.file_manager.setup_directories(self.sections)
 
     def prepare_pdf_parts(self) -> List:
-        """Upload PDF files to Gemini Files API and return file references"""
+        """Upload source files (PDF or Markdown) to Gemini Files API and return file references"""
         parts = []
 
-        # Handle research-only mode (no PDFs)
+        # Handle research-only mode (no source files)
         if not self.pdf_files:
-            thread_safe_print(f"{CYAN}{CHECK}{RESET} No PDFs to upload (research-only mode)")
+            thread_safe_print(f"{CYAN}{CHECK}{RESET} No source files to upload (research-only mode)")
             return parts
 
         for pdf_path in self.pdf_files:
@@ -1355,7 +1361,7 @@ class OnePageProfile:
   - See section_N/ subdirectories for intermediate outputs"""
 
         # Build source files section
-        source_files_section = "PDF Files:\n"
+        source_files_section = "Source Files:\n"
         source_files_section += chr(10).join(f"  - {Path(pdf).name}" for pdf in self.pdf_files)
 
         log_content = f"""OnePageProfile Run Log

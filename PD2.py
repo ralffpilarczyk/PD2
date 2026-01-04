@@ -144,12 +144,12 @@ class IntelligentAnalyst:
         self.cached_model_medium_temp = None  # Cached model (temp 0.6)
         self.cached_model_high_temp = None    # Cached model (temp 0.9)
 
-        # Upload PDFs to Files API
+        # Upload source files to Files API
         pdf_files = source_files.get('pdf_files', [])
         if not pdf_files:
-            raise Exception("No PDF files provided")
+            raise Exception("No source files provided")
 
-        thread_safe_print(f"Uploading {len(pdf_files)} PDF file(s) to Gemini Files API...")
+        thread_safe_print(f"Uploading {len(pdf_files)} source file(s) to Gemini Files API...")
         self.pdf_parts = self.upload_pdfs_to_files_api(pdf_files)
 
         if not self.pdf_parts:
@@ -171,10 +171,10 @@ class IntelligentAnalyst:
         )
 
     def upload_pdfs_to_files_api(self, pdf_files: List[str]) -> List:
-        """Upload multiple PDFs to Gemini Files API
+        """Upload multiple source files (PDF or Markdown) to Gemini Files API
 
         Args:
-            pdf_files: List of paths to PDF files
+            pdf_files: List of paths to source files
 
         Returns:
             List of uploaded file references
@@ -732,7 +732,7 @@ def prompt_single_digit(prompt_text: str, valid_digits: str, default_digit: str)
             return ch
         # Re-prompt on any other key
 def select_pdf_files():
-    """Interactively select PDF files for analysis"""
+    """Interactively select PDF or Markdown files for analysis"""
     from tkinter import filedialog
     import tkinter as tk
 
@@ -740,11 +740,13 @@ def select_pdf_files():
         root = tk.Tk()
         root.withdraw()
 
-        thread_safe_print("\nSelect PDF files for analysis...")
+        thread_safe_print("\nSelect source files for analysis (PDF or Markdown)...")
         source_files = filedialog.askopenfilenames(
-            title="Select PDF Files for Analysis",
+            title="Select Source Files for Analysis",
             filetypes=[
+                ("Supported files", "*.pdf *.md"),
                 ("PDF files", "*.pdf"),
+                ("Markdown files", "*.md"),
                 ("All files", "*.*")
             ]
         )
@@ -758,19 +760,20 @@ def select_pdf_files():
                 return None
             continue
 
-        # Filter for PDF files only
-        pdf_files = [f for f in source_files if f.lower().endswith('.pdf')]
-        other_files = [f for f in source_files if not f.lower().endswith('.pdf')]
+        # Filter for supported files (PDF and Markdown)
+        supported_extensions = ('.pdf', '.md')
+        pdf_files = [f for f in source_files if f.lower().endswith(supported_extensions)]
+        other_files = [f for f in source_files if not f.lower().endswith(supported_extensions)]
 
-        thread_safe_print(f"Selected {len(pdf_files)} PDF file(s):")
+        thread_safe_print(f"Selected {len(pdf_files)} source file(s):")
         for pdf in pdf_files:
             thread_safe_print(f"  - {Path(pdf).name}")
 
         if other_files:
-            thread_safe_print(f"  Warning: {len(other_files)} non-PDF file(s) will be skipped")
+            thread_safe_print(f"  Warning: {len(other_files)} unsupported file(s) will be skipped")
 
         if not pdf_files:
-            thread_safe_print("No PDF files found. Please select PDF files.")
+            thread_safe_print("No supported files found. Please select PDF or Markdown files.")
             continue
 
         return {'pdf_files': pdf_files}

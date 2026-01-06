@@ -4,6 +4,7 @@ Uses Google's Gemini Deep Research Agent for web-based company research.
 """
 
 import os
+import random
 import time
 import threading
 import traceback
@@ -18,6 +19,35 @@ warnings.filterwarnings('ignore', message='Interactions usage is experimental')
 from google import genai
 
 load_dotenv()
+
+
+def retry_on_connection_error(func, max_retries=3, base_delay=1.0):
+    """
+    Retry a function on connection errors with exponential backoff.
+    Returns the function result or raises the last exception after all retries fail.
+    """
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            error_str = str(type(e).__name__).lower()
+            error_msg = str(e).lower()
+            is_connection_error = (
+                'connection' in error_str or
+                'connection' in error_msg or
+                'timeout' in error_str or
+                'timeout' in error_msg or
+                'nodename' in error_msg or
+                'servname' in error_msg
+            )
+            if not is_connection_error:
+                raise
+            last_exception = e
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
+                time.sleep(delay)
+    raise last_exception
 
 
 class ResearchDisplay:
@@ -70,11 +100,13 @@ class DeepResearcher:
                 display.start(section_num, title)
 
             prompt = self._build_research_prompt(section)
-            interaction = self.client.interactions.create(
-                input=prompt,
-                agent=self.AGENT,
-                background=True,
-                store=True
+            interaction = retry_on_connection_error(
+                lambda: self.client.interactions.create(
+                    input=prompt,
+                    agent=self.AGENT,
+                    background=True,
+                    store=True
+                )
             )
 
             result = self._poll_for_result(interaction)
@@ -165,19 +197,39 @@ Output format:
     def _poll_for_result(self, interaction) -> dict:
         """Poll interaction until completed or failed."""
         start_time = time.time()
+        interaction_id = interaction.id
 
         while True:
-            interaction = self.client.interactions.get(interaction.id)
+            interaction = retry_on_connection_error(
+                lambda: self.client.interactions.get(interaction_id)
+            )
 
-            if interaction.status == "completed":
+            status = interaction.status
+
+            if status == "completed":
                 return {
                     'content': interaction.outputs[-1].text,
                     'status': 'completed'
                 }
-            elif interaction.status == "failed":
+            elif status == "failed":
                 error_msg = getattr(interaction, 'error', 'Unknown error')
                 return {
                     'content': f"Research failed: {error_msg}",
+                    'status': 'failed'
+                }
+            elif status == "cancelled":
+                return {
+                    'content': "Research was cancelled",
+                    'status': 'failed'
+                }
+            elif status == "requires_action":
+                return {
+                    'content': "Research requires action (unsupported for Deep Research agent)",
+                    'status': 'failed'
+                }
+            elif status not in ("in_progress", "pending"):
+                return {
+                    'content': f"Research returned unexpected status: {status}",
                     'status': 'failed'
                 }
 

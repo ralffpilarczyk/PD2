@@ -3,6 +3,7 @@ Deep Research - Standalone web research tool
 Uses Google's Gemini Deep Research Agent for company research.
 """
 
+import os
 import shutil
 import sys
 from datetime import datetime
@@ -12,6 +13,20 @@ from src.deep_research import DeepResearcher, ResearchDisplay
 from src.research_sections import get_research_sections
 
 __version__ = "1.0"
+
+
+def ensure_caffeinate():
+    """Re-exec under caffeinate on macOS to prevent sleep during long research."""
+    if sys.platform != 'darwin':
+        return  # Not macOS
+
+    if os.environ.get('_DR_CAFFEINATED'):
+        return  # Already running under caffeinate
+
+    # Re-exec under caffeinate -i (prevent idle sleep)
+    os.environ['_DR_CAFFEINATED'] = '1'
+    args = ['caffeinate', '-i', sys.executable] + sys.argv
+    os.execvp('caffeinate', args)
 
 RESET = '\033[0m'
 BOLD = '\033[1m'
@@ -124,4 +139,5 @@ def main():
 
 
 if __name__ == "__main__":
+    ensure_caffeinate()
     main()

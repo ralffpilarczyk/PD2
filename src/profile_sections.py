@@ -800,6 +800,92 @@ Your task is to act as an expert data organizer and format this information into
 
 Your output must be a single, well-formed block of HTML representing the entire appendix content, starting with `<div class="section" id="section-32">` and ending with `</div>`.
         """
+    },
+
+    {
+        "number": 35,
+        "title": "Unit Economics Analysis",
+        "specs": """
+You are analysing the unit economics of this company.
+
+Work through the following:
+
+1. IDENTIFY THE CORE BUSINESS
+   What is this company's primary business activity? If multiple segments exist, identify the dominant one.
+
+2. IDENTIFY THE UNIT OF PRODUCTION (UOP)
+   What is the standardisable unit that generates value?
+
+   The UOP must be:
+   - Comparable across companies in the same industry
+   - Roughly similar in scale (1-3x variance acceptable, not 100x)
+   - The unit that actually generates value
+
+   Reference examples:
+   - Telecom towers: per tower
+   - Real estate: per square metre
+   - Airlines: per available seat kilometre
+   - Hotels: per available room night
+   - Hospitals: per bed
+   - Shipping: per TEU
+   - Retail: per square foot
+   - Refineries: per barrel of capacity
+   - SaaS: per customer
+
+   State the UOP and why it is right for this business.
+
+3. CALCULATE CASH FLOW PER UOP
+   - Revenue per UOP
+   - Direct costs per UOP
+   - Cash flow per UOP
+
+   Use the most recent full year. Show calculations. Cite sources.
+
+4. DECOMPOSE INTO OPERATIONAL DRIVERS
+   Break down cash flow per UOP into its operational drivers.
+
+   CRITICAL: Every driver must have a number. The decomposition must be arithmetically consistent - drivers should multiply or add to the parent node. Show the math. If Revenue per UOP = Price x Volume, and Price = $X and Volume = Y, then Revenue per UOP must equal $X x Y.
+
+   TOLERANCE: Allow +/- 2% for rounding differences. Flag discrepancies >2% for manual review or note as estimation uncertainty.
+
+   Do NOT use financial ratios or accounting margins. Use operational metrics:
+   - Utilisation rates
+   - Throughput per unit of capacity
+   - Yield / conversion rates
+   - Price per unit of output
+   - Variable cost per unit of output
+   - Capacity factors, load factors, occupancy rates
+
+   Do not stop at one level of decomposition. For each driver, keep asking "what drives this?" and decompose further. Continue until you hit terminal nodes:
+   - External inputs (market prices, interest rates, tax rates, regulations)
+   - Directly observable metrics the company discloses
+   - Circular references (component already appears elsewhere)
+   - No evidence to support further breakdown
+
+   I expect depth, not just breadth. Go as deep as the evidence permits. Maximum 6 levels.
+
+   At each level, verify arithmetic consistency with the parent node.
+
+5. ANCILLARY BUSINESSES
+   Does the company have significant activities beyond the core business?
+   If yes, express them relative to the core UOP (e.g., ancillary revenue per UOP).
+   Quantify with numbers from the source documents.
+   If no, state this and move on.
+
+6. DUPONT FALLBACK (only if operational decomposition is thin)
+   If you cannot identify operational drivers, fall back to DuPont analysis:
+   - Net profit margin
+   - Asset turnover
+   - Financial leverage
+   Then try to identify operational drivers for each component.
+
+For every figure and relationship, flag confidence:
+- Grounded: Explicitly stated in source documents (cite page/section)
+- Inferred: Calculated from disclosed data or consistent with industry norms
+- Speculative: Reasonable estimate, no direct evidence
+
+Think through the whole business. Show your reasoning. The goal is to reveal the operational logic of how this company makes money, per unit - backed by numbers that reconcile.
+        """
     }
 
 ]

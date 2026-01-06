@@ -348,6 +348,56 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                 # Save retry attempt separately for diagnostics
                 self.file_manager.save_step_output(section_num, "step_1_initial_draft_retry.md", retry_draft or "")
 
+            # Section 35 (Unit Economics Analysis): Custom refinement pipeline (Prompts 2-6)
+            # Uses initial draft from Step 1 above, then custom UEA refinement instead of standard Steps 2-4
+            if section_num == 35:
+                company_name = self._extract_company_name()
+
+                # Prompt 2: Self-critique (docs: YES, temp: LOW)
+                if hasattr(self, 'worker_display') and self.worker_display:
+                    self.worker_display.update(section_num, "Critique")
+                else:
+                    thread_safe_print(f"Section {section_num} → Self-critique...")
+                prompt2_output = self.core_analyzer._section35_prompt2_self_critique(company_name, initial_draft)
+                self.file_manager.save_step_output(section_num, "prompt2_self_critique.md", prompt2_output)
+
+                # Prompt 3: Prose synthesis (docs: NO, temp: MEDIUM)
+                if hasattr(self, 'worker_display') and self.worker_display:
+                    self.worker_display.update(section_num, "Synthesis")
+                else:
+                    thread_safe_print(f"Section {section_num} → Prose synthesis...")
+                prompt3_output = self.core_analyzer._section35_prompt3_prose_synthesis(company_name, prompt2_output)
+                self.file_manager.save_step_output(section_num, "prompt3_prose_synthesis.md", prompt3_output)
+
+                # Prompt 4: Sensitivity analysis (docs: YES, temp: LOW)
+                if hasattr(self, 'worker_display') and self.worker_display:
+                    self.worker_display.update(section_num, "Sensitivity")
+                else:
+                    thread_safe_print(f"Section {section_num} → Sensitivity analysis...")
+                prompt4_output = self.core_analyzer._section35_prompt4_sensitivity(company_name, prompt2_output)
+                self.file_manager.save_step_output(section_num, "prompt4_sensitivity.md", prompt4_output)
+
+                # Prompt 5: Peer benchmarking (docs: YES, temp: LOW)
+                if hasattr(self, 'worker_display') and self.worker_display:
+                    self.worker_display.update(section_num, "Benchmark")
+                else:
+                    thread_safe_print(f"Section {section_num} → Peer benchmarking...")
+                prompt5_output = self.core_analyzer._section35_prompt5_peer_benchmark(company_name, prompt2_output)
+                self.file_manager.save_step_output(section_num, "prompt5_peer_benchmark.md", prompt5_output)
+
+                # Prompt 6: Final assembly (docs: NO, temp: LOW)
+                if hasattr(self, 'worker_display') and self.worker_display:
+                    self.worker_display.update(section_num, "Assembly")
+                else:
+                    thread_safe_print(f"Section {section_num} → Final assembly...")
+                final_output = self.core_analyzer._section35_prompt6_final_assembly(
+                    company_name, prompt3_output, prompt4_output, prompt5_output
+                )
+                self.file_manager.save_step_output(section_num, "prompt6_final_assembly.md", final_output)
+                self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
+
+                return f"Section {section_num} completed."
+
             # Initialize variables to avoid UnboundLocalError
             improved_draft = None
             step4_output = None
@@ -525,12 +575,14 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
             # Special sections that run in their own phases
             SECTION_33_PATTERN_ANALYSIS = 33
             SECTION_34_DATA_BOOK = 34
-            special_sections = {SECTION_33_PATTERN_ANALYSIS, SECTION_34_DATA_BOOK}
+            SECTION_35_UNIT_ECONOMICS = 35
+            special_sections = {SECTION_33_PATTERN_ANALYSIS, SECTION_34_DATA_BOOK, SECTION_35_UNIT_ECONOMICS}
 
-            # Phase 1: run all sections except 33 and 34
+            # Phase 1: run all sections except special sections
             regular_sections = [n for n in section_numbers if n not in special_sections]
             has33 = SECTION_33_PATTERN_ANALYSIS in section_numbers
             has34 = SECTION_34_DATA_BOOK in section_numbers
+            has35 = SECTION_35_UNIT_ECONOMICS in section_numbers
             phase1 = _run_parallel(regular_sections)
             results.update(phase1)
 
@@ -589,6 +641,31 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                     results[SECTION_34_DATA_BOOK] = res34
                 except Exception as e:
                     thread_safe_print(f"{WARNING} Appendix generation failed: {e}")
+                # Regenerate profile with sections so far
+                try:
+                    profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
+                    sections_so_far = regular_sections + ([SECTION_33_PATTERN_ANALYSIS] if has33 else []) + [SECTION_34_DATA_BOOK]
+                    if self.insights_enabled:
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections, pdf_variant="vanilla")
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections, pdf_variant="insights")
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections, pdf_variant="integrated")
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profiles updated")
+                    else:
+                        profile_generator.generate_html_profile(results, sections_so_far, company_name, sections)
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profile updated")
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Profile update failed: {e}")
+
+            # Phase 4: run Section 35 (Unit Economics Analysis) if selected
+            if has35:
+                thread_safe_print(f"\n{'='*60}")
+                thread_safe_print(f"{BOLD}Generating Unit Economics Analysis (Section 35){RESET}")
+                thread_safe_print(f"{'='*60}")
+                try:
+                    res35 = self.analyze_section(SECTION_35_UNIT_ECONOMICS)
+                    results[SECTION_35_UNIT_ECONOMICS] = res35
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Unit economics analysis failed: {e}")
                 # Regenerate profile with full set
                 try:
                     profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
@@ -596,10 +673,10 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                         profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="vanilla")
                         profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="insights")
                         profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="integrated")
-                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profiles updated")
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Unit economics complete - Profiles updated")
                     else:
                         profile_generator.generate_html_profile(results, section_numbers, company_name, sections)
-                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Appendix complete - Profile updated")
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Unit economics complete - Profile updated")
                 except Exception as e:
                     thread_safe_print(f"{WARNING} Profile update failed: {e}")
 
@@ -678,6 +755,10 @@ SECTION_GROUPS = {
     "Data Book": {
         "sections": [34],
         "prompt": "6. Data Book (section 34) (y/n): "
+    },
+    "Unit Economics Analysis": {
+        "sections": [35],
+        "prompt": "7. Unit Economics Analysis (section 35) (y/n): "
     }
 }
 

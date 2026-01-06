@@ -1132,3 +1132,246 @@ Maximum 200 words. Direct prose. No bullet points. No reference to hypotheses or
         thread_safe_print("  Section 33 complete: 16 API calls executed")
 
         return final_output
+
+    # =========================================================================
+    # Section 35: Unit Economics Analysis - Custom Refinement Prompts (2-6)
+    # Note: Prompt 1 (initial draft) comes from specs in profile_sections.py
+    # =========================================================================
+
+    def _section35_prompt2_self_critique(self, company_name: str, prompt1_output: str) -> str:
+        """
+        Prompt 2: Self-critique and targeted deepening.
+        Temperature: LOW (0.2)
+        Documents: YES
+        """
+        prompt = f"""Here is your unit economics analysis for {company_name}:
+
+{prompt1_output}
+
+Review your work:
+
+1. Which branches are flagged Inferred or Speculative?
+2. Which branches stopped at only 1-2 levels when deeper decomposition might be possible?
+3. Are there any logical gaps or inconsistencies?
+
+For each weak branch:
+- Go back to the source documents
+- Try to find additional evidence
+- Push deeper if evidence exists
+- If you still cannot find evidence, state this clearly and leave the branch as is
+
+Do not re-do the solid parts. Only refine the weak spots.
+
+Output an updated analysis incorporating your refinements.
+"""
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_low_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text,
+                context="Section 35 Prompt 2"
+            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context="Section 35 Prompt 2"
+            )
+
+    def _section35_prompt3_prose_synthesis(self, company_name: str, prompt2_output: str) -> str:
+        """
+        Prompt 3: Prose synthesis.
+        Temperature: MEDIUM (0.6)
+        Documents: NO (synthesis from prior output only)
+        """
+        prompt = f"""Here is the refined unit economics analysis for {company_name}:
+
+{prompt2_output}
+
+Write a narrative summary. Structure it as follows:
+
+1. THE UNIT
+   What is the UOP and why is it the right unit for this business?
+
+2. THE ECONOMICS
+   What is cash flow per UOP? State the headline numbers.
+
+3. THE DRIVERS
+   Walk through the decomposition logically. Start with top-level drivers, then go deeper into each branch. The prose should reveal the operational logic of how this business makes money. Show the causal chain. Highlight the most important levers. Include the numbers—this is a quantified analysis, not just conceptual.
+
+4. ANCILLARY ACTIVITIES
+   How much do non-core activities add per UOP?
+
+5. KEY INSIGHTS
+   What does this analysis reveal about the business model?
+   Where is value created? Where is it at risk?
+   What operational levers matter most?
+
+6. CONFIDENCE ASSESSMENT
+   Which parts are grounded, inferred, or speculative?
+
+Guidelines:
+- Write in prose paragraphs, no bullet points
+- Aim for 500-800 words
+- The reader should be able to follow the tree structure through the narrative
+- Be direct and concise
+"""
+        # NO documents - synthesis from prior output only
+        return retry_with_backoff(
+            lambda: self.model_medium_temp.generate_content([prompt]).text,
+            context="Section 35 Prompt 3"
+        )
+
+    def _section35_prompt4_sensitivity(self, company_name: str, prompt2_output: str) -> str:
+        """
+        Prompt 4: Sensitivity analysis and watch list.
+        Temperature: LOW (0.2)
+        Documents: YES
+        """
+        prompt = f"""Here is the quantified unit economics tree for {company_name}:
+
+{prompt2_output}
+
+Perform a sensitivity analysis:
+
+1. SENSITIVITY RANKING
+   For each driver in the tree, estimate the impact on cash flow per UOP if that driver changes by +/- 10%.
+
+   Calculate the dollar and percentage impact. Rank drivers from most sensitive to least sensitive.
+
+   Present as a table:
+   | Driver | Current Value | +10% Impact on CF/UOP | -10% Impact on CF/UOP | Sensitivity Rank |
+
+2. WATCH LIST
+   For the top 3-5 most sensitive drivers, provide:
+   - Current value (with source)
+   - Historical range or trend (if available in documents)
+   - What factors could cause it to change (risks and opportunities)
+   - Leading indicators or data points to monitor
+   - How quickly changes in this driver would flow through to cash flow
+
+3. VALUE CREATION OPPORTUNITIES
+   Based on the sensitivity analysis, where are the biggest opportunities to improve unit economics? What would need to happen operationally?
+
+4. KEY RISKS
+   Which sensitive drivers are most vulnerable to deterioration? What would cause them to decline? What's the downside scenario?
+
+5. SO-WHAT PARAGRAPH
+   Write a concise paragraph summarising what this sensitivity analysis implies for the investment thesis. Where is value created? Where is the risk? What should an investor focus on?
+
+Present this analysis clearly. The sensitivity ranking should be quantified. The watch list should be specific and actionable.
+"""
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_low_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text,
+                context="Section 35 Prompt 4"
+            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context="Section 35 Prompt 4"
+            )
+
+    def _section35_prompt5_peer_benchmark(self, company_name: str, prompt2_output: str) -> str:
+        """
+        Prompt 5: Peer benchmarking (optional - may return empty if no peer data).
+        Temperature: LOW (0.2)
+        Documents: YES
+        """
+        prompt = f"""Here is the unit economics analysis for {company_name}:
+
+{prompt2_output}
+
+If peer or industry benchmark data is available in the source documents:
+
+1. BENCHMARK COMPARISON
+   For the key operational drivers, how does {company_name} compare to:
+   - Industry average
+   - Best-in-class operators
+   - Direct competitors (if data available)
+
+   Present as a table:
+   | Driver | {company_name} | Industry Avg | Best-in-Class | Gap to Best |
+
+2. IMPROVEMENT POTENTIAL
+   For drivers where {company_name} lags best-in-class:
+   - What is the gap?
+   - What would closing the gap mean for cash flow per UOP?
+   - Is the gap closable? What would it take operationally?
+
+3. COMPETITIVE POSITION
+   For drivers where {company_name} leads:
+   - Is this advantage sustainable?
+   - What protects it?
+
+If peer data is NOT available in the source documents:
+- State this clearly
+- Note which drivers would be most valuable to benchmark
+- Flag as a gap for further diligence
+
+Do not fabricate peer data. Only use what is explicitly available in the source documents.
+"""
+        # Use cached model if available, else fallback to pdf_parts
+        if self.cached_model_low_temp:
+            return retry_with_backoff(
+                lambda: self.cached_model_low_temp.generate_content([prompt]).text,
+                context="Section 35 Prompt 5"
+            )
+        else:
+            return retry_with_backoff(
+                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
+                context="Section 35 Prompt 5"
+            )
+
+    def _section35_prompt6_final_assembly(self, company_name: str,
+                                           prompt3_output: str,
+                                           prompt4_output: str,
+                                           prompt5_output: str) -> str:
+        """
+        Prompt 6: Final assembly.
+        Temperature: LOW (0.2)
+        Documents: NO (assembly from prior outputs only)
+        """
+        prompt = f"""Assemble the final Unit Economics Analysis section for {company_name}.
+
+Combine:
+- Prose synthesis (from Prompt 3)
+- Sensitivity ranking table (from Prompt 4)
+- Watch list (from Prompt 4)
+- Peer benchmarking (from Prompt 5, if available)
+- So-what summary (from Prompt 4)
+
+PROSE SYNTHESIS:
+{prompt3_output}
+
+SENSITIVITY ANALYSIS AND WATCH LIST:
+{prompt4_output}
+
+PEER BENCHMARKING:
+{prompt5_output}
+
+Structure the final output as:
+
+## Unit Economics Analysis
+
+### 1. Unit Economics Narrative
+[From Prompt 3 - 500-800 words]
+
+### 2. Sensitivity Analysis
+[Table from Prompt 4]
+
+### 3. Watch List: Key Drivers to Monitor
+[From Prompt 4]
+
+### 4. Peer Benchmarking
+[From Prompt 5, or "Not available—flagged for further diligence"]
+
+### 5. Investment Implications
+[So-what paragraph from Prompt 4]
+
+Format as clean markdown. This becomes Section 35 of the company profile.
+"""
+        # NO documents - assembly from prior outputs only
+        return retry_with_backoff(
+            lambda: self.model_low_temp.generate_content([prompt]).text,
+            context="Section 35 Prompt 6"
+        )

@@ -62,6 +62,18 @@ ARROW = '→'
 WARNING = '⚠'
 CROSS = '✗'
 
+
+def ensure_caffeinate():
+    """Re-exec under caffeinate on macOS to prevent sleep during long analysis."""
+    if sys.platform != 'darwin':
+        return  # Not macOS
+    if os.environ.get('_OPP_CAFFEINATED'):
+        return  # Already running under caffeinate
+    os.environ['_OPP_CAFFEINATED'] = '1'
+    args = ['caffeinate', '-i', sys.executable] + sys.argv
+    os.execvp('caffeinate', args)
+
+
 # UI Helper Functions (from PD2)
 try:
     import termios
@@ -1456,6 +1468,7 @@ Status: {status}
 
 
 if __name__ == "__main__":
+    ensure_caffeinate()
     # Clear terminal screen
     print("\033[2J\033[H", end='')
 

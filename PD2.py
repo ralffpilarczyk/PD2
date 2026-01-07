@@ -48,6 +48,19 @@ WHITE = '\033[97m'    # Base color for everything else
 
 # Symbols
 CHECK = '✓'
+
+
+def ensure_caffeinate():
+    """Re-exec under caffeinate on macOS to prevent sleep during long analysis."""
+    if sys.platform != 'darwin':
+        return  # Not macOS
+    if os.environ.get('_PD2_CAFFEINATED'):
+        return  # Already running under caffeinate
+    os.environ['_PD2_CAFFEINATED'] = '1'
+    args = ['caffeinate', '-i', sys.executable] + sys.argv
+    os.execvp('caffeinate', args)
+
+
 ARROW = '→'
 WARNING = '⚠'
 CROSS = '✗'
@@ -853,6 +866,7 @@ def select_pdf_files():
 
 # Usage interface
 if __name__ == "__main__":
+    ensure_caffeinate()
     # Clear terminal screen
     print("\033[2J\033[H", end='')
 

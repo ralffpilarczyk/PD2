@@ -593,23 +593,24 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
 
             self._generate_run_summary(results)
 
-            # Generate profile with Phase 1 results
-            thread_safe_print(f"\n{'='*60}")
-            thread_safe_print(f"{BOLD}Generating Profile{RESET}")
-            thread_safe_print(f"{'='*60}")
-            try:
-                profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
-                if self.insights_enabled:
-                    # Generate 3 PDF variants when insights pipeline is enabled
-                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="vanilla")
-                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="insights")
-                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="integrated")
-                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Profiles ready (vanilla, insights, integrated)")
-                else:
-                    profile_generator.generate_html_profile(results, regular_sections, company_name, sections)
-                    thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
-            except Exception as e:
-                thread_safe_print(f"{WARNING} Profile generation failed: {e}")
+            # Generate profile with Phase 1 results (skip if no regular sections)
+            if regular_sections:
+                thread_safe_print(f"\n{'='*60}")
+                thread_safe_print(f"{BOLD}Generating Profile{RESET}")
+                thread_safe_print(f"{'='*60}")
+                try:
+                    profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
+                    if self.insights_enabled:
+                        # Generate 3 PDF variants when insights pipeline is enabled
+                        profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="vanilla")
+                        profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="insights")
+                        profile_generator.generate_html_profile(results, regular_sections, company_name, sections, pdf_variant="integrated")
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Profiles ready (vanilla, insights, integrated)")
+                    else:
+                        profile_generator.generate_html_profile(results, regular_sections, company_name, sections)
+                        thread_safe_print(f"{CYAN}{CHECK}{RESET} Profile ready")
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Profile generation failed: {e}")
 
             # Phase 2: run Section 33 (Financial Pattern Analysis) if selected
             if has33:

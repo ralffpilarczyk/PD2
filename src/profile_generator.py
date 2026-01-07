@@ -394,7 +394,8 @@ class ProfileGenerator:
             "Sellside Positioning": [s for s in processed_sections if 20 <= s[0] <= 26],
             "Buyside Due Diligence": [s for s in processed_sections if 27 <= s[0] <= 32],
             "Financial Pattern Analysis": [s for s in processed_sections if s[0] == 33],
-            "Data Book": [s for s in processed_sections if s[0] == 34]
+            "Data Book": [s for s in processed_sections if s[0] == 34],
+            "Unit Economics Analysis": [s for s in processed_sections if s[0] == 35]
         }
 
         cover_html = f'''

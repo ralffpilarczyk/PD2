@@ -96,6 +96,28 @@ CRITICAL RESTRICTIONS:
 
 This is a data-only section. Any narrative text will be removed.
 """
+        elif section['number'] == 35:
+            # Section 35: Unit Economics Analysis - custom prompt
+            prompt = f"""You are writing a unit economics analysis for a private equity investment memo.
+
+SECTION {section['number']}: {section['title']}
+
+{section['specs']}
+
+OUTPUT FORMAT:
+- Pure prose, no tables
+- No bullet points in final output (use prose paragraphs)
+- Target 800-1000 words
+- Every claim must have a number
+- Cite sources with footnotes [^1], [^2] etc.
+
+Structure your output as:
+1. Core business identification (1 paragraph)
+2. UOP identification and justification (1 paragraph)
+3. Cash flow per UOP calculation (1 paragraph with math shown)
+4. Decomposition tree (multiple paragraphs walking through each node)
+5. Ancillary businesses (1 paragraph if applicable)
+"""
         else:
             prompt = f"""You are an expert business analyst creating a DISCIPLINED initial draft.
 

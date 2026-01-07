@@ -139,6 +139,8 @@ def main():
     parser = argparse.ArgumentParser(description='Deep Research - Web-based company research')
     parser.add_argument('--resume', type=str, metavar='RUN_DIR',
                         help='Resume an incomplete run from the specified directory')
+    parser.add_argument('--workers', type=int, choices=[1, 2], default=None,
+                        help='Number of parallel workers (1-2, default: prompt)')
     args = parser.parse_args()
 
     research_sections = get_research_sections()
@@ -174,11 +176,15 @@ def main():
                 print(f"    - Section {s['number']}: {s['title']}")
 
             # Workers
-            print("\nResearch workers (parallel queries):")
-            print("  1-2 workers (default 2)")
-            workers_choice = prompt_single_digit("Choose workers [1-2] (default 2): ", valid_digits="12", default_digit="2")
-            workers = int(workers_choice)
-            print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
+            if args.workers:
+                workers = args.workers
+                print(f"\n{CYAN}{CHECK}{RESET} Workers: {workers}\n")
+            else:
+                print("\nResearch workers (parallel queries):")
+                print("  1-2 workers (default 2)")
+                workers_choice = prompt_single_digit("Choose workers [1-2] (default 2): ", valid_digits="12", default_digit="2")
+                workers = int(workers_choice)
+                print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
 
             # Run research for missing sections only
             print(f"{CYAN}Resuming Deep Research for {company_name}...{RESET}")
@@ -227,11 +233,15 @@ def main():
         print(f"{CYAN}{CHECK}{RESET} Company: {company_name}\n")
 
         # Workers
-        print("Research workers (parallel queries):")
-        print("  1-2 workers (default 2)")
-        workers_choice = prompt_single_digit("Choose workers [1-2] (default 2): ", valid_digits="12", default_digit="2")
-        workers = int(workers_choice)
-        print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
+        if args.workers:
+            workers = args.workers
+            print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
+        else:
+            print("Research workers (parallel queries):")
+            print("  1-2 workers (default 2)")
+            workers_choice = prompt_single_digit("Choose workers [1-2] (default 2): ", valid_digits="12", default_digit="2")
+            workers = int(workers_choice)
+            print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
 
         # Create run directory
         run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

@@ -76,6 +76,7 @@ def prompt_single_digit(prompt_text: str, valid_digits: str, default_digit: str)
 
 
 def main():
+    print("\033[2J\033[H", end='')  # Clear terminal
     print_header()
 
     # Company name

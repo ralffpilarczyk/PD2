@@ -1221,55 +1221,46 @@ OUTPUT FORMAT:
 
 {prompt2_output}
 
-Write a narrative summary that INTEGRATES temporal context as each driver is discussed. Do NOT create a separate "Temporal Analysis" section - weave temporal context naturally into the prose.
+Write a unit economics narrative for a private equity investment memo. PROSE ONLY - NO TABLES.
 
-Structure as follows:
+STRUCTURE (all in prose paragraphs):
 
-1. THE UNIT
-   What is the UOP and why is it the right unit for this business?
+1. THE UNIT (1 paragraph)
+   What is the Unit of Production? Describe it concretely - what does one unit actually represent in this business? Why is this the right unit for analysis? This must be crystal clear before any numbers are discussed.
 
-2. THE ECONOMICS
-   What is cash flow per UOP? State the headline numbers.
-   Include temporal context: How has cash flow per UOP evolved over the past 2-3 years? Why?
+2. HEADLINE ECONOMICS (1 paragraph)
+   State cash flow per UOP. Is it positive or negative? How has it changed from prior year? One-line verdict: improving, stable, or deteriorating.
 
-3. THE DRIVERS
-   Walk through the decomposition logically. Start with top-level drivers, then go deeper into each branch.
+3. NODE-BY-NODE EVOLUTION (main body - multiple paragraphs)
+   Walk through EACH driver in the decomposition tree. For each node:
+   - State what the driver is and its current value
+   - State its prior year value and the change (absolute and %)
+   - Explain WHY it changed (management commentary or inferred)
+   - State whether the trend is continuing, reversing, or stabilising
 
-   CRITICAL: For each driver discussed, weave in temporal context naturally:
-   - Current value AND how it has changed over time
-   - WHY it changed (management explanation or inferred cause from the temporal table)
-   - Whether the trend is continuing, reversing, or stabilising
+   Structure this as a logical walk through the tree: start with revenue per UOP, decompose into its components, then costs per UOP, decompose into its components. Each node gets its own treatment.
 
-   GOOD example of integration:
-   "Revenue per tower currently stands at $42,000 (FY24), up from $38,500 in FY23 (+9%). Management attributes this to pricing adjustments on legacy contracts as they come up for renewal. The LTM figure of $43,200 suggests the trend is continuing into FY25."
+   EXAMPLE OF GOOD NODE DESCRIPTION:
+   "Revenue per tower currently stands at $42,000, up 9% from $38,500 in FY23. Management attributes this to pricing adjustments on legacy contracts as they come up for renewal. The LTM figure of $43,200 suggests acceleration into FY25."
 
-   BAD example (DO NOT DO THIS):
-   "Revenue per tower is $42,000. [Historical note: This was $38,500 in FY23.]"
+   EXAMPLE OF BAD NODE DESCRIPTION (DO NOT DO THIS):
+   "Revenue per tower is $42,000."
 
-   The prose should reveal the operational logic while showing how that logic has evolved over time. Each driver's story should include its trajectory, not just its current state.
+4. DATA GAPS (final paragraph)
+   Which nodes lack temporal data? State in prose, not bullets.
 
-4. ANCILLARY ACTIVITIES
-   How much do non-core activities add per UOP? Include trend if material.
+RULES:
+- PURE PROSE - absolutely no tables, no bullet points
+- Every sentence must contain a number
+- Maximum 500 words total
+- Write like a PE associate: direct, data-dense, no fluff
 
-5. KEY INSIGHTS
-   What does this analysis reveal about the business model?
-   - Where is value created? Is it stable, growing, or at risk?
-   - What operational levers matter most? Are they improving or deteriorating?
-   - What does the trajectory tell us about sustainability?
-
-6. CONFIDENCE ASSESSMENT
-   Which parts are grounded, inferred, or speculative?
-   Flag any temporal data points that are inferred rather than explicitly disclosed.
-
-7. DATA GAPS
-   List any key drivers where temporal data was not available. These represent areas for further diligence.
-
-GUIDELINES:
-- Write in prose paragraphs, no bullet points (except in Data Gaps section)
-- Aim for 600-900 words (expanded to accommodate temporal context)
-- Temporal context should be woven in, not bolted on
-- Be direct and concise
-- If temporal data shows concerning trends, say so directly
+FORBIDDEN:
+- Tables of any kind
+- Bullet points
+- Accounting margins (gross margin %, EBITDA margin %)
+- Financial ratios (ROE, debt/equity)
+- Valuation commentary
 """
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content([prompt]).text,
@@ -1286,34 +1277,31 @@ GUIDELINES:
 
 {prompt2_output}
 
-If peer or industry benchmark data is available in the source documents:
+Benchmark the unit economics drivers against peers. PROSE ONLY - NO TABLES.
 
-1. BENCHMARK COMPARISON
-   For the key operational drivers, how does {company_name} compare to:
-   - Industry average
-   - Best-in-class operators
-   - Direct competitors (if data available)
+FOCUS ON THESE OPERATIONAL DRIVERS (if peer data available):
+- Revenue per UOP (absolute $)
+- Cost per UOP (absolute $)
+- Cash flow per UOP (absolute $)
+- Utilisation rate / capacity factor / occupancy
+- Productivity metrics (output per employee, units per hour)
 
-   Present as a table:
-   | Driver | {company_name} | Industry Avg | Best-in-Class | Gap to Best |
+FORBIDDEN:
+- Tables of any kind
+- Financial ratios (ROE, ROA, debt/equity)
+- Accounting margins as percentages (gross margin %, EBITDA margin %)
+- Revenue growth rates
+- Valuation multiples
 
-2. IMPROVEMENT POTENTIAL
-   For drivers where {company_name} lags best-in-class:
-   - What is the gap?
-   - What would closing the gap mean for cash flow per UOP?
-   - Is the gap closable? What would it take operationally?
+If peer or industry benchmark data is available in the source documents, write 2-3 paragraphs:
 
-3. COMPETITIVE POSITION
-   For drivers where {company_name} leads:
-   - Is this advantage sustainable?
-   - What protects it?
+1. Where does {company_name} lag peers on unit economics drivers? By how much? What would closing each gap add to cash flow per UOP?
 
-If peer data is NOT available in the source documents:
-- State this clearly
-- Note which drivers would be most valuable to benchmark
-- Flag as a gap for further diligence
+2. Where does {company_name} lead? Is the advantage structural or temporary?
 
-Do not fabricate peer data. Only use what is explicitly available in the source documents.
+If peer data is NOT available, state in one sentence which operational drivers per UOP would be most valuable to benchmark.
+
+Do not fabricate peer data. Maximum 150 words.
 """
         # Use cached model if available, else fallback to pdf_parts
         if self.cached_model_low_temp:
@@ -1337,35 +1325,39 @@ Do not fabricate peer data. Only use what is explicitly available in the source 
         """
         prompt = f"""Assemble the final Unit Economics Analysis section for {company_name}.
 
-Combine:
-- Integrated prose synthesis with temporal context (from Prompt 3)
-- Peer benchmarking (from Prompt 4, if available)
+INPUTS:
 
-INTEGRATED PROSE SYNTHESIS (with temporal context):
+UNIT ECONOMICS NARRATIVE:
 {prompt3_output}
 
 PEER BENCHMARKING:
 {prompt4_output}
 
-Structure the final output as:
+OUTPUT STRUCTURE (prose only, no tables):
 
 ## Unit Economics Analysis
 
-### 1. Unit Economics Narrative
-[From Prompt 3 - 600-900 words with temporal context integrated throughout]
+[Combine the narrative and peer comparison into flowing prose. The structure should be:
 
-### 2. Peer Benchmarking
-[From Prompt 4, or "Peer benchmarking data not available in source documents. Flagged for further diligence: [list specific drivers that would be most valuable to benchmark]"]
+1. First paragraph: What is the UOP and why it's the right unit for this business
+2. Second paragraph: Headline cash flow per UOP and whether it's improving/deteriorating
+3. Following paragraphs: Node-by-node evolution of each driver with temporal context
+4. Final paragraph: Peer comparison (if available) or data gaps
 
-### 3. Investment Implications
-Write a concluding paragraph (100-150 words) that synthesises:
-- Where value is created per unit
-- How unit economics have evolved (improving, stable, or deteriorating)
-- What the trajectory implies for the investment thesis
-- Key operational levers to monitor
-- Most significant data gaps for further diligence
+Total length: 500-600 words maximum.]
 
-Format as clean markdown. This becomes Section 35 of the company profile.
+RULES:
+- PURE PROSE - no tables, no bullet points, no headers beyond "## Unit Economics Analysis"
+- Every sentence must contain a number
+- Write like a PE investment memo: direct, data-dense
+
+FORBIDDEN - Remove if present:
+- All tables
+- Bullet points
+- "Investment Implications" section
+- Accounting margins (%, not absolute $)
+- Financial ratios
+- Valuation commentary
 """
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content([prompt]).text,

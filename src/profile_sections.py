@@ -806,7 +806,7 @@ Your output must be a single, well-formed block of HTML representing the entire 
         "number": 35,
         "title": "Unit Economics Analysis",
         "specs": """
-You are analysing the unit economics of this company.
+You are writing a unit economics analysis for a private equity investment memo.
 
 Work through the following:
 
@@ -848,13 +848,21 @@ Work through the following:
 
    TOLERANCE: Allow +/- 2% for rounding differences. Flag discrepancies >2% for manual review or note as estimation uncertainty.
 
-   Do NOT use financial ratios or accounting margins. Use operational metrics:
-   - Utilisation rates
+   ABSOLUTELY FORBIDDEN - Do NOT use these under any circumstances:
+   - Financial ratios (ROE, ROA, ROIC, debt/equity, current ratio)
+   - Accounting margins as percentages (gross margin %, operating margin %, EBITDA margin %)
+   - Valuation multiples (P/E, EV/EBITDA, revenue multiples)
+   - Revenue growth rates as standalone metrics
+   - DuPont decomposition or any variant
+
+   REQUIRED - Use ONLY operational metrics expressed in absolute terms per UOP:
+   - Utilisation rates, capacity factors, load factors, occupancy rates
    - Throughput per unit of capacity
    - Yield / conversion rates
-   - Price per unit of output
-   - Variable cost per unit of output
-   - Capacity factors, load factors, occupancy rates
+   - Price per unit of output (absolute $ per unit)
+   - Variable cost per unit of output (absolute $ per unit)
+   - Volume metrics (units sold, subscribers, transactions per period)
+   - Productivity metrics (output per employee, units per hour)
 
    Do not stop at one level of decomposition. For each driver, keep asking "what drives this?" and decompose further. Continue until you hit terminal nodes:
    - External inputs (market prices, interest rates, tax rates, regulations)
@@ -871,13 +879,6 @@ Work through the following:
    If yes, express them relative to the core UOP (e.g., ancillary revenue per UOP).
    Quantify with numbers from the source documents.
    If no, state this and move on.
-
-6. DUPONT FALLBACK (only if operational decomposition is thin)
-   If you cannot identify operational drivers, fall back to DuPont analysis:
-   - Net profit margin
-   - Asset turnover
-   - Financial leverage
-   Then try to identify operational drivers for each component.
 
 For every figure and relationship, flag confidence:
 - Grounded: Explicitly stated in source documents (cite page/section)

@@ -1134,19 +1134,24 @@ Maximum 200 words. Direct prose. No bullet points. No reference to hypotheses or
         return final_output
 
     # =========================================================================
-    # Section 35: Unit Economics Analysis - Custom Refinement Prompts (2-6)
-    # Note: Prompt 1 (initial draft) comes from specs in profile_sections.py
+    # Section 35: Unit Economics Analysis - Custom Refinement Prompts (2-5)
+    # Pipeline: 1 (specs) -> 2 (critique+temporal) -> 3 (integrated synthesis)
+    #           -> 4 (peer benchmark) -> 5 (final assembly)
     # =========================================================================
 
-    def _section35_prompt2_self_critique(self, company_name: str, prompt1_output: str) -> str:
+    def _section35_prompt2_critique_and_temporal(self, company_name: str, prompt1_output: str) -> str:
         """
-        Prompt 2: Self-critique and targeted deepening.
+        Prompt 2: Self-critique, targeted deepening, AND temporal extraction.
         Temperature: LOW (0.2)
         Documents: YES
         """
         prompt = f"""Here is your unit economics analysis for {company_name}:
 
 {prompt1_output}
+
+Perform TWO tasks:
+
+## TASK 1: SELF-CRITIQUE AND DEEPENING
 
 Review your work:
 
@@ -1162,9 +1167,39 @@ For each weak branch:
 
 Do not re-do the solid parts. Only refine the weak spots.
 
-Output an updated analysis incorporating your refinements.
+## TASK 2: TEMPORAL EXTRACTION
+
+For EVERY quantifiable driver in the tree, extract temporal data where available in the source documents.
+
+Create a TEMPORAL DATA TABLE at the end of your output:
+
+| Driver | LTM | Most Recent FY | Prior FY | Change Explanation |
+|--------|-----|----------------|----------|-------------------|
+
+For each driver:
+
+1. **LTM (Last Twelve Months)**: Value for the most recent 12-month period if disclosed. If not available, write "Not disclosed".
+
+2. **Most Recent FY**: Value for the most recently completed fiscal year. Cite the source (document, page).
+
+3. **Prior FY**: Value for the fiscal year before that. Cite the source.
+
+4. **Change Explanation**: For changes >5% year-over-year:
+   - Quote management commentary if available, marked as [Management]
+   - Otherwise infer the likely cause from operational context, marked as [Inferred]
+
+RULES:
+- Only include drivers that have at least TWO data points across the three periods
+- If a driver has only one historical value, note it but do not fabricate history
+- Always cite specific document references (page number, document name)
+- For percentage-based drivers (utilisation, yield), report percentage values
+- For absolute drivers (price, volume), report values with units
+- Do not fabricate or estimate values not in the documents
+
+OUTPUT FORMAT:
+1. First, the refined unit economics tree from Task 1
+2. Then, a clearly labelled TEMPORAL DATA TABLE with all quantifiable drivers
 """
-        # Use cached model if available, else fallback to pdf_parts
         if self.cached_model_low_temp:
             return retry_with_backoff(
                 lambda: self.cached_model_low_temp.generate_content([prompt]).text,
@@ -1176,104 +1211,74 @@ Output an updated analysis incorporating your refinements.
                 context="Section 35 Prompt 2"
             )
 
-    def _section35_prompt3_prose_synthesis(self, company_name: str, prompt2_output: str) -> str:
+    def _section35_prompt3_integrated_synthesis(self, company_name: str, prompt2_output: str) -> str:
         """
-        Prompt 3: Prose synthesis.
+        Prompt 3: Integrated prose synthesis with temporal context.
         Temperature: MEDIUM (0.6)
-        Documents: NO (synthesis from prior output only)
+        Documents: NO (synthesis from prior output only - temporal data already extracted)
         """
-        prompt = f"""Here is the refined unit economics analysis for {company_name}:
+        prompt = f"""Here is the refined unit economics analysis with temporal data for {company_name}:
 
 {prompt2_output}
 
-Write a narrative summary. Structure it as follows:
+Write a narrative summary that INTEGRATES temporal context as each driver is discussed. Do NOT create a separate "Temporal Analysis" section - weave temporal context naturally into the prose.
+
+Structure as follows:
 
 1. THE UNIT
    What is the UOP and why is it the right unit for this business?
 
 2. THE ECONOMICS
    What is cash flow per UOP? State the headline numbers.
+   Include temporal context: How has cash flow per UOP evolved over the past 2-3 years? Why?
 
 3. THE DRIVERS
-   Walk through the decomposition logically. Start with top-level drivers, then go deeper into each branch. The prose should reveal the operational logic of how this business makes money. Show the causal chain. Highlight the most important levers. Include the numbers—this is a quantified analysis, not just conceptual.
+   Walk through the decomposition logically. Start with top-level drivers, then go deeper into each branch.
+
+   CRITICAL: For each driver discussed, weave in temporal context naturally:
+   - Current value AND how it has changed over time
+   - WHY it changed (management explanation or inferred cause from the temporal table)
+   - Whether the trend is continuing, reversing, or stabilising
+
+   GOOD example of integration:
+   "Revenue per tower currently stands at $42,000 (FY24), up from $38,500 in FY23 (+9%). Management attributes this to pricing adjustments on legacy contracts as they come up for renewal. The LTM figure of $43,200 suggests the trend is continuing into FY25."
+
+   BAD example (DO NOT DO THIS):
+   "Revenue per tower is $42,000. [Historical note: This was $38,500 in FY23.]"
+
+   The prose should reveal the operational logic while showing how that logic has evolved over time. Each driver's story should include its trajectory, not just its current state.
 
 4. ANCILLARY ACTIVITIES
-   How much do non-core activities add per UOP?
+   How much do non-core activities add per UOP? Include trend if material.
 
 5. KEY INSIGHTS
    What does this analysis reveal about the business model?
-   Where is value created? Where is it at risk?
-   What operational levers matter most?
+   - Where is value created? Is it stable, growing, or at risk?
+   - What operational levers matter most? Are they improving or deteriorating?
+   - What does the trajectory tell us about sustainability?
 
 6. CONFIDENCE ASSESSMENT
    Which parts are grounded, inferred, or speculative?
+   Flag any temporal data points that are inferred rather than explicitly disclosed.
 
-Guidelines:
-- Write in prose paragraphs, no bullet points
-- Aim for 500-800 words
-- The reader should be able to follow the tree structure through the narrative
+7. DATA GAPS
+   List any key drivers where temporal data was not available. These represent areas for further diligence.
+
+GUIDELINES:
+- Write in prose paragraphs, no bullet points (except in Data Gaps section)
+- Aim for 600-900 words (expanded to accommodate temporal context)
+- Temporal context should be woven in, not bolted on
 - Be direct and concise
+- If temporal data shows concerning trends, say so directly
 """
-        # NO documents - synthesis from prior output only
         return retry_with_backoff(
             lambda: self.model_medium_temp.generate_content([prompt]).text,
             context="Section 35 Prompt 3"
         )
 
-    def _section35_prompt4_sensitivity(self, company_name: str, prompt2_output: str) -> str:
+    def _section35_prompt4_peer_benchmark(self, company_name: str, prompt2_output: str) -> str:
         """
-        Prompt 4: Sensitivity analysis and watch list.
-        Temperature: LOW (0.2)
-        Documents: YES
-        """
-        prompt = f"""Here is the quantified unit economics tree for {company_name}:
-
-{prompt2_output}
-
-Perform a sensitivity analysis:
-
-1. SENSITIVITY RANKING
-   For each driver in the tree, estimate the impact on cash flow per UOP if that driver changes by +/- 10%.
-
-   Calculate the dollar and percentage impact. Rank drivers from most sensitive to least sensitive.
-
-   Present as a table:
-   | Driver | Current Value | +10% Impact on CF/UOP | -10% Impact on CF/UOP | Sensitivity Rank |
-
-2. WATCH LIST
-   For the top 3-5 most sensitive drivers, provide:
-   - Current value (with source)
-   - Historical range or trend (if available in documents)
-   - What factors could cause it to change (risks and opportunities)
-   - Leading indicators or data points to monitor
-   - How quickly changes in this driver would flow through to cash flow
-
-3. VALUE CREATION OPPORTUNITIES
-   Based on the sensitivity analysis, where are the biggest opportunities to improve unit economics? What would need to happen operationally?
-
-4. KEY RISKS
-   Which sensitive drivers are most vulnerable to deterioration? What would cause them to decline? What's the downside scenario?
-
-5. SO-WHAT PARAGRAPH
-   Write a concise paragraph summarising what this sensitivity analysis implies for the investment thesis. Where is value created? Where is the risk? What should an investor focus on?
-
-Present this analysis clearly. The sensitivity ranking should be quantified. The watch list should be specific and actionable.
-"""
-        # Use cached model if available, else fallback to pdf_parts
-        if self.cached_model_low_temp:
-            return retry_with_backoff(
-                lambda: self.cached_model_low_temp.generate_content([prompt]).text,
-                context="Section 35 Prompt 4"
-            )
-        else:
-            return retry_with_backoff(
-                lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
-                context="Section 35 Prompt 4"
-            )
-
-    def _section35_prompt5_peer_benchmark(self, company_name: str, prompt2_output: str) -> str:
-        """
-        Prompt 5: Peer benchmarking (optional - may return empty if no peer data).
+        Prompt 4: Peer benchmarking (optional - may return empty if no peer data).
         Temperature: LOW (0.2)
         Documents: YES
         """
@@ -1314,64 +1319,55 @@ Do not fabricate peer data. Only use what is explicitly available in the source 
         if self.cached_model_low_temp:
             return retry_with_backoff(
                 lambda: self.cached_model_low_temp.generate_content([prompt]).text,
-                context="Section 35 Prompt 5"
+                context="Section 35 Prompt 4"
             )
         else:
             return retry_with_backoff(
                 lambda: self.model_low_temp.generate_content(self.pdf_parts + [prompt]).text,
-                context="Section 35 Prompt 5"
+                context="Section 35 Prompt 4"
             )
 
-    def _section35_prompt6_final_assembly(self, company_name: str,
+    def _section35_prompt5_final_assembly(self, company_name: str,
                                            prompt3_output: str,
-                                           prompt4_output: str,
-                                           prompt5_output: str) -> str:
+                                           prompt4_output: str) -> str:
         """
-        Prompt 6: Final assembly.
+        Prompt 5: Final assembly.
         Temperature: LOW (0.2)
         Documents: NO (assembly from prior outputs only)
         """
         prompt = f"""Assemble the final Unit Economics Analysis section for {company_name}.
 
 Combine:
-- Prose synthesis (from Prompt 3)
-- Sensitivity ranking table (from Prompt 4)
-- Watch list (from Prompt 4)
-- Peer benchmarking (from Prompt 5, if available)
-- So-what summary (from Prompt 4)
+- Integrated prose synthesis with temporal context (from Prompt 3)
+- Peer benchmarking (from Prompt 4, if available)
 
-PROSE SYNTHESIS:
+INTEGRATED PROSE SYNTHESIS (with temporal context):
 {prompt3_output}
 
-SENSITIVITY ANALYSIS AND WATCH LIST:
-{prompt4_output}
-
 PEER BENCHMARKING:
-{prompt5_output}
+{prompt4_output}
 
 Structure the final output as:
 
 ## Unit Economics Analysis
 
 ### 1. Unit Economics Narrative
-[From Prompt 3 - 500-800 words]
+[From Prompt 3 - 600-900 words with temporal context integrated throughout]
 
-### 2. Sensitivity Analysis
-[Table from Prompt 4]
+### 2. Peer Benchmarking
+[From Prompt 4, or "Peer benchmarking data not available in source documents. Flagged for further diligence: [list specific drivers that would be most valuable to benchmark]"]
 
-### 3. Watch List: Key Drivers to Monitor
-[From Prompt 4]
-
-### 4. Peer Benchmarking
-[From Prompt 5, or "Not available—flagged for further diligence"]
-
-### 5. Investment Implications
-[So-what paragraph from Prompt 4]
+### 3. Investment Implications
+Write a concluding paragraph (100-150 words) that synthesises:
+- Where value is created per unit
+- How unit economics have evolved (improving, stable, or deteriorating)
+- What the trajectory implies for the investment thesis
+- Key operational levers to monitor
+- Most significant data gaps for further diligence
 
 Format as clean markdown. This becomes Section 35 of the company profile.
 """
-        # NO documents - assembly from prior outputs only
         return retry_with_backoff(
             lambda: self.model_low_temp.generate_content([prompt]).text,
-            context="Section 35 Prompt 6"
+            context="Section 35 Prompt 5"
         )

@@ -348,52 +348,44 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                 # Save retry attempt separately for diagnostics
                 self.file_manager.save_step_output(section_num, "step_1_initial_draft_retry.md", retry_draft or "")
 
-            # Section 35 (Unit Economics Analysis): Custom refinement pipeline (Prompts 2-6)
+            # Section 35 (Unit Economics Analysis): Custom refinement pipeline (Prompts 2-5)
             # Uses initial draft from Step 1 above, then custom UEA refinement instead of standard Steps 2-4
             if section_num == 35:
                 company_name = self._extract_company_name()
 
-                # Prompt 2: Self-critique (docs: YES, temp: LOW)
+                # Prompt 2: Self-critique + temporal extraction (docs: YES, temp: LOW)
                 if hasattr(self, 'worker_display') and self.worker_display:
-                    self.worker_display.update(section_num, "Critique")
+                    self.worker_display.update(section_num, "Critique+Temporal")
                 else:
-                    thread_safe_print(f"Section {section_num} → Self-critique...")
-                prompt2_output = self.core_analyzer._section35_prompt2_self_critique(company_name, initial_draft)
-                self.file_manager.save_step_output(section_num, "prompt2_self_critique.md", prompt2_output)
+                    thread_safe_print(f"Section {section_num} → Critique + temporal extraction...")
+                prompt2_output = self.core_analyzer._section35_prompt2_critique_and_temporal(company_name, initial_draft)
+                self.file_manager.save_step_output(section_num, "prompt2_critique_temporal.md", prompt2_output)
 
-                # Prompt 3: Prose synthesis (docs: NO, temp: MEDIUM)
+                # Prompt 3: Integrated prose synthesis with temporal context (docs: NO, temp: MEDIUM)
                 if hasattr(self, 'worker_display') and self.worker_display:
                     self.worker_display.update(section_num, "Synthesis")
                 else:
-                    thread_safe_print(f"Section {section_num} → Prose synthesis...")
-                prompt3_output = self.core_analyzer._section35_prompt3_prose_synthesis(company_name, prompt2_output)
-                self.file_manager.save_step_output(section_num, "prompt3_prose_synthesis.md", prompt3_output)
+                    thread_safe_print(f"Section {section_num} → Integrated synthesis...")
+                prompt3_output = self.core_analyzer._section35_prompt3_integrated_synthesis(company_name, prompt2_output)
+                self.file_manager.save_step_output(section_num, "prompt3_integrated_synthesis.md", prompt3_output)
 
-                # Prompt 4: Sensitivity analysis (docs: YES, temp: LOW)
-                if hasattr(self, 'worker_display') and self.worker_display:
-                    self.worker_display.update(section_num, "Sensitivity")
-                else:
-                    thread_safe_print(f"Section {section_num} → Sensitivity analysis...")
-                prompt4_output = self.core_analyzer._section35_prompt4_sensitivity(company_name, prompt2_output)
-                self.file_manager.save_step_output(section_num, "prompt4_sensitivity.md", prompt4_output)
-
-                # Prompt 5: Peer benchmarking (docs: YES, temp: LOW)
+                # Prompt 4: Peer benchmarking (docs: YES, temp: LOW)
                 if hasattr(self, 'worker_display') and self.worker_display:
                     self.worker_display.update(section_num, "Benchmark")
                 else:
                     thread_safe_print(f"Section {section_num} → Peer benchmarking...")
-                prompt5_output = self.core_analyzer._section35_prompt5_peer_benchmark(company_name, prompt2_output)
-                self.file_manager.save_step_output(section_num, "prompt5_peer_benchmark.md", prompt5_output)
+                prompt4_output = self.core_analyzer._section35_prompt4_peer_benchmark(company_name, prompt2_output)
+                self.file_manager.save_step_output(section_num, "prompt4_peer_benchmark.md", prompt4_output)
 
-                # Prompt 6: Final assembly (docs: NO, temp: LOW)
+                # Prompt 5: Final assembly (docs: NO, temp: LOW)
                 if hasattr(self, 'worker_display') and self.worker_display:
                     self.worker_display.update(section_num, "Assembly")
                 else:
                     thread_safe_print(f"Section {section_num} → Final assembly...")
-                final_output = self.core_analyzer._section35_prompt6_final_assembly(
-                    company_name, prompt3_output, prompt4_output, prompt5_output
+                final_output = self.core_analyzer._section35_prompt5_final_assembly(
+                    company_name, prompt3_output, prompt4_output
                 )
-                self.file_manager.save_step_output(section_num, "prompt6_final_assembly.md", final_output)
+                self.file_manager.save_step_output(section_num, "prompt5_final_assembly.md", final_output)
                 self.file_manager.save_step_output(section_num, "step_4_final_section.md", final_output)
 
                 return f"Section {section_num} completed."

@@ -133,6 +133,7 @@ DRAFTING INSTRUCTIONS:
 4.  **Insightful Analysis:** Provide brief but insightful analysis connecting the data points. Look for non-obvious patterns and implications. Avoid long, speculative paragraphs.
 5.  **Footnote Discipline:** Use exactly 5 footnotes maximum. Select the 5 most important data points to cite. Use Markdown footnotes [^1], [^2], [^3], [^4], [^5] with definitions at the end of the section. No letters in footnotes.
 6.  **Tables:** Include at least one small, well-formatted Markdown table with the most critical data.
+7.  **NO NUMBERED SUB-SECTIONS:** Do NOT create numbered sub-sections within your output (e.g., "1.1", "1.2", "2.1"). Use bold headers for structure instead. The section numbering is handled separately.
 
 CRITICAL TABLE FORMATTING RULES:
 - NEVER create table cells with more than 200 characters
@@ -256,6 +257,7 @@ WHAT TO REMOVE:
 - Repetitive points
 - Obvious statements
 - Elaborate explanations of simple facts
+- ANY numbered sub-sections (e.g., "1.1", "1.2", "2.1", "4.1") - use bold headers instead
 
 CONSTRAINTS:
 - Maximum 500 words total
@@ -445,6 +447,8 @@ CRITICAL TABLE RULES:
 CRITICAL LIST RULES:
 - ALWAYS put a blank line before starting any list
 - Use consistent list markers throughout
+
+NO NUMBERED SUB-SECTIONS: Do NOT create or preserve numbered sub-sections (e.g., "1.1", "1.2", "2.1"). Use bold headers for structure instead.
 
 CRITICAL: Output ONLY the enhanced draft markdown content. Do not include any explanations, commentary, or descriptions of what you are doing. No preamble, no postamble - just the final enhanced draft."""
 
@@ -657,6 +661,7 @@ Rules:
 - Keep to ~500 words maximum
 - Every sentence should help an investor understand how this company actually competes
 - Do not add a separate "Analytical Notes" section - integrate fully
+- Do NOT use numbered sub-sections (e.g., "1.1", "1.2", "2.1") - use bold headers instead
 """
 
         # Use cached model if available, else fallback to pdf_parts
@@ -834,7 +839,7 @@ VALUATION DRIVERS: What is this pattern doing to the key value drivers (earnings
 
 NARRATIVE GAP: State what management has NOT explained. Identify the specific gap between their narrative and the data.
 
-Maximum 200 words. Direct prose. No bullet points. No reference to hypotheses or methodology. No explicit diligence questions - the analysis should make them obvious.
+Maximum 200 words. Direct prose. No bullet points. No numbered sub-sections (e.g., "1.1", "1.2"). No reference to hypotheses or methodology. No explicit diligence questions - the analysis should make them obvious.
 """
         # Use cached model if available, else fallback to pdf_parts
         if self.cached_model_medium_temp:
@@ -1280,6 +1285,7 @@ RULES:
 FORBIDDEN:
 - Tables of any kind
 - Bullet points
+- Numbered sub-sections (e.g., "1.1", "1.2", "2.1")
 - Accounting margins (gross margin %, EBITDA margin %)
 - Financial ratios (ROE, debt/equity)
 - Valuation commentary
@@ -1376,6 +1382,7 @@ RULES:
 FORBIDDEN - Remove if present:
 - All tables
 - Bullet points
+- Numbered sub-sections (e.g., "1.1", "1.2", "2.1")
 - "Investment Implications" section
 - Accounting margins (%, not absolute $)
 - Financial ratios

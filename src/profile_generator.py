@@ -1,6 +1,6 @@
 import os
 import glob
-from typing import Dict, List
+from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 from pathlib import Path
 import google.generativeai as genai
@@ -10,6 +10,35 @@ from .pdf_generator import generate_pdf_from_html
 from . import __version__
 import markdown
 from markdown.extensions import tables
+
+
+# Display groupings for PDF output
+# Each tuple: (group_name, [internal_section_numbers_in_display_order])
+GROUP_DEFINITIONS: List[Tuple[str, List[int]]] = [
+    ("Company Profile", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+    ("Strategy and Company Analysis", [14, 15, 16, 17, 18, 19, 13, 33, 35]),
+    ("Sellside Positioning", [20, 21, 22, 23, 24, 25, 26]),
+    ("Buyside Due Diligence", [27, 28, 29, 30, 31, 32]),
+    ("Data Book", [34]),
+]
+
+
+def get_display_number(internal_num: int) -> str:
+    """Convert internal section number to hierarchical display format.
+
+    Examples:
+        1 -> '1.1', 12 -> '1.12'
+        14 -> '2.1', 35 -> '2.9'
+        20 -> '3.1', 26 -> '3.7'
+        27 -> '4.1', 32 -> '4.6'
+        34 -> '5.1'
+    """
+    for group_idx, (_, section_list) in enumerate(GROUP_DEFINITIONS):
+        if internal_num in section_list:
+            position = section_list.index(internal_num) + 1
+            return f"{group_idx + 1}.{position}"
+    # Fallback for unknown sections
+    return str(internal_num)
 
 
 class ProfileGenerator:
@@ -74,8 +103,22 @@ class ProfileGenerator:
 
         # Look for section directories (section_01, section_02, etc.)
         section_dirs = glob.glob(f"{run_dir}/section_*")
-        # Sort numerically by section number
-        section_dirs = sorted(section_dirs, key=lambda x: int(os.path.basename(x).split('_')[1]))
+
+        # Build ordering from GROUP_DEFINITIONS to match cover page order
+        # Flatten the group definitions to get display order: [1,2,3,...12, 14,15,...19,13,33,35, 20,...26, 27,...32, 34]
+        display_order = []
+        for _, section_list in GROUP_DEFINITIONS:
+            display_order.extend(section_list)
+
+        # Create mapping from section number to its position in display order
+        section_order_map = {sec_num: idx for idx, sec_num in enumerate(display_order)}
+
+        # Sort section directories according to display order (unknown sections go to end)
+        def get_sort_key(path):
+            sec_num = int(os.path.basename(path).split('_')[1])
+            return section_order_map.get(sec_num, 999)
+
+        section_dirs = sorted(section_dirs, key=get_sort_key)
 
         for section_dir in section_dirs:
             section_num = int(os.path.basename(section_dir).split('_')[1])
@@ -153,8 +196,9 @@ class ProfileGenerator:
                 # Final table validation/normalization (single utility)
                 content = validate_and_fix_tables(content)
                     
-                # Add section with proper title and anchor
-                combined_markdown += f'\n\n<a id="section_{section_num}"></a>\n\n# Section {section_num}: {section_title}\n\n'
+                # Add section with proper title and anchor (display uses hierarchical numbering)
+                display_num = get_display_number(section_num)
+                combined_markdown += f'\n\n<a id="section_{section_num}"></a>\n\n# Section {display_num}: {section_title}\n\n'
                 combined_markdown += content
                 combined_markdown += f"\n\n---\n\n"
                 
@@ -333,10 +377,6 @@ class ProfileGenerator:
 </body>
 </html>"""
         
-        # Create ReportsPD2 directory if it doesn't exist
-        report_dir = Path("ReportsPD2")
-        report_dir.mkdir(parents=True, exist_ok=True)
-        
         # Convert run timestamp format from YYYY_MM_DD_HH_MM_SS to YYMMDD_HHMM
         # Example: 2025_09_05_16_23_45 -> 250905_1623
         timestamp_parts = self.run_timestamp.split('_')
@@ -350,21 +390,23 @@ class ProfileGenerator:
         else:
             # Fallback if timestamp format is unexpected
             compact_timestamp = datetime.now().strftime('%y%m%d_%H%M')
-        
-        # Save HTML file to ReportsPD2 with new naming format (include variant if specified)
+
+        # Save HTML file to run directory (include variant if specified)
+        run_dir = Path(f"runs/run_{self.run_timestamp}")
+        run_dir.mkdir(parents=True, exist_ok=True)
         variant_suffix = f"_{pdf_variant}" if pdf_variant else ""
         html_filename = f"{clean_company_name}{variant_suffix}_{compact_timestamp}.html"
-        html_path = report_dir / html_filename
+        html_path = run_dir / html_filename
         
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(full_html)
 
-        thread_safe_print(f"✓ HTML: {html_path.name}")
+        thread_safe_print(f"✓ HTML: {html_path}")
 
-        # Generate PDF from HTML
+        # Generate PDF from HTML (saves to ReportsPD2/)
         pdf_path = generate_pdf_from_html(str(html_path))
         if pdf_path:
-            thread_safe_print(f"✓ PDF: {Path(pdf_path).name}")
+            thread_safe_print(f"✓ PDF: {pdf_path}")
 
         return str(html_path)
     
@@ -387,16 +429,9 @@ class ProfileGenerator:
         }
         model_label = model_label_map.get(self.model_name, self.model_name)
 
-        # Group sections by category (like the real system does)
-        groups = {
-            "Company Profile": [s for s in processed_sections if 1 <= s[0] <= 13],
-            "Strategy and SWOT": [s for s in processed_sections if 14 <= s[0] <= 19],
-            "Sellside Positioning": [s for s in processed_sections if 20 <= s[0] <= 26],
-            "Buyside Due Diligence": [s for s in processed_sections if 27 <= s[0] <= 32],
-            "Financial Pattern Analysis": [s for s in processed_sections if s[0] == 33],
-            "Data Book": [s for s in processed_sections if s[0] == 34],
-            "Unit Economics Analysis": [s for s in processed_sections if s[0] == 35]
-        }
+        # Build set of available section numbers for quick lookup
+        available_sections = {s[0] for s in processed_sections}
+        section_title_map = {s[0]: s[1] for s in processed_sections}
 
         cover_html = f'''
         <div class="cover-page">
@@ -406,16 +441,21 @@ class ProfileGenerator:
                 Profile generated via {model_label} on {generation_date}<br>
                 Under MIT License
             </div>
-            
+
             <div class="toc-section">
                 <h2>Table of Contents</h2>
         '''
-        
-        for group_name, group_sections in groups.items():
-            if group_sections:
-                cover_html += f'<div class="toc-group"><strong>{group_name}</strong></div>\n'
-                for section_num, section_title in sorted(group_sections):
-                    cover_html += f'<div class="toc-item"><a href="#section_{section_num}">Section {section_num}: {section_title}</a></div>\n'
+
+        # Use GROUP_DEFINITIONS for consistent ordering and hierarchical display numbers
+        for group_idx, (group_name, section_list) in enumerate(GROUP_DEFINITIONS):
+            # Filter to sections that are actually present in this report
+            present_sections = [s for s in section_list if s in available_sections]
+            if present_sections:
+                cover_html += f'<div class="toc-group"><strong>{group_idx + 1}. {group_name}</strong></div>\n'
+                for section_num in present_sections:
+                    section_title = section_title_map.get(section_num, f"Section {section_num}")
+                    display_num = get_display_number(section_num)
+                    cover_html += f'<div class="toc-item"><a href="#section_{section_num}">{display_num}: {section_title}</a></div>\n'
                 cover_html += "<br>\n"
         
         cover_html += '''

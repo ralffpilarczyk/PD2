@@ -87,6 +87,7 @@ class DeepResearcher:
         self.company_name = company_name
         self.workers = workers
         self.run_dir = run_dir
+        print(f"  DeepResearcher initialized with workers={self.workers}")
         api_key = os.environ.get('GEMINI_API_KEY')
         self.client = genai.Client(api_key=api_key)
 
@@ -140,6 +141,7 @@ class DeepResearcher:
     def run_all_sections(self, sections: list, display: 'ResearchDisplay' = None) -> dict:
         """Run research on all sections with parallel workers."""
         results = {}
+        print(f"  Starting ThreadPoolExecutor with max_workers={self.workers}")
 
         with ThreadPoolExecutor(max_workers=self.workers) as executor:
             futures = {

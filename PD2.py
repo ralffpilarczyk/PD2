@@ -737,34 +737,27 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
 
 
 # Section Groups Configuration
+# Internal section numbers are preserved (1-35), but displayed hierarchically in UI and PDF
 SECTION_GROUPS = {
     "Company Profile": {
-        "sections": list(range(1, 14)),  # 1-13 (now includes Deep Dive Discoveries)
-        "prompt": "1. Company profile (sections 1-13) (y/n): "
+        "sections": list(range(1, 13)),  # 1-12
+        "prompt": "1. Company Profile (1.1-1.12) (y/n): "
     },
-    "Strategy and SWOT": {
-        "sections": list(range(14, 20)),  # 14-19
-        "prompt": "2. Strategy and SWOT (sections 14-19) (y/n): "
+    "Strategy and Company Analysis": {
+        "sections": [14, 15, 16, 17, 18, 19, 13, 33, 35],  # Strategy, SWOT, Deep Dive, Patterns, UEA
+        "prompt": "2. Strategy and Company Analysis (2.1-2.9) (y/n): "
     },
     "Sellside Positioning": {
         "sections": list(range(20, 27)),  # 20-26
-        "prompt": "3. Sellside Positioning (sections 20-26) (y/n): "
+        "prompt": "3. Sellside Positioning (3.1-3.7) (y/n): "
     },
     "Buyside Due Diligence": {
         "sections": list(range(27, 33)),  # 27-32
-        "prompt": "4. Buyside Due Diligence (sections 27-32) (y/n): "
-    },
-    "Financial Pattern Analysis": {
-        "sections": [33],
-        "prompt": "5. Financial Pattern Analysis (section 33) (y/n): "
+        "prompt": "4. Buyside Due Diligence (4.1-4.6) (y/n): "
     },
     "Data Book": {
         "sections": [34],
-        "prompt": "6. Data Book (section 34) (y/n): "
-    },
-    "Unit Economics Analysis": {
-        "sections": [35],
-        "prompt": "7. Unit Economics Analysis (section 35) (y/n): "
+        "prompt": "5. Data Book (5.1) (y/n): "
     }
 }
 

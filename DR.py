@@ -139,8 +139,8 @@ def main():
     parser = argparse.ArgumentParser(description='Deep Research - Web-based company research')
     parser.add_argument('--resume', type=str, metavar='RUN_DIR',
                         help='Resume an incomplete run from the specified directory')
-    parser.add_argument('--workers', type=int, choices=[1, 2], default=None,
-                        help='Number of parallel workers (1-2, default: prompt)')
+    parser.add_argument('--workers', type=int, choices=[1, 2, 3], default=None,
+                        help='Number of parallel workers (1-3, default: prompt)')
     args = parser.parse_args()
 
     research_sections = get_research_sections()
@@ -181,8 +181,8 @@ def main():
                 print(f"\n{CYAN}{CHECK}{RESET} Workers: {workers}\n")
             else:
                 print("\nResearch workers (parallel queries):")
-                print("  1-2 workers (default 2)")
-                workers_choice = prompt_single_digit("Choose workers [1-2] (default 2): ", valid_digits="12", default_digit="2")
+                print("  1-3 workers (default 2)")
+                workers_choice = prompt_single_digit("Choose workers [1-3] (default 2): ", valid_digits="123", default_digit="2")
                 workers = int(workers_choice)
                 print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
 
@@ -238,8 +238,8 @@ def main():
             print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
         else:
             print("Research workers (parallel queries):")
-            print("  1-2 workers (default 2)")
-            workers_choice = prompt_single_digit("Choose workers [1-2] (default 2): ", valid_digits="12", default_digit="2")
+            print("  1-3 workers (default 2)")
+            workers_choice = prompt_single_digit("Choose workers [1-3] (default 2): ", valid_digits="123", default_digit="2")
             workers = int(workers_choice)
             print(f"{CYAN}{CHECK}{RESET} Workers: {workers}\n")
 

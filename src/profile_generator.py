@@ -240,7 +240,11 @@ class ProfileGenerator:
         
         # Table structure fixes are handled centrally by validate_and_fix_tables
         import re
-        
+
+        # Remove section headers with internal numbering (e.g., "# Section 33:", "## Section 34:")
+        # These conflict with the display numbering added by profile_generator
+        content = re.sub(r'^#{1,2}\s*Section\s+\d+\s*:.*$\n*', '', content, flags=re.MULTILINE | re.IGNORECASE)
+
         # Remove duplicate section titles that LLM sometimes generates
         # Look for patterns like "## SECTION 1: Title" or "# SECTION 1: Title" at the start
         lines = content.split('\n')

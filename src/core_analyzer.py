@@ -1140,7 +1140,7 @@ Maximum 200 words. Direct prose. No bullet points. No numbered sub-sections (e.g
         if worker_display:
             worker_display.update(33, "Final")
 
-        final_output = "## Section 33: Financial Pattern Analysis\n\n"
+        final_output = ""
 
         for pattern_idx in range(3):
             pattern = patterns[pattern_idx]

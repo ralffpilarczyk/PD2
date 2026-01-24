@@ -61,20 +61,35 @@ You provide insightful, direct, and data-driven advice. You think like an invest
         self.last_retrieval_tokens = 0
 
         # Use RAG to retrieve relevant context
+        quality_metrics = None
         if self.rag_manager and self.rag_manager.collection.count() > 0:
-            context, chunk_count, chunks = self.rag_manager.build_context(user_message)
+            context, chunk_count, chunks, quality_metrics = self.rag_manager.build_context(user_message)
             if context:
                 source_context = context
                 self.last_retrieval_chunks = chunk_count
                 self.last_retrieval_tokens = len(context) // 4
 
         # Build system prompt with source context if available
-        if source_context:
+        if source_context and quality_metrics:
+            # Determine retrieval confidence status
+            if quality_metrics.get("used_fallback"):
+                retrieval_status = "LOW CONFIDENCE: Limited high-quality matches found. Some excerpts may be tangentially related."
+            elif quality_metrics.get("avg_similarity", 0) < 0.4:
+                retrieval_status = "MODERATE CONFIDENCE: Relevance scores are moderate. Cross-check conclusions against multiple excerpts."
+            else:
+                retrieval_status = "HIGH CONFIDENCE: Excerpts are highly relevant to the query."
+
+            high_conf = quality_metrics.get("high_confidence_chunks", 0)
+            total = quality_metrics.get("total_chunks", 0)
+
             full_system = f"""{self.system_prompt}
 
 --- RELEVANT SOURCE EXCERPTS ---
 
-The following excerpts from source documents are relevant to the user's question. Use this information to inform your response.
+RETRIEVAL STATUS: {retrieval_status}
+Retrieved: {total} excerpts ({high_conf} high-confidence)
+
+The following excerpts from source documents are relevant to the user's question.
 
 {source_context}
 
@@ -83,7 +98,8 @@ The following excerpts from source documents are relevant to the user's question
 When answering:
 1. Prioritize information from the source excerpts when relevant
 2. Cite which source the information comes from
-3. If the excerpts don't fully address the question, supplement with your general knowledge and note when doing so"""
+3. If the retrieval status indicates low confidence, be explicit about uncertainty
+4. If the excerpts don't fully address the question, state what information is missing and supplement with your general knowledge"""
         else:
             full_system = self.system_prompt
 

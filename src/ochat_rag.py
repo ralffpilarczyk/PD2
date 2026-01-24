@@ -11,14 +11,14 @@ class RAGManager:
     """Handles chunking, embedding, storage, and retrieval for RAG"""
 
     # Chunking parameters
-    CHUNK_SIZE = 500  # tokens (approx 4 chars per token)
-    CHUNK_OVERLAP = 100  # 20% overlap
+    CHUNK_SIZE = 1024  # tokens (approx 4 chars per token)
+    CHUNK_OVERLAP = 150  # ~15% overlap
     CHARS_PER_TOKEN = 4
 
     # Retrieval parameters
-    MIN_CHUNKS = 5
-    MAX_CHUNKS = 15
-    SCORE_THRESHOLD = 0.3  # ChromaDB returns distances, lower = better
+    MIN_CHUNKS = 8
+    MAX_CHUNKS = 25
+    MAX_DISTANCE = 0.5  # ChromaDB distance threshold, lower = more similar
 
     # Embedding model
     EMBEDDING_MODEL = "nomic-embed-text"
@@ -79,9 +79,9 @@ class RAGManager:
                 search_start = end - (chunk_chars // 5)
                 search_region = text[search_start:end + 100]
 
-                # Find best break point
+                # Find best break point (prefer markdown headers, then paragraphs, then sentences)
                 best_break = None
-                for pattern in ['\n\n', '.\n', '. ', '\n']:
+                for pattern in ['\n## ', '\n### ', '\n\n', '.\n', '. ', '\n']:
                     pos = search_region.rfind(pattern)
                     if pos != -1:
                         best_break = search_start + pos + len(pattern)
@@ -107,38 +107,43 @@ class RAGManager:
 
         return chunks
 
-    def embed_text(self, text: str) -> List[float]:
+    def embed_text(self, text: str, is_query: bool = False) -> List[float]:
         """Get embedding for a text using Ollama
 
         Args:
             text: Text to embed
+            is_query: True for queries, False for documents
 
         Returns:
             Embedding vector
         """
+        prefix = "search_query: " if is_query else "search_document: "
+        prefixed_text = prefix + text
+
         response = requests.post(
             f"{self.OLLAMA_BASE_URL}/api/embeddings",
             json={
                 "model": self.EMBEDDING_MODEL,
-                "prompt": text
+                "prompt": prefixed_text
             },
             timeout=60
         )
         response.raise_for_status()
         return response.json()["embedding"]
 
-    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+    def embed_texts(self, texts: List[str], is_query: bool = False) -> List[List[float]]:
         """Get embeddings for multiple texts
 
         Args:
             texts: List of texts to embed
+            is_query: True for queries, False for documents
 
         Returns:
             List of embedding vectors
         """
         embeddings = []
         for text in texts:
-            embedding = self.embed_text(text)
+            embedding = self.embed_text(text, is_query=is_query)
             embeddings.append(embedding)
         return embeddings
 
@@ -213,7 +218,7 @@ class RAGManager:
             return []
 
         # Embed the query
-        query_embedding = self.embed_text(query)
+        query_embedding = self.embed_text(query, is_query=True)
 
         # Query ChromaDB
         results = self.collection.query(
@@ -241,7 +246,7 @@ class RAGManager:
                 })
 
         # Filter by score threshold and minimum chunks
-        good_chunks = [c for c in chunks if c["similarity"] >= (1 - self.SCORE_THRESHOLD)]
+        good_chunks = [c for c in chunks if c["similarity"] >= (1 - self.MAX_DISTANCE)]
 
         # Ensure minimum chunks
         if len(good_chunks) < self.MIN_CHUNKS:
@@ -249,19 +254,33 @@ class RAGManager:
 
         return good_chunks
 
-    def build_context(self, query: str) -> Tuple[str, int, List[Dict]]:
+    def build_context(self, query: str) -> Tuple[str, int, List[Dict], Dict]:
         """Build context string from retrieved chunks
 
         Args:
             query: User's question
 
         Returns:
-            Tuple of (context_string, chunk_count, chunk_details)
+            Tuple of (context_string, chunk_count, chunk_details, quality_metrics)
         """
         chunks = self.retrieve(query)
 
         if not chunks:
-            return "", 0, []
+            return "", 0, [], {"status": "no_documents"}
+
+        # Calculate quality metrics
+        avg_similarity = sum(c["similarity"] for c in chunks) / len(chunks)
+        high_confidence_count = sum(1 for c in chunks if c["similarity"] >= 0.6)
+        similarity_threshold = 1 - self.MAX_DISTANCE
+        used_fallback = any(c["similarity"] < similarity_threshold for c in chunks)
+
+        quality_metrics = {
+            "status": "ok",
+            "avg_similarity": round(avg_similarity, 2),
+            "high_confidence_chunks": high_confidence_count,
+            "total_chunks": len(chunks),
+            "used_fallback": used_fallback
+        }
 
         # Group chunks by source file for better organization
         by_source = {}
@@ -284,10 +303,7 @@ class RAGManager:
 
         context = "\n".join(context_parts)
 
-        # Estimate tokens
-        token_estimate = len(context) // self.CHARS_PER_TOKEN
-
-        return context, len(chunks), chunks
+        return context, len(chunks), chunks, quality_metrics
 
     def get_index_stats(self) -> Dict:
         """Get statistics about the index

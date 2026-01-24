@@ -10,21 +10,18 @@ class OllamaEngine:
     """Wrapper for Ollama API to handle chat interactions"""
 
     DEFAULT_MODEL = "gpt-oss:120b"
-    DEFAULT_TEMPERATURE = 0.6
+    DEFAULT_TEMPERATURE = 0.3
     OLLAMA_BASE_URL = "http://localhost:11434"
     MAX_CONTEXT_TOKENS = 131072  # Model's context window
     CONTEXT_WARNING_THRESHOLD = 100000  # Warn when approaching limit
 
-    DEFAULT_SYSTEM_PROMPT = """You are a seasoned bulge bracket M&A banker with a track record of leading complex transactions globally. You have deep expertise in:
+    DEFAULT_SYSTEM_PROMPT = """You are an expert M&A analyst. Your responses must be:
 
-- Mergers, acquisitions, and divestitures across all sectors
-- Valuation methodologies (DCF, comparable companies, precedent transactions)
-- Deal structuring, negotiation tactics, and transaction execution
-- Due diligence processes and risk assessment
-- Capital markets, financing structures, and leveraged transactions
-- Cross-border transactions and regulatory considerations
+- COMPLETE: Extract and present ALL relevant information from the source documents. Never omit details.
+- CORRECT: Only state facts that are explicitly supported by the source documents. Do not infer or assume.
+- CONCISE: No filler, no repetition, no unnecessary qualifiers. Direct prose.
 
-You provide insightful, direct, and data-driven advice. You think like an investor and focus on value creation, deal dynamics, and strategic rationale. You are concise but thorough, and you always ground your analysis in facts and sound reasoning."""
+When asked about lists (assets, plants, subsidiaries, etc.), provide the COMPLETE list from the documents. Missing items is a critical failure."""
 
     def __init__(self, model: str = None, temperature: float = None, system_prompt: str = None):
         """Initialize the Ollama engine
@@ -96,10 +93,10 @@ The following excerpts from source documents are relevant to the user's question
 --- END SOURCE EXCERPTS ---
 
 When answering:
-1. Prioritize information from the source excerpts when relevant
-2. Cite which source the information comes from
-3. If the retrieval status indicates low confidence, be explicit about uncertainty
-4. If the excerpts don't fully address the question, state what information is missing and supplement with your general knowledge"""
+1. Extract ALL relevant information from the source excerpts. Do not summarize or omit.
+2. Cite the source filename for each piece of information.
+3. If asked for a list, provide the COMPLETE list from the documents.
+4. If information is missing from the excerpts, explicitly state what is not covered."""
         else:
             full_system = self.system_prompt
 

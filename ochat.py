@@ -25,7 +25,7 @@ from src.ochat_rag import RAGManager
 
 console = Console()
 
-__version__ = "1.0"
+__version__ = "1.1"
 
 REPORTS_DIR = Path("ReportsOChat")
 

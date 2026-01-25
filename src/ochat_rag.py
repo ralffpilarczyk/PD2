@@ -107,6 +107,18 @@ class RAGManager:
 
         return chunks
 
+    def _sanitize_for_embedding(self, text: str) -> str:
+        """Sanitize text for embedding model compatibility
+
+        Long sequences of repeated characters (especially dashes in markdown
+        tables) can crash some embedding models.
+        """
+        # Replace long dash sequences with shorter ones
+        text = re.sub(r'-{10,}', '---', text)
+        # Replace long pipe+dash table separators
+        text = re.sub(r'(\|\s*---\s*){5,}', '| --- | --- | --- | --- |', text)
+        return text
+
     def embed_text(self, text: str, is_query: bool = False) -> List[float]:
         """Get embedding for a text using Ollama
 
@@ -117,6 +129,9 @@ class RAGManager:
         Returns:
             Embedding vector
         """
+        # Sanitize before embedding
+        text = self._sanitize_for_embedding(text)
+
         prefix = "search_query: " if is_query else "search_document: "
         prefixed_text = prefix + text
 

@@ -1,6 +1,6 @@
 # OChat Technical Overview
 
-Version 1.0
+Version 1.1
 
 ---
 
@@ -364,4 +364,5 @@ requests                # Ollama API calls
 
 | Version | Changes |
 |---------|---------|
+| 1.1 | Fix embedding crash on long markdown table separators |
 | 1.0 | Initial release with RAG, Rich UI, session management |

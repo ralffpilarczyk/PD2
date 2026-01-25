@@ -4,7 +4,7 @@ Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.2): Comprehensive 34-section company profiles with deep analytical insights
 - **OPP** (OnePageProfile v1.4): Concise one-page profiles for quick M&A evaluation
 - **DR** (Deep Research 1.0): Standalone web research using Google's Deep Research Agent
-- **OChat** (OChat 1.0): Interactive chatbot with RAG for document Q&A
+- **OChat** (OChat 1.1): Interactive chatbot with RAG for document Q&A
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ DR researches 12 company profile topics from PD2 methodology:
 - 10-second polling interval, 60-minute timeout per section
 - Separate SDK (google-genai) from PD2/OPP (google-generativeai)
 
-## OChat 1.0
+## OChat 1.1
 
 Interactive chatbot with RAG (Retrieval Augmented Generation) for document-based Q&A using local Ollama models.
 

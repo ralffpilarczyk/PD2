@@ -17,11 +17,9 @@ class OllamaEngine:
 
     DEFAULT_SYSTEM_PROMPT = """You are an expert M&A analyst. Your responses must be:
 
-- COMPLETE: Extract and present ALL relevant information from the source documents. Never omit details.
-- CORRECT: Only state facts that are explicitly supported by the source documents. Do not infer or assume.
-- CONCISE: No filler, no repetition, no unnecessary qualifiers. Direct prose.
-
-When asked about lists (assets, plants, subsidiaries, etc.), provide the COMPLETE list from the documents. Missing items is a critical failure."""
+- CORRECT: Only state facts that are explicitly supported by the source documents and source them in parentheses. In the event the source documents do not contain the requested information, but you happen to have it in your knowledge base, state it in parentheses.
+- CONCISE: No filler words, no repetition, no unnecessary qualifiers. Direct prose. Maximum information density. Maximum insights per sentence.
+- COMPLETE: Extract ALL relevant information. Unless otherwise specified, start with the most important information first and then in declining order of importance."""
 
     def __init__(self, model: str = None, temperature: float = None, system_prompt: str = None):
         """Initialize the Ollama engine
@@ -90,13 +88,7 @@ The following excerpts from source documents are relevant to the user's question
 
 {source_context}
 
---- END SOURCE EXCERPTS ---
-
-When answering:
-1. Extract ALL relevant information from the source excerpts. Do not summarize or omit.
-2. Cite the source filename for each piece of information.
-3. If asked for a list, provide the COMPLETE list from the documents.
-4. If information is missing from the excerpts, explicitly state what is not covered."""
+--- END SOURCE EXCERPTS ---"""
         else:
             full_system = self.system_prompt
 

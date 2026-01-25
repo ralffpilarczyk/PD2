@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 """
 OChat - Ollama-based Chat Application
-A NotebookLM-style chatbot with project organization, note-saving, and RAG capabilities.
-
-Features:
-- Project-based organization
-- PDF and Markdown source support
-- RAG (Retrieval Augmented Generation) for focused context
-- Save Q&A exchanges as notes
+Simple chatbot with RAG capabilities. Each session is saved automatically.
 
 Usage:
     python ochat.py
@@ -15,16 +9,24 @@ Usage:
 
 import sys
 import os
+from pathlib import Path
+from datetime import datetime
+
+from rich.console import Console
+from rich.markdown import Markdown
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.ochat_engine import OllamaEngine
-from src.ochat_project import ProjectManager
 from src.ochat_sources import SourceManager, select_source_files
 from src.ochat_rag import RAGManager
 
-__version__ = "3.0"
+console = Console()
+
+__version__ = "1.0"
+
+REPORTS_DIR = Path("ReportsOChat")
 
 
 def clear_screen():
@@ -32,7 +34,16 @@ def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def print_welcome():
+def create_session_folder() -> Path:
+    """Create a new session folder with timestamp"""
+    REPORTS_DIR.mkdir(exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_path = REPORTS_DIR / f"ochat_{timestamp}"
+    session_path.mkdir(exist_ok=True)
+    return session_path
+
+
+def print_welcome(session_path: Path):
     """Print welcome screen with title and commands"""
     clear_screen()
     print()
@@ -43,6 +54,8 @@ def print_welcome():
     print()
     print("=" * 60)
     print()
+    print(f"Session: {session_path.name}")
+    print()
     print("Commands:")
     print()
     print("  Sources:")
@@ -51,18 +64,10 @@ def print_welcome():
     print("    /reindex       - Rebuild RAG index")
     print("    /remove <file> - Remove a source file")
     print()
-    print("  Notes:")
-    print("    /save [title]  - Save the last Q&A as a note")
-    print("    /notes         - List saved notes")
-    print("    /read <note>   - Read a note")
-    print("    /delete <note> - Delete a note")
-    print()
     print("  Session:")
-    print("    /info          - Show project and RAG stats")
-    print("    /clear         - Clear conversation history")
-    print("    /switch        - Switch project")
+    print("    /clear         - Save and start new conversation")
     print("    /help          - Show commands")
-    print("    /exit          - Exit")
+    print("    /quit           - Save and exit")
     print()
     print("=" * 60)
     print()
@@ -79,41 +84,30 @@ def print_help():
     print("    /reindex       - Rebuild RAG index")
     print("    /remove <file> - Remove a source file")
     print()
-    print("  Notes:")
-    print("    /save [title]  - Save the last Q&A as a note")
-    print("    /notes         - List saved notes")
-    print("    /read <note>   - Read a note")
-    print("    /delete <note> - Delete a note")
-    print()
     print("  Session:")
-    print("    /info          - Show project and RAG stats")
-    print("    /clear         - Clear conversation history")
-    print("    /switch        - Switch project")
+    print("    /clear         - Save and start new conversation")
     print("    /help          - Show commands")
-    print("    /exit          - Exit")
+    print("    /quit           - Save and exit")
     print()
 
 
 def check_system() -> bool:
-    """Check system requirements (compact output)"""
-    # Check Ollama
+    """Check system requirements"""
     if not OllamaEngine.check_ollama_running():
         print("[ERROR] Ollama is not running. Start it with: ollama serve")
         return False
 
-    # Check chat model availability
     models = OllamaEngine.list_models()
     target_model = OllamaEngine.DEFAULT_MODEL
 
     if target_model not in models:
         if not models:
-            print(f"[ERROR] No models available in Ollama")
+            print("[ERROR] No models available in Ollama")
             return False
         print(f"[WARNING] Model {target_model} not found. Available: {', '.join(models)}")
 
     print(f"[OK] Chat model: {target_model}")
 
-    # Check embedding model
     if RAGManager.check_embedding_model():
         print(f"[OK] Embedding model: {RAGManager.EMBEDDING_MODEL}")
     else:
@@ -124,178 +118,45 @@ def check_system() -> bool:
     return True
 
 
-def select_or_create_project(pm: ProjectManager, first_run: bool = True) -> bool:
-    """Project selection or creation flow"""
-    if not first_run:
-        clear_screen()
-        print()
-        print("=" * 60)
-        print("  Project Selection")
-        print("=" * 60)
-        print()
+def save_conversation(session_path: Path, engine: OllamaEngine):
+    """Save conversation to markdown file"""
+    if engine.get_conversation_length() == 0:
+        return
 
-    projects = pm.list_projects()
+    content = f"# OChat Conversation\nDate: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
 
-    if projects:
-        print("Existing projects:")
-        print()
-        for i, proj in enumerate(projects, 1):
-            note_str = f"{proj['note_count']} notes" if proj['note_count'] != 1 else "1 note"
-            print(f"  {i}. {proj['name']} ({note_str})")
-        print()
-        print("  N - Create new project")
-        print("  Q - Quit")
-        print()
+    history = engine.conversation_history
+    for i in range(0, len(history), 2):
+        if i + 1 < len(history):
+            user_msg = history[i]["content"]
+            assistant_msg = history[i + 1]["content"]
+            content += f"---\n\n## User\n{user_msg}\n\n## OChat\n{assistant_msg}\n\n"
 
-        while True:
-            choice = input("Select: ").strip()
+    conv_file = session_path / "conversation.md"
+    with open(conv_file, "w", encoding="utf-8") as f:
+        f.write(content)
 
-            if choice.upper() == 'Q':
-                return False
-
-            if choice.upper() == 'N':
-                return create_new_project(pm)
-
-            try:
-                idx = int(choice) - 1
-                if 0 <= idx < len(projects):
-                    project_name = projects[idx]['name']
-                    if pm.open_project(project_name):
-                        return True
-                    else:
-                        print("Failed to open project")
-                else:
-                    print("Invalid selection")
-            except ValueError:
-                print("Enter a number, N, or Q")
-
-    else:
-        print("No existing projects. Let's create one.")
-        print()
-        return create_new_project(pm)
+    print(f"[Saved: {conv_file}]")
 
 
-def create_new_project(pm: ProjectManager) -> bool:
-    """Create a new project"""
-    while True:
-        name = input("Project name (or 'cancel'): ").strip()
-
-        if name.lower() == 'cancel':
-            return False
-
-        if not name:
-            print("Name cannot be empty")
-            continue
-
-        if pm.create_project(name):
-            return True
-        else:
-            print(f"'{name}' already exists. Choose a different name.")
-
-
-def setup_rag(engine: OllamaEngine, pm: ProjectManager) -> SourceManager:
-    """Setup RAG manager and connect to engine"""
-    sm = pm.get_source_manager()
-    if sm:
-        # Connect RAG manager to engine
-        engine.set_rag_manager(sm.rag)
-    return sm
-
-
-def enter_chat(engine: OllamaEngine, pm: ProjectManager, sm: SourceManager):
-    """Enter chat mode with clear screen and project header"""
-    clear_screen()
-    print()
-    print("=" * 60)
-    print(f"  Project: {pm.current_project}")
-
-    # Show RAG stats
-    if sm:
-        stats = sm.get_rag_stats()
-        source_count = sm.get_source_count()
-        if stats['total_chunks'] > 0:
-            print(f"  Sources: {source_count} files, {stats['total_chunks']} chunks indexed")
-        elif source_count > 0:
-            print(f"  Sources: {source_count} files (not indexed - run /reindex)")
-        else:
-            print("  Sources: None (use /upload to add)")
-
-    print("=" * 60)
-    print()
-    print("Type your question, or /help for commands.")
-    print()
-
-
-def chat_loop(engine: OllamaEngine, pm: ProjectManager):
-    """Main chat loop"""
-    # Setup RAG
-    sm = setup_rag(engine, pm)
-
-    enter_chat(engine, pm, sm)
-
-    while True:
-        try:
-            user_input = input("You: ").strip()
-        except EOFError:
-            break
-        except KeyboardInterrupt:
-            print("\n")
-            continue
-
-        if not user_input:
-            continue
-
-        # Handle commands
-        if user_input.startswith('/'):
-            command_result = handle_command(user_input, engine, pm, sm)
-            if command_result == 'exit':
-                break
-            elif command_result == 'switch':
-                return 'switch'
-            continue
-
-        # Send to AI
-        print()
-        print("Assistant: ", end="", flush=True)
-
-        try:
-            response = engine.chat(user_input, stream=True)
-            print()
-
-            # Show retrieval stats
-            stats = engine.get_last_retrieval_stats()
-            if stats['chunks'] > 0:
-                print(f"  [Retrieved {stats['chunks']} chunks, ~{stats['tokens']} tokens]")
-
-        except ConnectionError as e:
-            print(f"\n[ERROR] {e}")
-            continue
-        except Exception as e:
-            print(f"\n[ERROR] Failed to get response: {e}")
-            continue
-
-        print()
-
-
-def handle_command(command: str, engine: OllamaEngine, pm: ProjectManager, sm: SourceManager) -> str:
+def handle_command(command: str, engine: OllamaEngine, sm: SourceManager, session_path: Path) -> str:
     """Handle a slash command
 
     Returns:
-        'exit', 'switch', or None
+        'exit', 'clear', or None
     """
     parts = command.split(maxsplit=1)
     cmd = parts[0].lower()
     arg = parts[1] if len(parts) > 1 else None
 
-    # Exit commands
-    if cmd == '/exit' or cmd == '/quit':
+    if cmd == '/exit' or cmd == '/quit' or cmd == '/quit':
+        save_conversation(session_path, engine)
         print("\nGoodbye!")
         return 'exit'
 
     elif cmd == '/help':
         print_help()
 
-    # Source commands
     elif cmd == '/upload' or cmd == '/add':
         print("\nOpening file selector...")
         files = select_source_files()
@@ -341,79 +202,9 @@ def handle_command(command: str, engine: OllamaEngine, pm: ProjectManager, sm: S
             status = "[OK]" if success else "[ERROR]"
             print(f"\n{status} {msg}\n")
 
-    # Note commands
-    elif cmd == '/save':
-        exchange = engine.get_last_exchange()
-        if exchange:
-            title = arg if arg else None
-            filename = pm.save_note(exchange['question'], exchange['response'], title)
-            print(f"\nSaved: {filename}\n")
-        else:
-            print("\nNo conversation to save yet.\n")
-
-    elif cmd == '/notes':
-        notes = pm.list_notes()
-        if notes:
-            print(f"\nSaved notes ({len(notes)}):")
-            for i, note in enumerate(notes, 1):
-                print(f"  {i}. {note['title'][:50]}")
-                print(f"     {note['filename']}")
-            print()
-        else:
-            print("\nNo saved notes yet.\n")
-
-    elif cmd == '/read':
-        if not arg:
-            print("\nUsage: /read <filename>\n")
-        else:
-            content = pm.read_note(arg)
-            if content:
-                print()
-                print("-" * 40)
-                print(content)
-                print("-" * 40)
-                print()
-            else:
-                print(f"\nNote not found: {arg}\n")
-
-    elif cmd == '/delete':
-        if not arg:
-            print("\nUsage: /delete <filename>\n")
-        else:
-            if pm.delete_note(arg):
-                print(f"\nDeleted: {arg}\n")
-            else:
-                print(f"\nNote not found: {arg}\n")
-
-    # Session commands
-    elif cmd == '/info':
-        info = pm.get_project_info()
-        if info:
-            print(f"\nProject: {info['name']}")
-            print(f"Created: {info['created'][:10]}")
-            print(f"Notes: {info['note_count']}")
-
-            # Source info
-            source_count = sm.get_source_count() if sm else 0
-            print(f"Sources: {source_count} files")
-
-            # RAG stats
-            stats = sm.get_rag_stats()
-            print(f"RAG chunks: {stats['total_chunks']}")
-
-            # Last retrieval
-            retrieval = engine.get_last_retrieval_stats()
-            if retrieval['chunks'] > 0:
-                print(f"Last retrieval: {retrieval['chunks']} chunks, ~{retrieval['tokens']} tokens")
-
-            print(f"Exchanges: {engine.get_conversation_length()}\n")
-
     elif cmd == '/clear':
-        engine.clear_history()
-        print("\nConversation history cleared.\n")
-
-    elif cmd == '/switch':
-        return 'switch'
+        save_conversation(session_path, engine)
+        return 'clear'
 
     else:
         print(f"\nUnknown command: {cmd}")
@@ -422,40 +213,95 @@ def handle_command(command: str, engine: OllamaEngine, pm: ProjectManager, sm: S
     return None
 
 
+def chat_loop(engine: OllamaEngine, sm: SourceManager, session_path: Path) -> str:
+    """Main chat loop
+
+    Returns:
+        'exit' or 'clear'
+    """
+    print("Type your question, or /help for commands.")
+    print()
+
+    while True:
+        try:
+            console.print("[cyan]You: [/cyan]", end="")
+            user_input = input().strip()
+        except EOFError:
+            return 'exit'
+        except KeyboardInterrupt:
+            print("\n")
+            continue
+
+        if not user_input:
+            continue
+
+        if user_input.startswith('/'):
+            result = handle_command(user_input, engine, sm, session_path)
+            if result:
+                return result
+            continue
+
+        console.print()
+
+        try:
+            # Show thinking indicator
+            with console.status("Thinking..."):
+                response = engine.chat(user_input, stream=False)
+
+            # Display response with formatted markdown
+            console.print("OChat:")
+            console.print(Markdown(response))
+
+            stats = engine.get_last_retrieval_stats()
+            if stats['chunks'] > 0:
+                console.print(f"[dim][Retrieved {stats['chunks']} chunks, ~{stats['tokens']} tokens][/dim]")
+
+        except ConnectionError as e:
+            console.print(f"[red][ERROR] {e}[/red]")
+            continue
+        except Exception as e:
+            console.print(f"[red][ERROR] Failed to get response: {e}[/red]")
+            continue
+
+        console.print()
+        console.rule(style="dim")
+
+
 def main():
     """Main entry point"""
-    # Show welcome screen
-    print_welcome()
+    # Create initial session
+    session_path = create_session_folder()
+
+    # Show welcome
+    print_welcome(session_path)
 
     # System check
     if not check_system():
         print("\nFix the issues above and try again.")
         sys.exit(1)
 
-    # Initialize project manager
-    pm = ProjectManager()
-    engine = None
-    first_run = True
-
-    # Main application loop
+    # Main loop
     while True:
-        # Project selection
-        if not select_or_create_project(pm, first_run=first_run):
-            print("\nGoodbye!")
-            break
-
-        first_run = False
-
-        # Initialize chat engine (fresh for each project session)
+        # Initialize engine and source manager for this session
         engine = OllamaEngine()
+        sm = SourceManager(session_path)
+        engine.set_rag_manager(sm.rag)
 
-        # Enter chat loop
-        result = chat_loop(engine, pm)
+        # Chat
+        result = chat_loop(engine, sm, session_path)
 
-        if result == 'switch':
-            continue
-        else:
+        if result == 'exit':
             break
+        elif result == 'clear':
+            # Create new session
+            session_path = create_session_folder()
+            clear_screen()
+            print()
+            print("=" * 60)
+            print(f"  New session: {session_path.name}")
+            print("=" * 60)
+            print()
+            continue
 
 
 if __name__ == "__main__":

@@ -84,8 +84,8 @@ src/opp_sections_custom.py
 # Claude Code
 .claude/
 # OChat data directories
-ChatProjects/*
-!ChatProjects/.gitkeep
+ReportsOChat/*
+!ReportsOChat/.gitkeep
 
 SourceCache/*
 !SourceCache/.gitkeep

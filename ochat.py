@@ -214,32 +214,6 @@ def handle_command(command: str, engine: OllamaEngine, sm: SourceManager, sessio
     return None
 
 
-def get_multiline_input() -> str:
-    """Get multi-line input from user. Empty line submits."""
-    lines = []
-    console.print("[green]You: [/green]", end="")
-    first_line = input().strip()
-
-    if not first_line:
-        return ""
-
-    lines.append(first_line)
-
-    # Check if it's a command (single line)
-    if first_line.startswith('/'):
-        return first_line
-
-    # Continue reading lines until empty line
-    while True:
-        console.print("[green]...  [/green]", end="")
-        line = input()
-        if not line.strip():
-            break
-        lines.append(line)
-
-    return "\n".join(lines)
-
-
 def chat_loop(engine: OllamaEngine, sm: SourceManager, session_path: Path) -> str:
     """Main chat loop
 
@@ -247,12 +221,12 @@ def chat_loop(engine: OllamaEngine, sm: SourceManager, session_path: Path) -> st
         'exit' or 'clear'
     """
     print("Type your question, or /help for commands.")
-    print("(Press Enter twice to submit multi-line input)")
     print()
 
     while True:
         try:
-            user_input = get_multiline_input()
+            console.print("[green]You: [/green]", end="")
+            user_input = input().strip()
         except EOFError:
             return 'exit'
         except KeyboardInterrupt:

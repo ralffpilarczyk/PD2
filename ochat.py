@@ -214,6 +214,13 @@ def handle_command(command: str, engine: OllamaEngine, sm: SourceManager, sessio
     return None
 
 
+def format_tokens(n: int) -> str:
+    """Format token count for display (e.g., 5K, 128K)"""
+    if n >= 1000:
+        return f"{n // 1000}K"
+    return str(n)
+
+
 def chat_loop(engine: OllamaEngine, sm: SourceManager, session_path: Path) -> str:
     """Main chat loop
 
@@ -225,7 +232,10 @@ def chat_loop(engine: OllamaEngine, sm: SourceManager, session_path: Path) -> st
 
     while True:
         try:
-            console.print("[green]You: [/green]", end="")
+            ctx = engine.get_context_status()
+            used = format_tokens(ctx['total_tokens'])
+            total = format_tokens(ctx['max_tokens'])
+            console.print(f"[dim][{used}/{total}][/dim] [green]You: [/green]", end="")
             user_input = input().strip()
         except EOFError:
             return 'exit'

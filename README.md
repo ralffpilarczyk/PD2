@@ -1,9 +1,10 @@
-# ProfileDash 2.2, OnePageProfile 1.4 & Deep Research 1.0
+# ProfileDash 2.2, OnePageProfile 1.4, Deep Research 1.0 & OChat 1.0
 
 Intelligent document analysis tools for M&A and investment analysis:
 - **PD2** (ProfileDash 2.2): Comprehensive 34-section company profiles with deep analytical insights
 - **OPP** (OnePageProfile v1.4): Concise one-page profiles for quick M&A evaluation
 - **DR** (Deep Research 1.0): Standalone web research using Google's Deep Research Agent
+- **OChat** (OChat 1.0): Interactive chatbot with RAG for document Q&A
 
 ## Quick Start
 
@@ -25,6 +26,7 @@ Intelligent document analysis tools for M&A and investment analysis:
    python PD2.py      # For comprehensive 34-section profiles
    python OPP.py      # For one-page M&A profiles
    python DR.py       # For web-based company research
+   python ochat.py    # For interactive document Q&A
    ```
 
 ## ProfileDash 2.2 (PD2)
@@ -158,6 +160,45 @@ DR researches 12 company profile topics from PD2 methodology:
 - Parallel execution with 1-2 workers (API rate limited)
 - 10-second polling interval, 60-minute timeout per section
 - Separate SDK (google-genai) from PD2/OPP (google-generativeai)
+
+## OChat 1.0
+
+Interactive chatbot with RAG (Retrieval Augmented Generation) for document-based Q&A using local Ollama models.
+
+**Usage:**
+```bash
+python ochat.py
+```
+
+1. Start chatting immediately (no setup required)
+2. Use `/upload` to add PDF or Markdown documents
+3. Ask questions about your documents
+4. Use `/clear` to save and start a new session
+5. Use `/quit` to save and exit
+
+**Commands:**
+- `/upload` - Add source files (PDF, Markdown)
+- `/sources` - List source files and index stats
+- `/reindex` - Rebuild RAG index
+- `/remove <file>` - Remove a source file
+- `/clear` - Save conversation and start new session
+- `/quit` - Save conversation and exit
+
+**Output:**
+
+Each session creates a folder in `ReportsOChat/`:
+```
+ReportsOChat/ochat_YYYYMMDD_HHMMSS/
+    conversation.md    # Chat transcript
+    sources/           # Uploaded documents
+    chroma_db/         # RAG vector index
+```
+
+**Architecture:**
+- Local LLM via Ollama (default: gpt-oss:120b)
+- RAG with ChromaDB and nomic-embed-text embeddings
+- 1024-token chunks with 15% overlap
+- Rich terminal output with markdown rendering
 
 ## Requirements
 

@@ -245,6 +245,25 @@ CONDENSING INSTRUCTIONS:
    - Eliminate elaborate explanations - let the data speak
    - Focus on what's surprising, notable, or value-affecting
 
+6. **TEXT EDITING RULES**:
+
+   PRESERVE (non-negotiable):
+   - Every proper noun, number, date, and percentage
+   - Every concrete function tied to a specific entity (e.g., "supplies 40% of Luzon baseload")
+   - Every causal claim and contractual structure
+
+   CUT:
+   - Adjectives that don't modify a specific fact (e.g., "robust" growth → just state the growth rate)
+   - Metaphors and rhetorical framing ("competitive shield," "strategic moat," "primary defensive mechanism")
+   - Any sentence that restates something already said
+
+   COMBINE:
+   - Sentences that share the same subject
+
+   DO NOT:
+   - Abstract or generalize specific facts into summary statements
+   - Replace concrete examples with category descriptions
+
 WHAT TO PRESERVE:
 - Tables (especially for financial data)
 - Specific metrics and quantified trends
@@ -662,6 +681,25 @@ Rules:
 - Every sentence should help an investor understand how this company actually competes
 - Do not add a separate "Analytical Notes" section - integrate fully
 - Do NOT use numbered sub-sections (e.g., "1.1", "1.2", "2.1") - use bold headers instead
+
+TEXT EDITING RULES:
+
+PRESERVE (non-negotiable):
+- Every proper noun, number, date, and percentage
+- Every concrete function tied to a specific entity
+- Every causal claim and contractual structure
+
+CUT:
+- Adjectives that don't modify a specific fact (e.g., "robust" growth)
+- Metaphors and rhetorical framing ("competitive shield," "strategic moat")
+- Any sentence that restates something already said
+
+COMBINE:
+- Sentences that share the same subject
+
+DO NOT:
+- Abstract or generalize specific facts into summary statements
+- Replace concrete examples with category descriptions
 """
 
         # Use cached model if available, else fallback to pdf_parts

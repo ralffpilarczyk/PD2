@@ -1,7 +1,8 @@
 import google.generativeai as genai
-from typing import Dict
+from typing import Dict, List
 import re
 import os
+import glob
 from datetime import datetime
 from .utils import retry_with_backoff, thread_safe_print, validate_and_fix_tables
 from .profile_sections import sections
@@ -1430,3 +1431,189 @@ FORBIDDEN - Remove if present:
             lambda: self.model_low_temp.generate_content([prompt]).text,
             context="Section 35 Prompt 5"
         )
+
+    # =========================================================================
+    # Cross-Section Deduplication Phase
+    # =========================================================================
+
+    DEDUP_READ_ONLY_SECTIONS = {33, 35}
+    DEDUP_EXCLUDED_SECTIONS = {34}
+
+    def deduplicate_sections(self, file_manager, section_numbers: List[int],
+                             insights_enabled: bool) -> bool:
+        """Remove cross-section redundancies from completed sections.
+
+        Reads final output per section, feeds all into a single LLM call,
+        and writes step_10_deduplicated.md for each read-write section.
+
+        Args:
+            file_manager: FileManager instance for reading/writing files
+            section_numbers: All section numbers that were processed
+            insights_enabled: Whether the insights pipeline was enabled
+
+        Returns:
+            True if dedup succeeded and files were written, False otherwise
+        """
+        run_dir = file_manager.run_dir
+
+        rw_sections = []
+        ro_sections = []
+
+        for num in section_numbers:
+            if num in self.DEDUP_EXCLUDED_SECTIONS:
+                continue
+            content = self._read_section_final_output(run_dir, num, insights_enabled)
+            if not content or len(content.strip()) < 50:
+                continue
+            section_def = next((s for s in sections if s['number'] == num), None)
+            if not section_def:
+                continue
+            entry = {'number': num, 'title': section_def['title'],
+                     'specs': section_def['specs'], 'content': content}
+            if num in self.DEDUP_READ_ONLY_SECTIONS:
+                ro_sections.append(entry)
+            else:
+                rw_sections.append(entry)
+
+        if len(rw_sections) < 2:
+            thread_safe_print("Dedup: fewer than 2 read-write sections, skipping")
+            return False
+
+        prompt = self._build_dedup_prompt(rw_sections, ro_sections)
+
+        # Save prompt for debugging
+        prompt_path = os.path.join(run_dir, "dedup_prompt.txt")
+        try:
+            with open(prompt_path, 'w', encoding='utf-8') as f:
+                f.write(prompt)
+        except Exception:
+            pass
+
+        try:
+            raw_output = retry_with_backoff(
+                lambda: self.model_low_temp.generate_content([prompt]).text,
+                context="Cross-section deduplication"
+            )
+        except Exception as e:
+            thread_safe_print(f"Dedup: LLM call failed: {e}")
+            return False
+
+        parsed = self._parse_dedup_output(raw_output, [s['number'] for s in rw_sections])
+
+        if not parsed:
+            thread_safe_print("Dedup: failed to parse LLM output")
+            return False
+
+        originals = {s['number']: s['content'] for s in rw_sections}
+        written = 0
+        for num, new_content in parsed.items():
+            original = originals.get(num, "")
+            # Safety: reject empty, too short, or bloated output
+            if not new_content or len(new_content.strip()) < 50:
+                thread_safe_print(f"Dedup: section {num} output too short, keeping original")
+                continue
+            if original and len(new_content) > len(original) * 1.2:
+                thread_safe_print(f"Dedup: section {num} output >120% of original, keeping original")
+                continue
+            file_manager.save_step_output(num, "step_10_deduplicated.md", new_content)
+            written += 1
+
+        thread_safe_print(f"Dedup: wrote {written}/{len(rw_sections)} deduplicated sections")
+        return written > 0
+
+    def _read_section_final_output(self, run_dir: str, section_num: int,
+                                    insights_enabled: bool) -> str:
+        """Read the final output file for a section.
+
+        Priority: step_9_integrated.md (if insights enabled and exists),
+        then step_4_final_section.md.
+        """
+        section_dir = os.path.join(run_dir, f"section_{section_num}")
+        if not os.path.isdir(section_dir):
+            return ""
+
+        if insights_enabled:
+            step9 = os.path.join(section_dir, "step_9_integrated.md")
+            if os.path.isfile(step9):
+                with open(step9, 'r', encoding='utf-8') as f:
+                    return f.read()
+
+        step4 = os.path.join(section_dir, "step_4_final_section.md")
+        if os.path.isfile(step4):
+            with open(step4, 'r', encoding='utf-8') as f:
+                return f.read()
+
+        return ""
+
+    def _build_dedup_prompt(self, rw_sections: List[Dict],
+                            ro_sections: List[Dict]) -> str:
+        """Build the deduplication prompt with all sections and specs."""
+        parts = []
+
+        parts.append("SECTIONS TO DEDUPLICATE (you will return cleaned versions of these):\n")
+        for s in rw_sections:
+            parts.append(f"--- Section {s['number']}: {s['title']} ---")
+            parts.append(s['content'])
+            parts.append("")
+
+        if ro_sections:
+            parts.append("\nREAD-ONLY SECTIONS (for overlap detection only -- do NOT return these):\n")
+            for s in ro_sections:
+                parts.append(f"--- Section {s['number']}: {s['title']} ---")
+                parts.append(s['content'])
+                parts.append("")
+
+        parts.append("\nSECTION SPECIFICATIONS:\n")
+        for s in rw_sections + ro_sections:
+            parts.append(f"SECTION {s['number']} ({s['title']}): {s['specs']}")
+            parts.append("")
+
+        parts.append("""DEDUPLICATION TASK:
+For each piece of information that appears in multiple sections:
+1. Determine which section is the BEST FIT per the section specifications
+2. Consider whether removing it from other sections would make them
+   materially less meaningful -- if yes, keep it there too
+3. If the same data point appears with DIFFERENT analytical framing
+   (e.g., one section highlights it as a strength, another questions it
+   as a risk), this is NOT redundancy -- preserve both versions
+4. When the same topic is fragmented across sections with different
+   details, merge all details into the best-fit section
+
+Do NOT:
+- Add new content not present in the originals
+- Change analytical conclusions or framing
+- Modify tables or footnotes
+- Exceed 500 words per section
+
+OUTPUT FORMAT:
+For every read-write section listed above (even those with no changes), output:
+
+=== SECTION {num}: {title} ===
+{cleaned content}
+=== END SECTION {num} ===
+""")
+
+        return "\n".join(parts)
+
+    def _parse_dedup_output(self, raw_output: str,
+                            expected_sections: List[int]) -> Dict[int, str]:
+        """Parse structured LLM output into per-section content.
+
+        Expected format:
+            === SECTION {num}: {title} ===
+            {content}
+            === END SECTION {num} ===
+
+        Returns:
+            Dict mapping section number to cleaned content, or empty dict on failure.
+        """
+        result = {}
+        pattern = r'===\s*SECTION\s+(\d+)\s*:\s*.*?===\s*\n(.*?)===\s*END\s+SECTION\s+\1\s*==='
+        matches = re.findall(pattern, raw_output, re.DOTALL)
+
+        for num_str, content in matches:
+            num = int(num_str)
+            if num in expected_sections:
+                result[num] = content.strip()
+
+        return result

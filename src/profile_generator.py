@@ -132,13 +132,18 @@ class ProfileGenerator:
                 final_file = None
 
                 if pdf_variant == "vanilla":
-                    # Vanilla: Use Step 4 output only (standard polished description)
+                    # Vanilla: step_10 (deduped) > step_4
                     for md_file in md_files:
-                        if 'step_4_final_section.md' in md_file:
+                        if 'step_10_deduplicated.md' in md_file:
                             final_file = md_file
                             break
-                        elif 'final_section.md' in md_file and not final_file:
-                            final_file = md_file
+                    if not final_file:
+                        for md_file in md_files:
+                            if 'step_4_final_section.md' in md_file:
+                                final_file = md_file
+                                break
+                            elif 'final_section.md' in md_file and not final_file:
+                                final_file = md_file
 
                 elif pdf_variant == "insights":
                     # Insights: Use Step 8 synthesis only (ground truth insights)
@@ -154,12 +159,16 @@ class ProfileGenerator:
                                 break
 
                 elif pdf_variant == "integrated":
-                    # Integrated: Use Step 9 integrated output (insights woven in)
+                    # Integrated: step_10 (deduped) > step_9 > step_4
                     for md_file in md_files:
-                        if 'step_9_integrated.md' in md_file:
+                        if 'step_10_deduplicated.md' in md_file:
                             final_file = md_file
                             break
-                    # Fallback to step_4 if no integrated available
+                    if not final_file:
+                        for md_file in md_files:
+                            if 'step_9_integrated.md' in md_file:
+                                final_file = md_file
+                                break
                     if not final_file:
                         for md_file in md_files:
                             if 'step_4_final_section.md' in md_file:
@@ -167,13 +176,18 @@ class ProfileGenerator:
                                 break
 
                 else:
-                    # Default: Use step_4 output (standard polished description)
+                    # Default: step_10 (deduped) > step_4
                     for md_file in md_files:
-                        if 'step_4_final_section.md' in md_file:
+                        if 'step_10_deduplicated.md' in md_file:
                             final_file = md_file
                             break
-                        elif 'final_section.md' in md_file and not final_file:
-                            final_file = md_file
+                    if not final_file:
+                        for md_file in md_files:
+                            if 'step_4_final_section.md' in md_file:
+                                final_file = md_file
+                                break
+                            elif 'final_section.md' in md_file and not final_file:
+                                final_file = md_file
 
                 # If no final file found, use the first one
                 md_file = final_file if final_file else md_files[0]

@@ -686,6 +686,32 @@ Output ONLY the company name, nothing else. No explanation, no punctuation."""
                 except Exception as e:
                     thread_safe_print(f"{WARNING} Profile update failed: {e}")
 
+            # Phase 5: Cross-section deduplication
+            regular_sections_for_dedup = [n for n in section_numbers if n != SECTION_34_DATA_BOOK]
+            rw_candidates = [n for n in regular_sections_for_dedup if n not in special_sections]
+            if len(rw_candidates) > 1:
+                thread_safe_print(f"\n{'='*60}")
+                thread_safe_print(f"{BOLD}Cross-Section Deduplication{RESET}")
+                thread_safe_print(f"{'='*60}")
+                try:
+                    dedup_success = self.core_analyzer.deduplicate_sections(
+                        self.file_manager, section_numbers, self.insights_enabled
+                    )
+                    if dedup_success:
+                        profile_generator = ProfileGenerator(self.run_timestamp, model_name=self.core_analyzer.model_name)
+                        if self.insights_enabled:
+                            profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="vanilla")
+                            profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="insights")
+                            profile_generator.generate_html_profile(results, section_numbers, company_name, sections, pdf_variant="integrated")
+                            thread_safe_print(f"{CYAN}{CHECK}{RESET} Dedup complete - Final profiles generated")
+                        else:
+                            profile_generator.generate_html_profile(results, section_numbers, company_name, sections)
+                            thread_safe_print(f"{CYAN}{CHECK}{RESET} Dedup complete - Final profile generated")
+                    else:
+                        thread_safe_print(f"{DIM}Dedup skipped or produced no changes{RESET}")
+                except Exception as e:
+                    thread_safe_print(f"{WARNING} Deduplication failed: {e}")
+
             return results
 
         finally:

@@ -59,6 +59,7 @@ class TestFileManagerSaveOutput:
             "step_7_test_results.md",
             "step_8_synthesis.md",
             "step_9_integrated.md",
+            "step_10_deduplicated.md",
         ]
         for step in standard_steps:
             fm.save_step_output(5, step, f"Content for {step}")

@@ -1569,7 +1569,7 @@ FORBIDDEN - Remove if present:
             parts.append("")
 
         parts.append("""DEDUPLICATION TASK:
-For each piece of information that appears in multiple sections:
+Scan ALL sections for information that appears in MULTIPLE sections. For each such piece:
 1. Determine which section is the BEST FIT per the section specifications
 2. Consider whether removing it from other sections would make them
    materially less meaningful -- if yes, keep it there too
@@ -1579,10 +1579,22 @@ For each piece of information that appears in multiple sections:
 4. When the same topic is fragmented across sections with different
    details, merge all details into the best-fit section
 
+CRITICAL PRESERVATION RULES:
+- If a piece of information appears in ONLY ONE section, it MUST remain unchanged
+- Do NOT summarize, condense, or rephrase content -- only RELOCATE duplicates
+- Do NOT remove supporting evidence, specific numbers, tables, or footnotes
+- Every sentence in the original that is not a duplicate of another section's
+  sentence must appear in the output
+- When in doubt, KEEP the content where it is
+- The output for each section should be approximately the same length as the input;
+  significant reduction means you are removing non-duplicate content
+- Make only minimal edits to maintain appropriate flow after removing duplicates
+
 Do NOT:
 - Add new content not present in the originals
 - Change analytical conclusions or framing
 - Modify tables or footnotes
+- Summarize or condense sections
 - Exceed 500 words per section
 
 OUTPUT FORMAT:

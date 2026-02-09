@@ -1588,6 +1588,8 @@ CRITICAL PRESERVATION RULES:
 - When in doubt, KEEP the content where it is
 - The output for each section should be approximately the same length as the input;
   significant reduction means you are removing non-duplicate content
+- Tables are NEVER duplicates of other sections' tables, even when they share
+  some data points -- different table structures serve different analytical purposes
 - Make only minimal edits to maintain appropriate flow after removing duplicates
 
 Do NOT:
@@ -1595,7 +1597,6 @@ Do NOT:
 - Change analytical conclusions or framing
 - Modify tables or footnotes
 - Summarize or condense sections
-- Exceed 500 words per section
 
 OUTPUT FORMAT:
 For every read-write section listed above (even those with no changes), output:

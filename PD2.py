@@ -922,13 +922,13 @@ if __name__ == "__main__":
     # Model selection
     thread_safe_print("Select LLM model:")
     thread_safe_print("  1) gemini-3-flash-preview")
-    thread_safe_print("  2) gemini-3-pro-preview")
+    thread_safe_print("  2) gemini-3.1-pro-preview")
     selected_model = None
     choice = prompt_single_digit("Choose model [1/2] (default 1): ", valid_digits="12", default_digit="1")
     if choice == "1":
         selected_model = 'gemini-3-flash-preview'
     else:
-        selected_model = 'gemini-3-pro-preview'
+        selected_model = 'gemini-3.1-pro-preview'
 
     # Optional LLM warm-up to reduce first-call latency (uses selected model)
     try:

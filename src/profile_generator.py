@@ -443,7 +443,7 @@ class ProfileGenerator:
         # Human-readable model label for cover note
         model_label_map = {
             'gemini-3-flash-preview': 'Gemini 3 Flash Preview',
-            'gemini-3-pro-preview': 'Gemini 3 Pro Preview',
+            'gemini-3.1-pro-preview': 'Gemini 3.1 Pro Preview',
         }
         model_label = model_label_map.get(self.model_name, self.model_name)
 

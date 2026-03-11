@@ -582,7 +582,7 @@ def run(self) -> Optional[Path]:
 if __name__ == "__main__":
     # 1. System checks (API key, directories)
     # 2. File source selection (interactive or batch)
-    # 3. Select LLM model (gemini-3-flash-preview or gemini-3-pro-preview)
+    # 3. Select LLM model (gemini-3-flash-preview or gemini-3.1-pro-preview)
     # 4. Select worker count (1-4, default 4)
     # 5. Enable insights pipeline? (y/N)
     # 6. If batch: scan SourceFiles/SourceBatch/, confirm, loop
@@ -609,7 +609,7 @@ Choose [1/2] (default 1): 1
 
 Select LLM model:
   1) gemini-3-flash-preview
-  2) gemini-3-pro-preview
+  2) gemini-3.1-pro-preview
 Choose model [1/2] (default 1): 1
 
 Select number of parallel workers:
